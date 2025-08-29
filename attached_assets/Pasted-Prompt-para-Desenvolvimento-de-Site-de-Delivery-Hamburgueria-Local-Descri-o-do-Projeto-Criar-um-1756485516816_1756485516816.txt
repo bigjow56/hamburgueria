@@ -1,0 +1,187 @@
+Prompt para Desenvolvimento de Site de Delivery - Hamburgueria Local
+
+Descrição do Projeto
+
+Criar um site completo de delivery para hamburgueria local com sistema de pedidos online, carrinho de compras e painel administrativo. O site deve ser responsivo, moderno e focado na experiência do usuário local.
+
+Tecnologias Sugeridas
+
+Pagamentos: Integração com Mercado Pago ou PagSeguro
+
+Estrutura do Site
+
+1. Página Principal (Landing)
+
+Header com logo da hamburgueria, menu de navegação (LOJA, CARRINHO, INFO, CONTA)
+
+Banner hero com imagem apetitosa de hambúrguer
+
+Seção "Mais Vendidos" com produtos em destaque
+
+Status: "ABERTO AGORA" / "FECHADO" com horários
+
+Pedido mínimo em destaque
+
+Botão de download do app (opcional)
+
+2. Catálogo de Produtos
+
+Categorias principais:
+
+HAMBÚRGUERS (produto principal)
+
+ACOMPANHAMENTOS (batata frita, onion rings, etc.)
+
+BEBIDAS (refrigerantes, sucos, água)
+
+SOBREMESAS (milk-shake, sorvetes, etc.)
+
+COMBOS (hambúrguer + batata + bebida)
+
+PROMOÇÕES (ofertas especiais)
+
+3. Carrinho de Compras
+
+Lista de produtos selecionados
+
+Quantidade e preço unitário
+
+Subtotal e total
+
+Botão "Adicionar mais produtos"
+
+Botão "Finalizar pedido"
+
+Indicador visual quando vazio: "Carrinho está vazio"
+
+4. Sistema de Pedidos
+
+Formulário de dados do cliente
+
+Endereço de entrega
+
+Forma de pagamento (Dinheiro, Cartão, PIX, Online)
+
+Observações especiais
+
+Confirmação do pedido
+
+Tempo estimado de entrega
+
+5. Informações da Loja
+
+Horário de funcionamento detalhado
+
+Endereço completo
+
+Telefone para contato
+
+Formas de pagamento aceitas
+
+Política de entrega
+
+Tempo médio de entrega
+
+Taxa de entrega por região
+
+Funcionalidades Essenciais
+
+Para o Cliente:
+
+Navegação intuitiva por categorias
+
+Busca de produtos
+
+Carrinho persistente
+
+Cálculo automático de preços
+
+Sistema de login/cadastro
+
+Histórico de pedidos
+
+Acompanhamento de pedido em tempo real
+
+Avaliação de produtos
+
+Programa de fidelidade (pontos)
+
+Para o Administrador:
+
+Painel de controle
+
+Gestão de produtos (CRUD)
+
+Controle de estoque
+
+Gestão de pedidos
+
+Relatórios de vendas
+
+Controle de horário de funcionamento
+
+Gestão de promoções
+
+Chat/mensagens com clientes
+
+Design e UX
+
+Cores Sugeridas:
+
+Primária: Vermelho/Laranja (apetitoso)
+
+Secundária: Amarelo (energia)
+
+Neutra: Cinza escuro, branco
+
+Destaque: Verde para botões de ação
+
+Elementos Visuais:
+
+Ícones intuitivos para categorias
+
+Fotos profissionais dos hambúrguers
+
+Indicadores de status (aberto/fechado)
+
+Badges para promoções e ofertas
+
+Loading states e feedback visual
+
+Animações suaves nas interações
+
+Responsividade:
+
+Mobile-first design
+
+Adaptação para tablet e desktop
+
+Touch-friendly (botões grandes)
+
+Navegação por gestos no mobile
+
+Integrações Necessárias
+
+Pagamentos:
+
+Mercado Pago API
+
+PIX automático
+
+Cartão de crédito/débito
+
+Delivery:
+
+Google Maps para cálculo de distância
+
+WhatsApp Business API
+
+Notificações push/SMS
+
+Analytics:
+
+Google Analytics
+
+Métricas de conversão
+
+Relatórios de vendas
