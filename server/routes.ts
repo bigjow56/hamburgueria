@@ -7,7 +7,9 @@ import { z } from "zod";
 const createOrderRequestSchema = z.object({
   customerName: z.string().min(1),
   customerPhone: z.string().min(1),
-  customerEmail: z.string().email().optional(),
+  customerEmail: z.string().optional().refine((val) => !val || z.string().email().safeParse(val).success, {
+    message: "Invalid email"
+  }),
   streetName: z.string().min(1),
   houseNumber: z.string().min(1),
   neighborhood: z.string().min(1),
@@ -20,6 +22,36 @@ const createOrderRequestSchema = z.object({
     unitPrice: z.string(),
   })),
 });
+
+// Função para enviar dados para n8n
+async function sendToN8n(orderData: any, orderItems: any[]) {
+  try {
+    const n8nPayload = {
+      order: orderData,
+      items: orderItems,
+      timestamp: new Date().toISOString(),
+      total: orderData.total,
+      subtotal: orderData.subtotal,
+      deliveryFee: orderData.deliveryFee
+    };
+
+    const response = await fetch('https://n8n-curso-n8n.yao8ay.easypanel.host/webhook/hamburgueria', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(n8nPayload),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send to n8n:', response.status, response.statusText);
+    } else {
+      console.log('Successfully sent order to n8n');
+    }
+  } catch (error) {
+    console.error('Error sending to n8n:', error);
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Categories
@@ -124,6 +156,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       
       await storage.addOrderItems(orderItemsWithOrderId);
+
+      // Enviar dados para n8n
+      await sendToN8n(order, orderItemsWithOrderId);
 
       res.status(201).json({ 
         success: true, 
