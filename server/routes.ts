@@ -116,18 +116,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const requestData = createOrderRequestSchema.parse(req.body);
       
-      // Calculate totals
+      // Calculate totals and get product names
       let subtotal = 0;
-      const orderItems = requestData.items.map(item => {
+      const orderItems = await Promise.all(requestData.items.map(async item => {
+        const product = await storage.getProduct(item.productId);
         const totalPrice = parseFloat(item.unitPrice) * item.quantity;
         subtotal += totalPrice;
         return {
           productId: item.productId,
+          productName: product?.name || 'Produto não encontrado',
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           totalPrice: totalPrice.toFixed(2),
         };
-      });
+      }));
 
       const deliveryFee = 5.90; // Fixed delivery fee for now
       const total = subtotal + deliveryFee;
