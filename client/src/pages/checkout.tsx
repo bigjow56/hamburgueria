@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -22,6 +23,7 @@ export default function Checkout() {
   const [formData, setFormData] = useState({
     customerName: "",
     customerPhone: "",
+    customerPhoneInternational: "", // Full international number for n8n
     customerEmail: "",
     streetName: "",
     houseNumber: "",
@@ -148,11 +150,14 @@ export default function Checkout() {
                     </div>
 
                     <div>
-                      <Label htmlFor="customerPhone">Telefone *</Label>
-                      <Input
+                      <PhoneInput
                         id="customerPhone"
                         value={formData.customerPhone}
-                        onChange={(e) => setFormData({...formData, customerPhone: e.target.value})}
+                        onChange={(formatted, international) => setFormData({
+                          ...formData, 
+                          customerPhone: formatted,
+                          customerPhoneInternational: international
+                        })}
                         placeholder="(11) 99999-9999"
                         required
                         data-testid="input-customer-phone"

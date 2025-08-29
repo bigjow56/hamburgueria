@@ -7,6 +7,7 @@ import { z } from "zod";
 const createOrderRequestSchema = z.object({
   customerName: z.string().min(1),
   customerPhone: z.string().min(1),
+  customerPhoneInternational: z.string().optional(),
   customerEmail: z.string().optional().refine((val) => !val || z.string().email().safeParse(val).success, {
     message: "Invalid email"
   }),
@@ -134,6 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderData = {
         customerName: requestData.customerName,
         customerPhone: requestData.customerPhone,
+        customerPhoneInternational: requestData.customerPhoneInternational,
         customerEmail: requestData.customerEmail,
         streetName: requestData.streetName,
         houseNumber: requestData.houseNumber,
