@@ -5,6 +5,7 @@ import {
   orders,
   orderItems,
   storeSettings,
+  deliveryZones,
   type User,
   type InsertUser,
   type Category,
@@ -16,9 +17,11 @@ import {
   type OrderItem,
   type InsertOrderItem,
   type StoreSettings,
+  type DeliveryZone,
+  type InsertDeliveryZone,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -48,6 +51,15 @@ export interface IStorage {
   // Store settings
   getStoreSettings(): Promise<StoreSettings | undefined>;
   updateStoreSettings(settings: Partial<StoreSettings>): Promise<StoreSettings>;
+  
+  // Delivery zones
+  getDeliveryZones(): Promise<DeliveryZone[]>;
+  getActiveDeliveryZones(): Promise<DeliveryZone[]>;
+  getDeliveryZone(id: string): Promise<DeliveryZone | undefined>;
+  createDeliveryZone(zone: InsertDeliveryZone): Promise<DeliveryZone>;
+  updateDeliveryZone(id: string, zone: Partial<InsertDeliveryZone>): Promise<DeliveryZone | undefined>;
+  deleteDeliveryZone(id: string): Promise<boolean>;
+  getDeliveryFeeByNeighborhood(neighborhood: string): Promise<number | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -176,6 +188,55 @@ export class DatabaseStorage implements IStorage {
       .set({ ...settingsData, updatedAt: new Date() })
       .returning();
     return settings;
+  }
+
+  // Delivery zones
+  async getDeliveryZones(): Promise<DeliveryZone[]> {
+    return await db.select().from(deliveryZones).orderBy(deliveryZones.neighborhoodName);
+  }
+
+  async getActiveDeliveryZones(): Promise<DeliveryZone[]> {
+    return await db
+      .select()
+      .from(deliveryZones)
+      .where(eq(deliveryZones.isActive, true))
+      .orderBy(deliveryZones.neighborhoodName);
+  }
+
+  async getDeliveryZone(id: string): Promise<DeliveryZone | undefined> {
+    const [zone] = await db.select().from(deliveryZones).where(eq(deliveryZones.id, id));
+    return zone;
+  }
+
+  async createDeliveryZone(zoneData: InsertDeliveryZone): Promise<DeliveryZone> {
+    const [zone] = await db.insert(deliveryZones).values(zoneData).returning();
+    return zone;
+  }
+
+  async updateDeliveryZone(id: string, zoneData: Partial<InsertDeliveryZone>): Promise<DeliveryZone | undefined> {
+    const [zone] = await db
+      .update(deliveryZones)
+      .set({ ...zoneData, updatedAt: new Date() })
+      .where(eq(deliveryZones.id, id))
+      .returning();
+    return zone;
+  }
+
+  async deleteDeliveryZone(id: string): Promise<boolean> {
+    const result = await db.delete(deliveryZones).where(eq(deliveryZones.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getDeliveryFeeByNeighborhood(neighborhood: string): Promise<number | null> {
+    const [zone] = await db
+      .select()
+      .from(deliveryZones)
+      .where(and(
+        eq(deliveryZones.neighborhoodName, neighborhood),
+        eq(deliveryZones.isActive, true)
+      ));
+    
+    return zone ? parseFloat(zone.deliveryFee) : null;
   }
 }
 

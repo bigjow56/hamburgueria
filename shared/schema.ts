@@ -79,6 +79,19 @@ export const storeSettings = pgTable("store_settings", {
   closingTime: text("closing_time").default("23:00"),
   minimumOrderAmount: decimal("minimum_order_amount", { precision: 10, scale: 2 }).default("25.00"),
   deliveryAreas: jsonb("delivery_areas").default([]),
+  // Novos campos para taxa de entrega por bairro
+  useNeighborhoodDelivery: boolean("use_neighborhood_delivery").default(false),
+  defaultDeliveryFee: decimal("default_delivery_fee", { precision: 10, scale: 2 }).default("5.90"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Delivery zones table (bairros e suas taxas)
+export const deliveryZones = pgTable("delivery_zones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  neighborhoodName: text("neighborhood_name").notNull(),
+  deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
@@ -108,6 +121,12 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
   id: true,
 });
 
+export const insertDeliveryZoneSchema = createInsertSchema(deliveryZones).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -123,5 +142,8 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
+
+export type DeliveryZone = typeof deliveryZones.$inferSelect;
+export type InsertDeliveryZone = z.infer<typeof insertDeliveryZoneSchema>;
 
 export type StoreSettings = typeof storeSettings.$inferSelect;

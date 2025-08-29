@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema } from "@shared/schema";
+import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema } from "@shared/schema";
 import { z } from "zod";
 
 const createOrderRequestSchema = z.object({
@@ -27,9 +27,6 @@ const createOrderRequestSchema = z.object({
 // Função para enviar dados para n8n
 async function sendToN8n(orderData: any, orderItems: any[]) {
   try {
-    // Debug: verificar se os items têm productName
-    console.log('Items being sent to n8n:', JSON.stringify(orderItems, null, 2));
-    
     const n8nPayload = {
       order: orderData,
       items: orderItems,
@@ -38,8 +35,6 @@ async function sendToN8n(orderData: any, orderItems: any[]) {
       subtotal: orderData.subtotal,
       deliveryFee: orderData.deliveryFee
     };
-    
-    console.log('Full payload to n8n:', JSON.stringify(n8nPayload, null, 2));
 
     const response = await fetch('https://n8n-curso-n8n.yao8ay.easypanel.host/webhook-test/hamburgueria', {
       method: 'POST',
@@ -108,11 +103,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isOpen: true,
         closingTime: "23:00",
         minimumOrderAmount: "25.00",
-        deliveryAreas: []
+        deliveryAreas: [],
+        useNeighborhoodDelivery: false,
+        defaultDeliveryFee: "5.90"
       });
     } catch (error) {
       console.error("Error fetching store settings:", error);
       res.status(500).json({ message: "Failed to fetch store settings" });
+    }
+  });
+
+  app.put("/api/store/settings", async (req, res) => {
+    try {
+      const settings = await storage.updateStoreSettings(req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating store settings:", error);
+      res.status(500).json({ message: "Failed to update store settings" });
     }
   });
 
@@ -141,8 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const orderData = {
         customerName: requestData.customerName,
-        customerPhone: requestData.customerPhone,
-        customerPhoneInternational: requestData.customerPhoneInternational,
+        customerPhone: requestData.customerPhoneInternational || requestData.customerPhone, // Use international number for n8n
         customerEmail: requestData.customerEmail,
         streetName: requestData.streetName,
         houseNumber: requestData.houseNumber,
@@ -164,6 +170,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderId: order.id,
       }));
 
+      // Update order data with international phone for n8n
+      const orderForN8n = {
+        ...order,
+        customerPhone: requestData.customerPhoneInternational || order.customerPhone,
+      };
+
       // Prepare items for database (without productName as it's not in the schema)
       const orderItemsForDb = orderItems.map(item => ({
         productId: item.productId,
@@ -175,8 +187,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.addOrderItems(orderItemsForDb);
 
-      // Enviar dados para n8n (with product names)
-      await sendToN8n(order, orderItemsForN8n);
+      // Enviar dados para n8n (with product names and international phone)
+      await sendToN8n(orderForN8n, orderItemsForN8n);
 
       res.status(201).json({ 
         success: true, 
@@ -267,6 +279,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: "Failed to create user" });
       }
+    }
+  });
+
+  // Delivery Zones (Admin)
+  app.get("/api/delivery-zones", async (req, res) => {
+    try {
+      const zones = await storage.getDeliveryZones();
+      res.json(zones);
+    } catch (error) {
+      console.error("Error fetching delivery zones:", error);
+      res.status(500).json({ message: "Failed to fetch delivery zones" });
+    }
+  });
+
+  app.get("/api/delivery-zones/active", async (req, res) => {
+    try {
+      const zones = await storage.getActiveDeliveryZones();
+      res.json(zones);
+    } catch (error) {
+      console.error("Error fetching active delivery zones:", error);
+      res.status(500).json({ message: "Failed to fetch active delivery zones" });
+    }
+  });
+
+  app.post("/api/delivery-zones", async (req, res) => {
+    try {
+      const zoneData = insertDeliveryZoneSchema.parse(req.body);
+      const zone = await storage.createDeliveryZone(zoneData);
+      res.status(201).json(zone);
+    } catch (error) {
+      console.error("Error creating delivery zone:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid delivery zone data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create delivery zone" });
+      }
+    }
+  });
+
+  app.put("/api/delivery-zones/:id", async (req, res) => {
+    try {
+      const zoneData = insertDeliveryZoneSchema.partial().parse(req.body);
+      const zone = await storage.updateDeliveryZone(req.params.id, zoneData);
+      if (!zone) {
+        return res.status(404).json({ message: "Delivery zone not found" });
+      }
+      res.json(zone);
+    } catch (error) {
+      console.error("Error updating delivery zone:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid delivery zone data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update delivery zone" });
+      }
+    }
+  });
+
+  app.delete("/api/delivery-zones/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteDeliveryZone(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Delivery zone not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting delivery zone:", error);
+      res.status(500).json({ message: "Failed to delete delivery zone" });
     }
   });
 

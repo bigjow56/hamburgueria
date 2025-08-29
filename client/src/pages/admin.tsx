@@ -8,11 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image } from "lucide-react";
-import type { Product, Category } from "@shared/schema";
+import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings } from "lucide-react";
+import { AdminDeliveryZones } from "@/components/admin-delivery-zones";
+import type { Product, Category, DeliveryZone, StoreSettings } from "@shared/schema";
 
 interface EditingProduct {
   id?: string;
@@ -27,6 +30,13 @@ interface EditingProduct {
   isPromotion: boolean;
 }
 
+interface EditingDeliveryZone {
+  id?: string;
+  neighborhoodName: string;
+  deliveryFee: string;
+  isActive: boolean;
+}
+
 export default function Admin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -34,6 +44,9 @@ export default function Admin() {
   
   const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
   const [showNewProductForm, setShowNewProductForm] = useState(false);
+  const [editingDeliveryZone, setEditingDeliveryZone] = useState<EditingDeliveryZone | null>(null);
+  const [showNewZoneForm, setShowNewZoneForm] = useState(false);
+  const [activeTab, setActiveTab] = useState("products");
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -41,6 +54,14 @@ export default function Admin() {
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
+  });
+
+  const { data: deliveryZones = [] } = useQuery<DeliveryZone[]>({
+    queryKey: ["/api/delivery-zones"],
+  });
+
+  const { data: storeSettings } = useQuery<StoreSettings>({
+    queryKey: ["/api/store/settings"],
   });
 
   const updateProductMutation = useMutation({
@@ -233,34 +254,48 @@ export default function Admin() {
           </CardContent>
         </Card>
 
-        {/* New Product Form */}
-        {showNewProductForm && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Plus className="mr-2 h-5 w-5" />
-                Adicionar Novo Produto
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProductForm
-                product={editingProduct}
-                setProduct={setEditingProduct}
-                categories={categories}
-                onSave={handleCreate}
-                onCancel={() => {
-                  setShowNewProductForm(false);
-                  setEditingProduct(null);
-                }}
-                isCreating={true}
-                isLoading={createProductMutation.isPending}
-              />
-            </CardContent>
-          </Card>
-        )}
+        {/* Admin Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="products" className="flex items-center">
+              <Edit3 className="mr-2 h-4 w-4" />
+              Produtos
+            </TabsTrigger>
+            <TabsTrigger value="delivery" className="flex items-center">
+              <MapPin className="mr-2 h-4 w-4" />
+              Entrega
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Products List */}
-        <Card>
+          <TabsContent value="products" className="space-y-6">
+            {/* New Product Form */}
+            {showNewProductForm && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Plus className="mr-2 h-5 w-5" />
+                    Adicionar Novo Produto
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ProductForm
+                    product={editingProduct}
+                    setProduct={setEditingProduct}
+                    categories={categories}
+                    onSave={handleCreate}
+                    onCancel={() => {
+                      setShowNewProductForm(false);
+                      setEditingProduct(null);
+                    }}
+                    isCreating={true}
+                    isLoading={createProductMutation.isPending}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Products List */}
+            <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Edit3 className="mr-2 h-5 w-5" />
@@ -376,6 +411,12 @@ export default function Admin() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="delivery">
+            <AdminDeliveryZones />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
