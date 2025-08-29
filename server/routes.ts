@@ -35,7 +35,7 @@ async function sendToN8n(orderData: any, orderItems: any[]) {
       deliveryFee: orderData.deliveryFee
     };
 
-    const response = await fetch('https://n8n-curso-n8n.yao8ay.easypanel.host/webhook/hamburgueria', {
+    const response = await fetch('https://n8n-curso-n8n.yao8ay.easypanel.host/webhook-test/hamburgueria', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

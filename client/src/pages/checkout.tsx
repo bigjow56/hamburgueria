@@ -76,6 +76,8 @@ export default function Checkout() {
 
     const orderData = {
       ...formData,
+      // Remove email if empty to avoid validation issues
+      customerEmail: formData.customerEmail || undefined,
       items: items.map(item => ({
         productId: item.product.id,
         quantity: item.quantity,
