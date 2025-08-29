@@ -27,6 +27,9 @@ const createOrderRequestSchema = z.object({
 // Função para enviar dados para n8n
 async function sendToN8n(orderData: any, orderItems: any[]) {
   try {
+    // Debug: verificar se os items têm productName
+    console.log('Items being sent to n8n:', JSON.stringify(orderItems, null, 2));
+    
     const n8nPayload = {
       order: orderData,
       items: orderItems,
@@ -35,6 +38,8 @@ async function sendToN8n(orderData: any, orderItems: any[]) {
       subtotal: orderData.subtotal,
       deliveryFee: orderData.deliveryFee
     };
+    
+    console.log('Full payload to n8n:', JSON.stringify(n8nPayload, null, 2));
 
     const response = await fetch('https://n8n-curso-n8n.yao8ay.easypanel.host/webhook-test/hamburgueria', {
       method: 'POST',
