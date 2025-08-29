@@ -153,16 +153,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const order = await storage.createOrder(orderData);
       
-      // Add order items
-      const orderItemsWithOrderId = orderItems.map(item => ({
+      // Prepare items for n8n (with product names) before saving to database
+      const orderItemsForN8n = orderItems.map(item => ({
         ...item,
         orderId: order.id,
       }));
-      
-      await storage.addOrderItems(orderItemsWithOrderId);
 
-      // Enviar dados para n8n
-      await sendToN8n(order, orderItemsWithOrderId);
+      // Prepare items for database (without productName as it's not in the schema)
+      const orderItemsForDb = orderItems.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        orderId: order.id,
+      }));
+      
+      await storage.addOrderItems(orderItemsForDb);
+
+      // Enviar dados para n8n (with product names)
+      await sendToN8n(order, orderItemsForN8n);
 
       res.status(201).json({ 
         success: true, 
