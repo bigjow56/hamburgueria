@@ -1,0 +1,538 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image } from "lucide-react";
+import type { Product, Category } from "@shared/schema";
+
+interface EditingProduct {
+  id?: string;
+  name: string;
+  description: string;
+  price: string;
+  originalPrice?: string;
+  categoryId: string;
+  imageUrl: string;
+  isAvailable: boolean;
+  isFeatured: boolean;
+  isPromotion: boolean;
+}
+
+export default function Admin() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
+  const [showNewProductForm, setShowNewProductForm] = useState(false);
+
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+  });
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ["/api/categories"],
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: async (productData: any) => {
+      return await apiRequest("PUT", `/api/products/${productData.id}`, productData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      setEditingProduct(null);
+      toast({
+        title: "Produto atualizado!",
+        description: "As alterações foram salvas com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao atualizar produto",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createProductMutation = useMutation({
+    mutationFn: async (productData: any) => {
+      return await apiRequest("POST", "/api/products", productData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      setShowNewProductForm(false);
+      toast({
+        title: "Produto criado!",
+        description: "Novo produto adicionado ao cardápio.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao criar produto",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      return await apiRequest("DELETE", `/api/products/${productId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Produto removido!",
+        description: "Produto foi removido do cardápio.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao remover produto",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      originalPrice: product.originalPrice || "",
+      categoryId: product.categoryId,
+      imageUrl: product.imageUrl,
+      isAvailable: product.isAvailable ?? true,
+      isFeatured: product.isFeatured ?? false,
+      isPromotion: product.isPromotion ?? false,
+    });
+  };
+
+  const handleSave = () => {
+    if (!editingProduct) return;
+
+    const productData = {
+      id: editingProduct.id,
+      name: editingProduct.name,
+      description: editingProduct.description,
+      price: editingProduct.price,
+      originalPrice: editingProduct.originalPrice || null,
+      categoryId: editingProduct.categoryId,
+      imageUrl: editingProduct.imageUrl,
+      isAvailable: editingProduct.isAvailable,
+      isFeatured: editingProduct.isFeatured,
+      isPromotion: editingProduct.isPromotion,
+    };
+
+    updateProductMutation.mutate(productData);
+  };
+
+  const handleCreate = () => {
+    if (!editingProduct) return;
+
+    const productData = {
+      name: editingProduct.name,
+      description: editingProduct.description,
+      price: editingProduct.price,
+      originalPrice: editingProduct.originalPrice || null,
+      categoryId: editingProduct.categoryId,
+      imageUrl: editingProduct.imageUrl,
+      isAvailable: editingProduct.isAvailable,
+      isFeatured: editingProduct.isFeatured,
+      isPromotion: editingProduct.isPromotion,
+    };
+
+    createProductMutation.mutate(productData);
+  };
+
+  const handleToggleAvailability = (product: Product) => {
+    const productData = {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      categoryId: product.categoryId,
+      imageUrl: product.imageUrl,
+      isAvailable: !product.isAvailable,
+      isFeatured: product.isFeatured,
+      isPromotion: product.isPromotion,
+    };
+
+    updateProductMutation.mutate(productData);
+  };
+
+  const handleDelete = (productId: string) => {
+    if (confirm("Tem certeza que deseja remover este produto?")) {
+      deleteProductMutation.mutate(productId);
+    }
+  };
+
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category?.name || "Categoria";
+  };
+
+  const startNewProduct = () => {
+    setEditingProduct({
+      name: "",
+      description: "",
+      price: "",
+      originalPrice: "",
+      categoryId: categories[0]?.id || "",
+      imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400",
+      isAvailable: true,
+      isFeatured: false,
+      isPromotion: false,
+    });
+    setShowNewProductForm(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-muted/30">
+      <div className="max-w-6xl mx-auto p-6">
+        {/* Header */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center mb-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setLocation("/")}
+                    className="mr-4 p-2"
+                    data-testid="button-back-home"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <h1 className="text-3xl font-bold text-foreground">🍔 Painel Administrativo</h1>
+                </div>
+                <p className="text-muted-foreground">Gerencie seus produtos sem mexer no código</p>
+              </div>
+              <Button 
+                onClick={startNewProduct}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                data-testid="button-new-product"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Produto
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* New Product Form */}
+        {showNewProductForm && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Plus className="mr-2 h-5 w-5" />
+                Adicionar Novo Produto
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProductForm
+                product={editingProduct}
+                setProduct={setEditingProduct}
+                categories={categories}
+                onSave={handleCreate}
+                onCancel={() => {
+                  setShowNewProductForm(false);
+                  setEditingProduct(null);
+                }}
+                isCreating={true}
+                isLoading={createProductMutation.isPending}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Products List */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Edit3 className="mr-2 h-5 w-5" />
+              Gerenciar Produtos ({products.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {products.map((product) => (
+                <div key={product.id} className="border border-border rounded-lg p-4">
+                  {editingProduct?.id === product.id ? (
+                    <ProductForm
+                      product={editingProduct}
+                      setProduct={setEditingProduct}
+                      categories={categories}
+                      onSave={handleSave}
+                      onCancel={() => setEditingProduct(null)}
+                      isCreating={false}
+                      isLoading={updateProductMutation.isPending}
+                    />
+                  ) : (
+                    <div className="flex items-start space-x-4">
+                      {/* Product Image */}
+                      <div className="relative group">
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                          className="w-24 h-24 object-cover rounded-lg"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer rounded-lg flex items-center justify-center transition-opacity">
+                          <Image className="text-white h-5 w-5" />
+                        </div>
+                      </div>
+
+                      {/* Product Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-semibold">{product.name}</h3>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              onClick={() => handleToggleAvailability(product)}
+                              variant={product.isAvailable ? "default" : "secondary"}
+                              size="sm"
+                              data-testid={`button-toggle-${product.id}`}
+                            >
+                              {product.isAvailable ? (
+                                <>
+                                  <ToggleRight className="mr-1 h-3 w-3" />
+                                  Disponível
+                                </>
+                              ) : (
+                                <>
+                                  <ToggleLeft className="mr-1 h-3 w-3" />
+                                  Indisponível
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              onClick={() => handleEdit(product)}
+                              variant="outline"
+                              size="sm"
+                              data-testid={`button-edit-${product.id}`}
+                            >
+                              <Edit3 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              onClick={() => handleDelete(product.id)}
+                              variant="outline"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              data-testid={`button-delete-${product.id}`}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <p className="text-muted-foreground mb-2">{product.description}</p>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            {product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price) && (
+                              <span className="text-sm text-muted-foreground line-through">
+                                R$ {parseFloat(product.originalPrice).toFixed(2)}
+                              </span>
+                            )}
+                            <span className="text-xl font-bold text-accent">
+                              R$ {parseFloat(product.price).toFixed(2)}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline">
+                              {getCategoryName(product.categoryId)}
+                            </Badge>
+                            {product.isFeatured && (
+                              <Badge className="bg-secondary text-secondary-foreground">
+                                Destaque
+                              </Badge>
+                            )}
+                            {product.isPromotion && (
+                              <Badge className="bg-primary text-primary-foreground">
+                                Promoção
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+interface ProductFormProps {
+  product: EditingProduct | null;
+  setProduct: (product: EditingProduct) => void;
+  categories: Category[];
+  onSave: () => void;
+  onCancel: () => void;
+  isCreating: boolean;
+  isLoading: boolean;
+}
+
+function ProductForm({ product, setProduct, categories, onSave, onCancel, isCreating, isLoading }: ProductFormProps) {
+  if (!product) return null;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="name">Nome do Produto *</Label>
+          <Input
+            id="name"
+            value={product.name}
+            onChange={(e) => setProduct({ ...product, name: e.target.value })}
+            placeholder="Ex: X-Bacon Deluxe"
+            data-testid="input-product-name"
+          />
+        </div>
+        <div>
+          <Label htmlFor="category">Categoria *</Label>
+          <Select
+            value={product.categoryId}
+            onValueChange={(value) => setProduct({ ...product, categoryId: value })}
+          >
+            <SelectTrigger data-testid="select-category">
+              <SelectValue placeholder="Selecione a categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.icon} {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="price">Preço *</Label>
+          <Input
+            id="price"
+            type="number"
+            step="0.01"
+            value={product.price}
+            onChange={(e) => setProduct({ ...product, price: e.target.value })}
+            placeholder="18.90"
+            data-testid="input-product-price"
+          />
+        </div>
+        <div>
+          <Label htmlFor="originalPrice">Preço Original (opcional)</Label>
+          <Input
+            id="originalPrice"
+            type="number"
+            step="0.01"
+            value={product.originalPrice}
+            onChange={(e) => setProduct({ ...product, originalPrice: e.target.value })}
+            placeholder="22.90"
+            data-testid="input-original-price"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="description">Descrição *</Label>
+        <Textarea
+          id="description"
+          value={product.description}
+          onChange={(e) => setProduct({ ...product, description: e.target.value })}
+          placeholder="Hambúrguer suculento com bacon crocante, queijo e molho especial"
+          rows={3}
+          data-testid="input-product-description"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="imageUrl">URL da Imagem *</Label>
+        <Input
+          id="imageUrl"
+          value={product.imageUrl}
+          onChange={(e) => setProduct({ ...product, imageUrl: e.target.value })}
+          placeholder="https://images.unsplash.com/photo-..."
+          data-testid="input-image-url"
+        />
+      </div>
+
+      <div className="flex items-center space-x-6">
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={product.isAvailable}
+            onChange={(e) => setProduct({ ...product, isAvailable: e.target.checked })}
+            className="rounded"
+            data-testid="checkbox-available"
+          />
+          <span>Disponível</span>
+        </label>
+
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={product.isFeatured}
+            onChange={(e) => setProduct({ ...product, isFeatured: e.target.checked })}
+            className="rounded"
+            data-testid="checkbox-featured"
+          />
+          <span>Produto em Destaque</span>
+        </label>
+
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={product.isPromotion}
+            onChange={(e) => setProduct({ ...product, isPromotion: e.target.checked })}
+            className="rounded"
+            data-testid="checkbox-promotion"
+          />
+          <span>Em Promoção</span>
+        </label>
+      </div>
+
+      <Separator />
+
+      <div className="flex space-x-2">
+        <Button
+          onClick={onSave}
+          disabled={isLoading || !product.name || !product.description || !product.price || !product.categoryId}
+          className="bg-accent hover:bg-accent/90"
+          data-testid="button-save-product"
+        >
+          <Save className="mr-1 h-4 w-4" />
+          {isLoading ? "Salvando..." : (isCreating ? "Criar Produto" : "Salvar Alterações")}
+        </Button>
+        <Button
+          onClick={onCancel}
+          variant="outline"
+          data-testid="button-cancel-edit"
+        >
+          <X className="mr-1 h-4 w-4" />
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
