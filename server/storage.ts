@@ -118,9 +118,25 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
+  // Helper function to generate unique order number
+  private generateOrderNumber(): string {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const time = now.getHours().toString().padStart(2, '0') + now.getMinutes().toString().padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    
+    return `BH${year}${month}${day}${time}${random}`;
+  }
+
   // Order operations
   async createOrder(orderData: InsertOrder): Promise<Order> {
-    const [order] = await db.insert(orders).values(orderData).returning();
+    const orderNumber = this.generateOrderNumber();
+    const [order] = await db.insert(orders).values({
+      ...orderData,
+      orderNumber
+    }).returning();
     return order;
   }
 

@@ -8,7 +8,10 @@ const createOrderRequestSchema = z.object({
   customerName: z.string().min(1),
   customerPhone: z.string().min(1),
   customerEmail: z.string().email().optional(),
-  deliveryAddress: z.string().min(1),
+  streetName: z.string().min(1),
+  houseNumber: z.string().min(1),
+  neighborhood: z.string().min(1),
+  referencePoint: z.string().optional(),
   paymentMethod: z.string().min(1),
   specialInstructions: z.string().optional(),
   items: z.array(z.object({
@@ -100,7 +103,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerName: requestData.customerName,
         customerPhone: requestData.customerPhone,
         customerEmail: requestData.customerEmail,
-        deliveryAddress: requestData.deliveryAddress,
+        streetName: requestData.streetName,
+        houseNumber: requestData.houseNumber,
+        neighborhood: requestData.neighborhood,
+        referencePoint: requestData.referencePoint,
         paymentMethod: requestData.paymentMethod,
         specialInstructions: requestData.specialInstructions,
         subtotal: subtotal.toFixed(2),
@@ -122,6 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json({ 
         success: true, 
         orderId: order.id,
+        orderNumber: order.orderNumber,
         estimatedDeliveryTime: order.estimatedDeliveryTime 
       });
     } catch (error) {

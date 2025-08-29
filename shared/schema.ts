@@ -40,11 +40,16 @@ export const products = pgTable("products", {
 // Orders table
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderNumber: text("order_number").notNull().unique(), // ID único legível para n8n
   userId: varchar("user_id").references(() => users.id),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),
   customerEmail: text("customer_email"),
-  deliveryAddress: text("delivery_address").notNull(),
+  // Campos separados de endereço
+  streetName: text("street_name").notNull(),
+  houseNumber: text("house_number").notNull(),
+  neighborhood: text("neighborhood").notNull(),
+  referencePoint: text("reference_point"),
   paymentMethod: text("payment_method").notNull(),
   paymentStatus: text("payment_status").default("pending"),
   orderStatus: text("order_status").default("pending"),
@@ -94,6 +99,7 @@ export const insertProductSchema = createInsertSchema(products).omit({
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
+  orderNumber: true, // Generated automatically
   createdAt: true,
   updatedAt: true,
 });

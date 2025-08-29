@@ -23,7 +23,10 @@ export default function Checkout() {
     customerName: "",
     customerPhone: "",
     customerEmail: "",
-    deliveryAddress: "",
+    streetName: "",
+    houseNumber: "",
+    neighborhood: "",
+    referencePoint: "",
     paymentMethod: "",
     specialInstructions: "",
   });
@@ -37,7 +40,7 @@ export default function Checkout() {
       clearCart();
       toast({
         title: "Pedido realizado com sucesso!",
-        description: `Seu pedido foi confirmado. Tempo estimado: ${data.estimatedDeliveryTime} minutos.`,
+        description: `Pedido #${data.orderNumber} confirmado. Tempo estimado: ${data.estimatedDeliveryTime} minutos.`,
       });
       setLocation("/");
     },
@@ -53,7 +56,7 @@ export default function Checkout() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.customerName || !formData.customerPhone || !formData.deliveryAddress || !formData.paymentMethod) {
+    if (!formData.customerName || !formData.customerPhone || !formData.streetName || !formData.houseNumber || !formData.neighborhood || !formData.paymentMethod) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -167,14 +170,51 @@ export default function Checkout() {
                     </div>
 
                     <div>
-                      <Label htmlFor="deliveryAddress">Endereço de Entrega *</Label>
-                      <Textarea
-                        id="deliveryAddress"
-                        value={formData.deliveryAddress}
-                        onChange={(e) => setFormData({...formData, deliveryAddress: e.target.value})}
-                        placeholder="Rua, número, complemento, bairro, cidade"
+                      <Label htmlFor="streetName">Nome da Rua *</Label>
+                      <Input
+                        id="streetName"
+                        value={formData.streetName}
+                        onChange={(e) => setFormData({...formData, streetName: e.target.value})}
+                        placeholder="Ex: Rua das Flores"
                         required
-                        data-testid="input-delivery-address"
+                        data-testid="input-street-name"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="houseNumber">Número da Casa *</Label>
+                        <Input
+                          id="houseNumber"
+                          value={formData.houseNumber}
+                          onChange={(e) => setFormData({...formData, houseNumber: e.target.value})}
+                          placeholder="Ex: 123"
+                          required
+                          data-testid="input-house-number"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="neighborhood">Bairro *</Label>
+                        <Input
+                          id="neighborhood"
+                          value={formData.neighborhood}
+                          onChange={(e) => setFormData({...formData, neighborhood: e.target.value})}
+                          placeholder="Ex: Centro"
+                          required
+                          data-testid="input-neighborhood"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="referencePoint">Ponto de Referência</Label>
+                      <Input
+                        id="referencePoint"
+                        value={formData.referencePoint}
+                        onChange={(e) => setFormData({...formData, referencePoint: e.target.value})}
+                        placeholder="Ex: Próximo ao mercado (opcional)"
+                        data-testid="input-reference-point"
                       />
                     </div>
 
