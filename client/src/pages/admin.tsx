@@ -990,6 +990,7 @@ function StoreInfoManagement() {
   useEffect(() => {
     if (storeSettings && !hasChanges) {
       setFormData({
+        siteName: storeSettings.siteName,
         storeTitle: storeSettings.storeTitle,
         storeImageUrl: storeSettings.storeImageUrl,
         storeAddress: storeSettings.storeAddress,
@@ -1046,12 +1047,25 @@ function StoreInfoManagement() {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Título e Imagem da Loja */}
+        {/* Nome do Site e Título da Loja */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Seção Principal</h3>
+          <h3 className="text-lg font-semibold">Identidade da Marca</h3>
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <Label htmlFor="store-title">Título da Seção</Label>
+              <Label htmlFor="site-name">Nome do Site (Cabeçalho)</Label>
+              <Input
+                id="site-name"
+                value={formData.siteName || ""}
+                onChange={(e) => handleInputChange('siteName', e.target.value)}
+                placeholder="Ex: Burger House"
+                data-testid="input-site-name"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Nome que aparece no cabeçalho do site (🍔 Nome)
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="store-title">Título da Seção Nossa Loja</Label>
               <Input
                 id="store-title"
                 value={formData.storeTitle || ""}

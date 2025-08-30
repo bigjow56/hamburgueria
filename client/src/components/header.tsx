@@ -4,11 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useCart } from "@/hooks/use-cart";
 import { Menu, ShoppingCart } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { StoreSettings } from "@shared/schema";
 
 export default function Header() {
   const [, setLocation] = useLocation();
   const { itemCount, toggleCartSidebar } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const { data: storeSettings } = useQuery<StoreSettings>({
+    queryKey: ["/api/store/settings"],
+  });
+
+  const siteName = storeSettings?.siteName || "Burger House";
 
   const scrollToSection = (sectionId: string) => {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
@@ -25,7 +33,7 @@ export default function Header() {
               className="flex-shrink-0"
               data-testid="button-home"
             >
-              <h1 className="text-xl font-bold text-primary">🍔 Burger House</h1>
+              <h1 className="text-xl font-bold text-primary">🍔 {siteName}</h1>
             </button>
           </div>
           
@@ -71,7 +79,7 @@ export default function Header() {
               </SheetTrigger>
               <SheetContent side="left">
                 <div className="flex flex-col space-y-4 mt-8">
-                  <h2 className="text-xl font-bold text-primary mb-4">🍔 Burger House</h2>
+                  <h2 className="text-xl font-bold text-primary mb-4">🍔 {siteName}</h2>
                   <Button
                     variant="ghost"
                     onClick={() => scrollToSection('menu')}

@@ -91,6 +91,8 @@ export const storeSettings = pgTable("store_settings", {
   
   // Informações da loja (seção Nossa Loja)
   storeTitle: text("store_title").default("Nossa Loja"),
+  // Nome da loja no cabeçalho
+  siteName: text("site_name").default("Burger House"),
   storeImageUrl: text("store_image_url").default(""),
   storeAddress: text("store_address").default("Rua das Delícias, 123"),
   storeNeighborhood: text("store_neighborhood").default("Centro, São Paulo - SP"),
