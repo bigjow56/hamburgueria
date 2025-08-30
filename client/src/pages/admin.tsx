@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags, ShoppingBag, BarChart3 } from "lucide-react";
 import { AdminDeliveryZones } from "@/components/admin-delivery-zones";
 import type { Product, Category, DeliveryZone, StoreSettings, Order, OrderItem } from "@shared/schema";
 
@@ -266,14 +266,25 @@ export default function Admin() {
                 </div>
                 <p className="text-muted-foreground">Gerencie seus produtos sem mexer no código</p>
               </div>
-              <Button 
-                onClick={startNewProduct}
-                className="bg-accent hover:bg-accent/90 text-accent-foreground"
-                data-testid="button-new-product"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Produto
-              </Button>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => setLocation("/admin/analytics")}
+                  variant="outline"
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  data-testid="button-analytics"
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Analytics
+                </Button>
+                <Button 
+                  onClick={startNewProduct}
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                  data-testid="button-new-product"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Produto
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

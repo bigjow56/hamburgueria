@@ -122,6 +122,17 @@ export const deliveryZones = pgTable("delivery_zones", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Expenses table for financial analytics
+export const expenses = pgTable("expenses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  category: text("category").notNull(), // ex: ingredientes, marketing, aluguel, etc
+  date: timestamp("date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -154,6 +165,12 @@ export const insertDeliveryZoneSchema = createInsertSchema(deliveryZones).omit({
   updatedAt: true,
 });
 
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -172,5 +189,8 @@ export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 
 export type DeliveryZone = typeof deliveryZones.$inferSelect;
 export type InsertDeliveryZone = z.infer<typeof insertDeliveryZoneSchema>;
+
+export type Expense = typeof expenses.$inferSelect;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 
 export type StoreSettings = typeof storeSettings.$inferSelect;

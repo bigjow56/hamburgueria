@@ -1,0 +1,134 @@
+Prompt para Replit - Dashboard Analytics Financeiro
+
+Crie um dashboard analytics financeiro completo em React com as seguintes especificações detalhadas:
+
+🎯 Funcionalidades Principais
+
+1. Sistema de Seleção de Período Avançado:
+
+Botões de período rápido: 7 dias, 30 dias, 3 meses, 6 meses, 1 ano
+
+Seletor de datas personalizado (data inicial e final)
+
+Validação de datas para o ano de 2024
+
+Resumo visual do período selecionado com contagem de dias
+
+Agrupamento inteligente dos dados baseado na duração:
+
+≤31 dias: visualização diária
+
+32-180 dias: agrupamento semanal
+
+180 dias: agrupamento mensal
+
+2. KPIs (Indicadores-Chave):
+
+Card de Faturamento Total com percentual de crescimento (+12.5%)
+
+Card de Despesas Totais com variação (-5.2%)
+
+Card de Lucro Líquido calculado automaticamente (+18.7%)
+
+Card de Clientes Médios no período (+8.3%)
+
+Todos com ícones coloridos e indicadores de tendência (setas)
+
+3. Visualizações de Dados:
+
+Gráfico de Área: Evolução do faturamento com gradiente verde
+
+Gráfico de Barras: Comparação faturamento vs despesas
+
+Gráfico de Linha: Tendência de lucro ao longo do tempo
+
+Gráfico Pizza: Distribuição entre faturamento e despesas
+
+📊 Especificações Técnicas
+
+Bibliotecas Necessárias:
+
+React com useState e useMemo
+
+Recharts para gráficos (LineChart, AreaChart, BarChart, PieChart)
+
+Lucide-react para ícones
+
+Tailwind CSS para estilização
+
+Estrutura de Dados:
+
+javascript
+
+// Gerar dados simulados para cada dia de 2024
+{
+  date: "2024-01-01",
+  faturamento: valor_aleatorio,
+  despesas: valor_aleatorio,
+  lucro: faturamento - despesas,
+  clientes: numero_aleatorio
+}
+
+Funcionalidades de Agrupamento:
+
+Função para agrupar dados por dia/semana/mês automaticamente
+
+Labels dinâmicos baseados no período (dd/mm, Sem dd/mm, mmm yyyy)
+
+Cálculos de médias para clientes quando agrupando
+
+🎨 Design e UX
+
+Layout:
+
+Header com título "Dashboard Analytics"
+
+Seção de seleção de período em card branco com fundo azul claro
+
+Grid de 4 KPIs em cards brancos com sombras suaves
+
+Grid 2x2 para os gráficos principais
+
+Responsivo (mobile e desktop)
+
+Paleta de Cores:
+
+Verde (#10b981) para faturamento/positivo
+
+Vermelho (#ef4444) para despesas/negativo
+
+Azul (#3b82f6) para lucro
+
+Roxo (#8b5cf6) para clientes
+
+Fundo cinza claro (#f9fafb)
+
+Componentes Visuais:
+
+Cards com bordas arredondadas (rounded-xl)
+
+Sombras suaves (shadow-sm)
+
+Gradientes nos gráficos de área
+
+Hover effects nos botões
+
+Formatação monetária em Real brasileiro (R$)
+
+Funções Principais:
+
+generateData(): gera 365 dias de dados simulados
+
+groupDataByPeriod(): agrupa dados por período
+
+setQuickPeriodHandler(): define períodos rápidos
+
+formatCurrency(): formata valores em R$
+
+Responsividade:
+
+Grid adaptativo (grid-cols-1 md:grid-cols-4)
+
+Flex responsivo para seletor de período
+
+Gráficos com ResponsiveContainer

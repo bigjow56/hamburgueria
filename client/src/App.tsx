@@ -9,6 +9,7 @@ import Home from "@/pages/home";
 import Checkout from "@/pages/checkout";
 import Admin from "@/pages/admin";
 import AdminLogin from "@/pages/admin-login";
+import Analytics from "@/pages/analytics";
 
 function Router() {
   return (
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
+      <Route path="/admin/analytics" component={Analytics} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema } from "@shared/schema";
+import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema } from "@shared/schema";
 import { z } from "zod";
 
 const createOrderRequestSchema = z.object({
@@ -451,6 +451,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating order payment status:", error);
       res.status(500).json({ message: "Failed to update order payment status" });
+    }
+  });
+
+  // Expenses
+  app.get("/api/expenses", async (req, res) => {
+    try {
+      const expenses = await storage.getExpenses();
+      res.json(expenses);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+      res.status(500).json({ message: "Failed to fetch expenses" });
+    }
+  });
+
+  app.post("/api/expenses", async (req, res) => {
+    try {
+      const result = insertExpenseSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid expense data", errors: result.error.errors });
+      }
+
+      const expense = await storage.createExpense(result.data);
+      res.status(201).json(expense);
+    } catch (error) {
+      console.error("Error creating expense:", error);
+      res.status(500).json({ message: "Failed to create expense" });
+    }
+  });
+
+  app.put("/api/expenses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = insertExpenseSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid expense data", errors: result.error.errors });
+      }
+
+      const expense = await storage.updateExpense(id, result.data);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+
+      res.json(expense);
+    } catch (error) {
+      console.error("Error updating expense:", error);
+      res.status(500).json({ message: "Failed to update expense" });
+    }
+  });
+
+  app.delete("/api/expenses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteExpense(id);
+      if (!success) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+
+      res.json({ message: "Expense deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      res.status(500).json({ message: "Failed to delete expense" });
     }
   });
 

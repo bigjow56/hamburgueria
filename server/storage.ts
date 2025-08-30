@@ -6,6 +6,7 @@ import {
   orderItems,
   storeSettings,
   deliveryZones,
+  expenses,
   type User,
   type InsertUser,
   type Category,
@@ -19,6 +20,8 @@ import {
   type StoreSettings,
   type DeliveryZone,
   type InsertDeliveryZone,
+  type Expense,
+  type InsertExpense,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -62,6 +65,13 @@ export interface IStorage {
   updateDeliveryZone(id: string, zone: Partial<InsertDeliveryZone>): Promise<DeliveryZone | undefined>;
   deleteDeliveryZone(id: string): Promise<boolean>;
   getDeliveryFeeByNeighborhood(neighborhood: string): Promise<number | null>;
+  
+  // Expenses
+  getExpenses(): Promise<Expense[]>;
+  getExpense(id: string): Promise<Expense | undefined>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: string, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
+  deleteExpense(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -262,6 +272,38 @@ export class DatabaseStorage implements IStorage {
       ));
     
     return zone ? parseFloat(zone.deliveryFee) : null;
+  }
+
+  // Expenses operations
+  async getExpenses(): Promise<Expense[]> {
+    return await db
+      .select()
+      .from(expenses)
+      .orderBy(desc(expenses.date), desc(expenses.createdAt));
+  }
+
+  async getExpense(id: string): Promise<Expense | undefined> {
+    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
+    return expense;
+  }
+
+  async createExpense(expenseData: InsertExpense): Promise<Expense> {
+    const [expense] = await db.insert(expenses).values(expenseData).returning();
+    return expense;
+  }
+
+  async updateExpense(id: string, expenseData: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const [expense] = await db
+      .update(expenses)
+      .set({ ...expenseData, updatedAt: new Date() })
+      .where(eq(expenses.id, id))
+      .returning();
+    return expense;
+  }
+
+  async deleteExpense(id: string): Promise<boolean> {
+    const result = await db.delete(expenses).where(eq(expenses.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 
