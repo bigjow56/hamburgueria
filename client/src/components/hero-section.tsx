@@ -15,14 +15,39 @@ export default function HeroSection({ storeSettings, onScrollToMenu }: HeroSecti
   const bannerDescription = storeSettings?.bannerDescription ?? "Ingredientes frescos, sabor incomparável.";
   const bannerPrice = storeSettings?.bannerPrice ?? "18.90";
   const bannerImageUrl = storeSettings?.bannerImageUrl ?? "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600";
+  
+  // Configurações de aparência do banner
+  const bannerColor1 = storeSettings?.bannerColor1 ?? "#ff6b35";
+  const bannerColor2 = storeSettings?.bannerColor2 ?? "#f7931e";
+  const bannerColor3 = storeSettings?.bannerColor3 ?? "#ffd23f";
+  const bannerColor4 = storeSettings?.bannerColor4 ?? "#ff8c42";
+  const bannerBackgroundImage = storeSettings?.bannerBackgroundImage;
+  const useImageBackground = storeSettings?.bannerUseImageBackground ?? false;
+  
   const openWhatsApp = () => {
     const message = "Olá! Gostaria de fazer um pedido na Burger House.";
     const phone = "5511999999999"; // Replace with actual WhatsApp number
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  // Criar o estilo dinâmico do banner
+  const bannerStyle = useImageBackground && bannerBackgroundImage 
+    ? {
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${bannerBackgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }
+    : {
+        background: `linear-gradient(135deg, ${bannerColor1} 0%, ${bannerColor2} 25%, ${bannerColor3} 75%, ${bannerColor4} 100%)`,
+        boxShadow: `0 8px 32px ${bannerColor1}30`
+      };
+
   return (
-    <section className="hero-gradient relative overflow-hidden">
+    <section 
+      className="relative overflow-hidden"
+      style={bannerStyle}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
           <div className="text-center lg:text-left">

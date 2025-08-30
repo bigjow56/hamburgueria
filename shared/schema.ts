@@ -89,6 +89,14 @@ export const storeSettings = pgTable("store_settings", {
   bannerPrice: decimal("banner_price", { precision: 10, scale: 2 }).default("18.90"),
   bannerImageUrl: text("banner_image_url").default(""),
   
+  // Personalização visual do banner
+  bannerColor1: text("banner_color_1").default("#ff6b35"),
+  bannerColor2: text("banner_color_2").default("#f7931e"),
+  bannerColor3: text("banner_color_3").default("#ffd23f"),
+  bannerColor4: text("banner_color_4").default("#ff8c42"),
+  bannerBackgroundImage: text("banner_background_image"),
+  bannerUseImageBackground: boolean("banner_use_image_background").default(false),
+  
   // Informações da loja (seção Nossa Loja)
   storeTitle: text("store_title").default("Nossa Loja"),
   // Nome da loja no cabeçalho

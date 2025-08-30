@@ -836,6 +836,12 @@ function BannerManagement() {
         bannerDescription: storeSettings.bannerDescription,
         bannerPrice: storeSettings.bannerPrice,
         bannerImageUrl: storeSettings.bannerImageUrl,
+        bannerColor1: storeSettings.bannerColor1,
+        bannerColor2: storeSettings.bannerColor2,
+        bannerColor3: storeSettings.bannerColor3,
+        bannerColor4: storeSettings.bannerColor4,
+        bannerBackgroundImage: storeSettings.bannerBackgroundImage,
+        bannerUseImageBackground: storeSettings.bannerUseImageBackground,
       });
     }
   }, [storeSettings, hasChanges]);
@@ -946,6 +952,97 @@ function BannerManagement() {
           </div>
         )}
 
+        {/* Personalização Visual */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">🎨 Aparência do Banner</h3>
+          
+          {/* Opção de usar imagem de fundo */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="use-image-background"
+              checked={formData.bannerUseImageBackground || false}
+              onChange={(e) => handleInputChange('bannerUseImageBackground', e.target.checked.toString())}
+              className="rounded"
+              data-testid="checkbox-use-image-background"
+            />
+            <Label htmlFor="use-image-background">Usar imagem de fundo (em vez de gradiente)</Label>
+          </div>
+
+          {/* URL da imagem de fundo */}
+          {formData.bannerUseImageBackground && (
+            <div>
+              <Label htmlFor="banner-background-image">URL da Imagem de Fundo</Label>
+              <Input
+                id="banner-background-image"
+                value={formData.bannerBackgroundImage || ""}
+                onChange={(e) => handleInputChange('bannerBackgroundImage', e.target.value)}
+                placeholder="https://exemplo.com/imagem-fundo.jpg"
+                data-testid="input-banner-background-image"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Imagem que cobrirá todo o fundo do banner
+              </p>
+            </div>
+          )}
+
+          {/* Cores do gradiente */}
+          {!formData.bannerUseImageBackground && (
+            <div>
+              <Label>Cores do Gradiente</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                <div>
+                  <Label htmlFor="banner-color-1" className="text-sm">Cor 1</Label>
+                  <Input
+                    type="color"
+                    id="banner-color-1"
+                    value={formData.bannerColor1 || "#ff6b35"}
+                    onChange={(e) => handleInputChange('bannerColor1', e.target.value)}
+                    className="h-12 w-full"
+                    data-testid="input-banner-color-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="banner-color-2" className="text-sm">Cor 2</Label>
+                  <Input
+                    type="color"
+                    id="banner-color-2"
+                    value={formData.bannerColor2 || "#f7931e"}
+                    onChange={(e) => handleInputChange('bannerColor2', e.target.value)}
+                    className="h-12 w-full"
+                    data-testid="input-banner-color-2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="banner-color-3" className="text-sm">Cor 3</Label>
+                  <Input
+                    type="color"
+                    id="banner-color-3"
+                    value={formData.bannerColor3 || "#ffd23f"}
+                    onChange={(e) => handleInputChange('bannerColor3', e.target.value)}
+                    className="h-12 w-full"
+                    data-testid="input-banner-color-3"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="banner-color-4" className="text-sm">Cor 4</Label>
+                  <Input
+                    type="color"
+                    id="banner-color-4"
+                    value={formData.bannerColor4 || "#ff8c42"}
+                    onChange={(e) => handleInputChange('bannerColor4', e.target.value)}
+                    className="h-12 w-full"
+                    data-testid="input-banner-color-4"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                O gradiente vai da Cor 1 → Cor 2 → Cor 3 → Cor 4
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end gap-2">
           <Button
             type="button"
@@ -956,6 +1053,12 @@ function BannerManagement() {
                 bannerDescription: storeSettings?.bannerDescription,
                 bannerPrice: storeSettings?.bannerPrice,
                 bannerImageUrl: storeSettings?.bannerImageUrl,
+                bannerColor1: storeSettings?.bannerColor1,
+                bannerColor2: storeSettings?.bannerColor2,
+                bannerColor3: storeSettings?.bannerColor3,
+                bannerColor4: storeSettings?.bannerColor4,
+                bannerBackgroundImage: storeSettings?.bannerBackgroundImage,
+                bannerUseImageBackground: storeSettings?.bannerUseImageBackground,
               });
               setHasChanges(false);
             }}
