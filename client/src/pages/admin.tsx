@@ -256,10 +256,18 @@ export default function Admin() {
 
         {/* Admin Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="products" className="flex items-center">
               <Edit3 className="mr-2 h-4 w-4" />
               Produtos
+            </TabsTrigger>
+            <TabsTrigger value="banner" className="flex items-center">
+              <Image className="mr-2 h-4 w-4" />
+              Banner
+            </TabsTrigger>
+            <TabsTrigger value="store-info" className="flex items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              Loja
             </TabsTrigger>
             <TabsTrigger value="delivery" className="flex items-center">
               <MapPin className="mr-2 h-4 w-4" />
@@ -411,6 +419,14 @@ export default function Admin() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="banner" className="space-y-6">
+            <BannerManagement />
+          </TabsContent>
+
+          <TabsContent value="store-info" className="space-y-6">
+            <StoreInfoManagement />
           </TabsContent>
 
           <TabsContent value="delivery">
@@ -575,5 +591,305 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
         </Button>
       </div>
     </div>
+  );
+}
+
+// Banner Management Component
+function BannerManagement() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: storeSettings } = useQuery<StoreSettings>({
+    queryKey: ["/api/store/settings"],
+  });
+
+  const updateStoreSettingsMutation = useMutation({
+    mutationFn: async (data: Partial<StoreSettings>) => {
+      return await apiRequest("PUT", "/api/store/settings", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/store/settings"] });
+      toast({
+        title: "Banner atualizado!",
+        description: "As alterações foram salvas com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao atualizar banner",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveBanner = (data: Partial<StoreSettings>) => {
+    updateStoreSettingsMutation.mutate(data);
+  };
+
+  if (!storeSettings) return <div>Carregando...</div>;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Image className="mr-2 h-5 w-5" />
+          Gerenciar Banner Principal
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Configure o banner que aparece no topo do site
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="banner-title">Título do Banner</Label>
+            <Input
+              id="banner-title"
+              value={storeSettings.bannerTitle || ""}
+              onChange={(e) => handleSaveBanner({ bannerTitle: e.target.value })}
+              placeholder="Ex: Hambúrguers"
+              data-testid="input-banner-title"
+            />
+          </div>
+          <div>
+            <Label htmlFor="banner-price">Preço</Label>
+            <Input
+              id="banner-price"
+              value={storeSettings.bannerPrice || ""}
+              onChange={(e) => handleSaveBanner({ bannerPrice: e.target.value })}
+              placeholder="Ex: 18.90"
+              data-testid="input-banner-price"
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="banner-description">Descrição</Label>
+          <Textarea
+            id="banner-description"
+            value={storeSettings.bannerDescription || ""}
+            onChange={(e) => handleSaveBanner({ bannerDescription: e.target.value })}
+            placeholder="Ex: Ingredientes frescos, sabor incomparável."
+            rows={3}
+            data-testid="textarea-banner-description"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="banner-image">URL da Imagem</Label>
+          <Input
+            id="banner-image"
+            value={storeSettings.bannerImageUrl || ""}
+            onChange={(e) => handleSaveBanner({ bannerImageUrl: e.target.value })}
+            placeholder="https://exemplo.com/imagem-banner.jpg"
+            data-testid="input-banner-image"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Cole aqui a URL de uma imagem (recomendado: 600x400px)
+          </p>
+        </div>
+
+        {storeSettings.bannerImageUrl && (
+          <div>
+            <Label>Preview da Imagem</Label>
+            <div className="border rounded-lg p-4 bg-muted">
+              <img
+                src={storeSettings.bannerImageUrl}
+                alt="Preview banner"
+                className="max-w-full h-48 object-cover rounded-lg mx-auto"
+              />
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Store Info Management Component
+function StoreInfoManagement() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: storeSettings } = useQuery<StoreSettings>({
+    queryKey: ["/api/store/settings"],
+  });
+
+  const updateStoreSettingsMutation = useMutation({
+    mutationFn: async (data: Partial<StoreSettings>) => {
+      return await apiRequest("PUT", "/api/store/settings", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/store/settings"] });
+      toast({
+        title: "Informações atualizadas!",
+        description: "As alterações foram salvas com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao atualizar informações",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveInfo = (data: Partial<StoreSettings>) => {
+    updateStoreSettingsMutation.mutate(data);
+  };
+
+  if (!storeSettings) return <div>Carregando...</div>;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Settings className="mr-2 h-5 w-5" />
+          Informações da Loja
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Configure as informações que aparecem na seção "Nossa Loja"
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Título e Imagem da Loja */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Seção Principal</h3>
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <Label htmlFor="store-title">Título da Seção</Label>
+              <Input
+                id="store-title"
+                value={storeSettings.storeTitle || ""}
+                onChange={(e) => handleSaveInfo({ storeTitle: e.target.value })}
+                placeholder="Ex: Nossa Loja"
+                data-testid="input-store-title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="store-image">URL da Imagem da Loja</Label>
+              <Input
+                id="store-image"
+                value={storeSettings.storeImageUrl || ""}
+                onChange={(e) => handleSaveInfo({ storeImageUrl: e.target.value })}
+                placeholder="https://exemplo.com/imagem-loja.jpg"
+                data-testid="input-store-image"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Foto do interior/exterior da hamburgueria
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Informações de Localização */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Localização</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="store-address">Endereço</Label>
+              <Input
+                id="store-address"
+                value={storeSettings.storeAddress || ""}
+                onChange={(e) => handleSaveInfo({ storeAddress: e.target.value })}
+                placeholder="Ex: Rua das Delícias, 123"
+                data-testid="input-store-address"
+              />
+            </div>
+            <div>
+              <Label htmlFor="store-neighborhood">Bairro/Cidade</Label>
+              <Input
+                id="store-neighborhood"
+                value={storeSettings.storeNeighborhood || ""}
+                onChange={(e) => handleSaveInfo({ storeNeighborhood: e.target.value })}
+                placeholder="Ex: Centro, São Paulo - SP"
+                data-testid="input-store-neighborhood"
+              />
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Horários e Funcionamento */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Funcionamento</h3>
+          <div>
+            <Label htmlFor="store-hours">Horário de Funcionamento</Label>
+            <Textarea
+              id="store-hours"
+              value={storeSettings.storeHours || ""}
+              onChange={(e) => handleSaveInfo({ storeHours: e.target.value })}
+              placeholder="Segunda a Sexta: 18h - 23h
+Sábado e Domingo: 18h - 00h"
+              rows={3}
+              data-testid="textarea-store-hours"
+            />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Entrega e Pagamento */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Entrega e Pagamento</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="delivery-time">Tempo de Entrega</Label>
+              <Input
+                id="delivery-time"
+                value={storeSettings.deliveryTime || ""}
+                onChange={(e) => handleSaveInfo({ deliveryTime: e.target.value })}
+                placeholder="Ex: Tempo médio: 30-45 minutos"
+                data-testid="input-delivery-time"
+              />
+            </div>
+            <div>
+              <Label htmlFor="delivery-fee-range">Faixa de Taxa de Entrega</Label>
+              <Input
+                id="delivery-fee-range"
+                value={storeSettings.deliveryFeeRange || ""}
+                onChange={(e) => handleSaveInfo({ deliveryFeeRange: e.target.value })}
+                placeholder="Ex: Taxa: R$ 3,90 - R$ 8,90"
+                data-testid="input-delivery-fee-range"
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="payment-methods">Métodos de Pagamento</Label>
+            <Textarea
+              id="payment-methods"
+              value={storeSettings.paymentMethods || ""}
+              onChange={(e) => handleSaveInfo({ paymentMethods: e.target.value })}
+              placeholder="Dinheiro, Cartão, PIX
+Mercado Pago integrado"
+              rows={3}
+              data-testid="textarea-payment-methods"
+            />
+          </div>
+        </div>
+
+        {/* Preview da Imagem da Loja */}
+        {storeSettings.storeImageUrl && (
+          <>
+            <Separator />
+            <div>
+              <Label>Preview da Imagem da Loja</Label>
+              <div className="border rounded-lg p-4 bg-muted">
+                <img
+                  src={storeSettings.storeImageUrl}
+                  alt="Preview loja"
+                  className="max-w-full h-48 object-cover rounded-lg mx-auto"
+                />
+              </div>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

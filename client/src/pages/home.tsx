@@ -58,9 +58,7 @@ export default function Home() {
       
       <main>
         <HeroSection 
-          isOpen={storeSettings?.isOpen ?? true}
-          closingTime={storeSettings?.closingTime ?? "23:00"}
-          minimumOrder={storeSettings?.minimumOrderAmount ?? "25.00"}
+          storeSettings={storeSettings}
           onScrollToMenu={scrollToMenu}
         />
 
@@ -161,7 +159,7 @@ export default function Home() {
           </div>
         </section>
 
-        <StoreInfo />
+        <StoreInfo storeSettings={storeSettings} />
       </main>
 
       <Footer />

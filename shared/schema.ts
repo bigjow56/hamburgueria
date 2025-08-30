@@ -82,6 +82,23 @@ export const storeSettings = pgTable("store_settings", {
   // Novos campos para taxa de entrega por bairro
   useNeighborhoodDelivery: boolean("use_neighborhood_delivery").default(false),
   defaultDeliveryFee: decimal("default_delivery_fee", { precision: 10, scale: 2 }).default("5.90"),
+  
+  // Banner principal (seção topo)
+  bannerTitle: text("banner_title").default("Hambúrguers"),
+  bannerDescription: text("banner_description").default("Ingredientes frescos, sabor incomparável."),
+  bannerPrice: decimal("banner_price", { precision: 10, scale: 2 }).default("18.90"),
+  bannerImageUrl: text("banner_image_url").default(""),
+  
+  // Informações da loja (seção Nossa Loja)
+  storeTitle: text("store_title").default("Nossa Loja"),
+  storeImageUrl: text("store_image_url").default(""),
+  storeAddress: text("store_address").default("Rua das Delícias, 123"),
+  storeNeighborhood: text("store_neighborhood").default("Centro, São Paulo - SP"),
+  storeHours: text("store_hours").default("Segunda a Sexta: 18h - 23h\nSábado e Domingo: 18h - 00h"),
+  deliveryTime: text("delivery_time").default("Tempo médio: 30-45 minutos"),
+  deliveryFeeRange: text("delivery_fee_range").default("Taxa: R$ 3,90 - R$ 8,90"),
+  paymentMethods: text("payment_methods").default("Dinheiro, Cartão, PIX\nMercado Pago integrado"),
+  
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 

@@ -1,14 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import type { StoreSettings } from "@shared/schema";
 
 interface HeroSectionProps {
-  isOpen: boolean;
-  closingTime: string;
-  minimumOrder: string;
+  storeSettings: StoreSettings | null;
   onScrollToMenu: () => void;
 }
 
-export default function HeroSection({ isOpen, closingTime, minimumOrder, onScrollToMenu }: HeroSectionProps) {
+export default function HeroSection({ storeSettings, onScrollToMenu }: HeroSectionProps) {
+  const isOpen = storeSettings?.isOpen ?? true;
+  const closingTime = storeSettings?.closingTime ?? "23:00";
+  const minimumOrder = storeSettings?.minimumOrderAmount ?? "25.00";
+  const bannerTitle = storeSettings?.bannerTitle ?? "Hambúrguers";
+  const bannerDescription = storeSettings?.bannerDescription ?? "Ingredientes frescos, sabor incomparável.";
+  const bannerPrice = storeSettings?.bannerPrice ?? "18.90";
+  const bannerImageUrl = storeSettings?.bannerImageUrl ?? "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600";
   const openWhatsApp = () => {
     const message = "Olá! Gostaria de fazer um pedido na Burger House.";
     const phone = "5511999999999"; // Replace with actual WhatsApp number
@@ -33,12 +39,12 @@ export default function HeroSection({ isOpen, closingTime, minimumOrder, onScrol
             
             <h1 className="text-4xl lg:text-6xl font-bold text-primary-foreground mb-4">
               Os Melhores<br />
-              <span className="text-secondary">Hambúrguers</span><br />
+              <span className="text-secondary">{bannerTitle}</span><br />
               da Cidade
             </h1>
             
             <p className="text-xl text-primary-foreground/90 mb-6">
-              Ingredientes frescos, sabor incomparável.<br />
+              {bannerDescription}<br />
               <span className="font-semibold">Pedido mínimo: R$ {minimumOrder}</span>
             </p>
             
@@ -63,13 +69,13 @@ export default function HeroSection({ isOpen, closingTime, minimumOrder, onScrol
           
           <div className="relative">
             <img 
-              src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600" 
-              alt="Hambúrguer artesanal gourmet" 
+              src={bannerImageUrl} 
+              alt={`${bannerTitle} artesanal gourmet`} 
               className="rounded-2xl shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500 w-full" 
             />
             
             <div className="absolute -bottom-4 -left-4 bg-secondary text-secondary-foreground px-6 py-3 rounded-xl shadow-lg font-bold">
-              <span className="text-2xl">R$ 18,90</span>
+              <span className="text-2xl">R$ {bannerPrice}</span>
             </div>
           </div>
         </div>
