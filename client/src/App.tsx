@@ -8,12 +8,14 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Checkout from "@/pages/checkout";
 import Admin from "@/pages/admin";
+import AdminLogin from "@/pages/admin-login";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/checkout" component={Checkout} />
+      <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>

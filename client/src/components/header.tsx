@@ -45,13 +45,6 @@ export default function Header() {
               >
                 INFO
               </button>
-              <button
-                onClick={() => setLocation('/admin')}
-                className="text-muted-foreground hover:text-primary transition-colors px-3 py-2 font-medium"
-                data-testid="nav-admin"
-              >
-                ADMIN
-              </button>
             </div>
           </nav>
 
@@ -94,17 +87,6 @@ export default function Header() {
                     data-testid="mobile-nav-info"
                   >
                     INFO
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setLocation('/admin');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="justify-start"
-                    data-testid="mobile-nav-admin"
-                  >
-                    ADMIN
                   </Button>
                 </div>
               </SheetContent>
