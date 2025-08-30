@@ -81,6 +81,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/categories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if there are products using this category
+      const productsInCategory = await storage.getProductsByCategory(id);
+      if (productsInCategory.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete category with existing products",
+          productsCount: productsInCategory.length 
+        });
+      }
+
+      const success = await storage.deleteCategory(id);
+      if (!success) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+
+      res.json({ message: "Category deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      res.status(500).json({ message: "Failed to delete category" });
+    }
+  });
+
   // Products
   app.get("/api/products", async (req, res) => {
     try {

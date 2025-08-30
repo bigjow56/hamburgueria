@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings } from "lucide-react";
+import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags } from "lucide-react";
 import { AdminDeliveryZones } from "@/components/admin-delivery-zones";
 import type { Product, Category, DeliveryZone, StoreSettings } from "@shared/schema";
 
@@ -47,6 +47,30 @@ export default function Admin() {
   const [editingDeliveryZone, setEditingDeliveryZone] = useState<EditingDeliveryZone | null>(null);
   const [showNewZoneForm, setShowNewZoneForm] = useState(false);
   const [activeTab, setActiveTab] = useState("products");
+
+  // Delete category mutation
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      return await apiRequest("DELETE", `/api/categories/${categoryId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      toast({
+        title: "Categoria removida!",
+        description: "Categoria foi removida com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      const message = error.message?.includes("existing products") 
+        ? "Não é possível deletar categoria que possui produtos cadastrados."
+        : "Erro ao remover categoria. Tente novamente.";
+      toast({
+        title: "Erro ao remover categoria",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -256,10 +280,14 @@ export default function Admin() {
 
         {/* Admin Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="products" className="flex items-center">
               <Edit3 className="mr-2 h-4 w-4" />
               Produtos
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center">
+              <Tags className="mr-2 h-4 w-4" />
+              Categorias
             </TabsTrigger>
             <TabsTrigger value="banner" className="flex items-center">
               <Image className="mr-2 h-4 w-4" />
@@ -427,6 +455,10 @@ export default function Admin() {
 
           <TabsContent value="store-info" className="space-y-6">
             <StoreInfoManagement />
+          </TabsContent>
+
+          <TabsContent value="categories" className="space-y-6">
+            <CategoryManagement />
           </TabsContent>
 
           <TabsContent value="delivery">
