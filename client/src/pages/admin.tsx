@@ -280,14 +280,10 @@ export default function Admin() {
 
         {/* Admin Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="products" className="flex items-center">
               <Edit3 className="mr-2 h-4 w-4" />
               Produtos
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center">
-              <Tags className="mr-2 h-4 w-4" />
-              Categorias
             </TabsTrigger>
             <TabsTrigger value="banner" className="flex items-center">
               <Image className="mr-2 h-4 w-4" />
@@ -457,10 +453,6 @@ export default function Admin() {
             <StoreInfoManagement />
           </TabsContent>
 
-          <TabsContent value="categories" className="space-y-6">
-            <CategoryManagement />
-          </TabsContent>
-
           <TabsContent value="delivery">
             <AdminDeliveryZones />
           </TabsContent>
@@ -542,6 +534,35 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
     createCategoryMutation.mutate(newCategory);
   };
 
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      return await apiRequest("DELETE", `/api/categories/${categoryId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      toast({
+        title: "Categoria removida!",
+        description: "Categoria foi removida com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      const message = error.message?.includes("existing products") 
+        ? "Não é possível deletar categoria que possui produtos cadastrados."
+        : "Erro ao remover categoria. Tente novamente.";
+      toast({
+        title: "Erro ao remover categoria",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteCategory = (categoryId: string, categoryName: string) => {
+    if (confirm(`Tem certeza que deseja remover a categoria "${categoryName}"?`)) {
+      deleteCategoryMutation.mutate(categoryId);
+    }
+  };
+
   if (!product) return null;
 
   return (
@@ -576,17 +597,45 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
               </SelectContent>
             </Select>
             
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowNewCategoryForm(!showNewCategoryForm)}
-              className="w-full"
-              data-testid="button-new-category"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {showNewCategoryForm ? 'Cancelar' : 'Criar Nova Categoria'}
-            </Button>
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNewCategoryForm(!showNewCategoryForm)}
+                className="w-full"
+                data-testid="button-new-category"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                {showNewCategoryForm ? 'Cancelar' : 'Criar Nova Categoria'}
+              </Button>
+              
+              {categories.length > 0 && (
+                <div className="text-sm">
+                  <Label className="text-xs text-muted-foreground">Categorias existentes:</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {categories.map((category) => (
+                      <div
+                        key={category.id}
+                        className="flex items-center bg-muted rounded px-2 py-1 text-xs"
+                      >
+                        <span className="mr-1">{category.icon}</span>
+                        <span className="mr-2">{category.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteCategory(category.id, category.name)}
+                          className="h-4 w-4 p-0 text-destructive hover:text-destructive"
+                          data-testid={`button-delete-category-${category.slug}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             
             {showNewCategoryForm && (
               <Card className="p-4 bg-muted/30">
