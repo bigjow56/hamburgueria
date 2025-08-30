@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCart } from "@/hooks/use-cart";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,10 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, CreditCard, DollarSign, Smartphone } from "lucide-react";
+import type { StoreSettings, DeliveryZone } from "@shared/schema";
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
@@ -31,6 +32,18 @@ export default function Checkout() {
     referencePoint: "",
     paymentMethod: "",
     specialInstructions: "",
+  });
+
+  const [deliveryFee, setDeliveryFee] = useState(5.90);
+
+  // Fetch store settings
+  const { data: storeSettings } = useQuery<StoreSettings>({
+    queryKey: ["/api/store/settings"],
+  });
+
+  // Fetch active delivery zones
+  const { data: deliveryZones = [] } = useQuery<DeliveryZone[]>({
+    queryKey: ["/api/delivery-zones/active"],
   });
 
   const createOrderMutation = useMutation({
@@ -90,7 +103,23 @@ export default function Checkout() {
     createOrderMutation.mutate(orderData);
   };
 
-  const deliveryFee = 5.90;
+  // Update delivery fee when neighborhood changes
+  useEffect(() => {
+    if (!storeSettings?.useNeighborhoodDelivery) {
+      setDeliveryFee(parseFloat(storeSettings?.defaultDeliveryFee || "5.90"));
+      return;
+    }
+
+    const selectedZone = deliveryZones.find(
+      zone => zone.neighborhoodName === formData.neighborhood
+    );
+
+    if (selectedZone) {
+      setDeliveryFee(parseFloat(selectedZone.deliveryFee));
+    } else {
+      setDeliveryFee(parseFloat(storeSettings?.defaultDeliveryFee || "5.90"));
+    }
+  }, [formData.neighborhood, storeSettings, deliveryZones]);
 
   if (items.length === 0) {
     return (
@@ -203,14 +232,37 @@ export default function Checkout() {
                       
                       <div>
                         <Label htmlFor="neighborhood">Bairro *</Label>
-                        <Input
-                          id="neighborhood"
-                          value={formData.neighborhood}
-                          onChange={(e) => setFormData({...formData, neighborhood: e.target.value})}
-                          placeholder="Ex: Centro"
-                          required
-                          data-testid="input-neighborhood"
-                        />
+                        {storeSettings?.useNeighborhoodDelivery ? (
+                          <Select
+                            value={formData.neighborhood}
+                            onValueChange={(value) => setFormData({...formData, neighborhood: value})}
+                          >
+                            <SelectTrigger data-testid="select-neighborhood">
+                              <SelectValue placeholder="Selecione o bairro" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {deliveryZones.map((zone) => (
+                                <SelectItem key={zone.id} value={zone.neighborhoodName}>
+                                  <div className="flex items-center justify-between w-full">
+                                    <span>{zone.neighborhoodName}</span>
+                                    <span className="text-sm text-muted-foreground ml-2">
+                                      +R$ {parseFloat(zone.deliveryFee).toFixed(2)}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            id="neighborhood"
+                            value={formData.neighborhood}
+                            onChange={(e) => setFormData({...formData, neighborhood: e.target.value})}
+                            placeholder="Ex: Centro"
+                            required
+                            data-testid="input-neighborhood"
+                          />
+                        )}
                       </div>
                     </div>
 

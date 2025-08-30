@@ -143,7 +143,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }));
 
-      const deliveryFee = 5.90; // Fixed delivery fee for now
+      // Calculate delivery fee based on neighborhood
+      const storeSettings = await storage.getStoreSettings();
+      let deliveryFee = parseFloat(storeSettings?.defaultDeliveryFee || "5.90");
+      
+      if (storeSettings?.useNeighborhoodDelivery) {
+        const zoneDeliveryFee = await storage.getDeliveryFeeByNeighborhood(requestData.neighborhood);
+        if (zoneDeliveryFee !== null) {
+          deliveryFee = zoneDeliveryFee;
+        }
+      }
+      
       const total = subtotal + deliveryFee;
 
       const orderData = {
