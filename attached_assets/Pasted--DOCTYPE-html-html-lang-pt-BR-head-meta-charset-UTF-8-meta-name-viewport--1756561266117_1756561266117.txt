@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Pedidos - Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FF8A00, #FF6B00);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            min-width: 150px;
+            margin: 5px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .filters {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: #FF8A00;
+            color: white;
+            border-color: #FF8A00;
+            transform: translateY(-2px);
+        }
+
+        .orders-list {
+            padding: 30px;
+        }
+
+        .order-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-left: 5px solid #FF8A00;
+            transition: all 0.3s ease;
+        }
+
+        .order-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .order-id {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .order-time {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .order-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #FF8A00;
+        }
+
+        .customer-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .customer-field {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .customer-field strong {
+            color: #333;
+            min-width: 80px;
+        }
+
+        .status-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .status-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        .status-pendente {
+            background: #ff4757;
+            color: white;
+        }
+
+        .status-preparando {
+            background: #ffa502;
+            color: white;
+        }
+
+        .status-entregando {
+            background: #3742fa;
+            color: white;
+        }
+
+        .status-entregue {
+            background: #2ed573;
+            color: white;
+        }
+
+        .status-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .status-btn.active {
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.5);
+            transform: scale(1.05);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-details {
+            background: #74b9ff;
+            color: white;
+        }
+
+        .btn-whatsapp {
+            background: #00d084;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .order-items {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f1f2f6;
+            border-radius: 8px;
+        }
+
+        .order-items h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .item:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 2px solid #FF8A00;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #2ed573;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .orders-list {
+                padding: 15px;
+            }
+            
+            .order-card {
+                padding: 20px;
+            }
+            
+            .status-buttons {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍔 Gerenciar Pedidos</h1>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">8</div>
+                    <div class="stat-label">Pedidos Hoje</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Em Preparo</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">R$ 284,50</div>
+                    <div class="stat-label">Faturamento</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">18min</div>
+                    <div class="stat-label">Tempo Médio</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" onclick="filterOrders('todos')">Todos</button>
+            <button class="filter-btn" onclick="filterOrders('pendente')">Pendentes</button>
+            <button class="filter-btn" onclick="filterOrders('preparando')">Em Preparo</button>
+            <button class="filter-btn" onclick="filterOrders('entregando')">Saindo</button>
+            <button class="filter-btn" onclick="filterOrders('entregue')">Entregues</button>
+        </div>
+
+        <div class="orders-list">
+            <!-- Pedido 1 -->
+            <div class="order-card" data-status="pendente">
+                <div class="order-header">
+                    <div>
+                        <div class="order-id">#001 - Wesly Barbosa</div>
+                        <div class="order-time">Hoje às 00:32</div>
+                    </div>
+                    <div class="order-value">R$ 35,90</div>
+                </div>
+
+                <div class="customer-info">
+                    <div class="customer-field">
+                        <strong>📞</strong> (98) 99222-4032
+                    </div>
+                    <div class="customer-field">
+                        <strong>📍</strong> Rua dos Hospital Velho, 914 - Centro
+                    </div>
+                    <div class="customer-field">
+                        <strong>💳</strong> Dinheiro - Troco para R$ 50,00
+                    </div>
+                    <div class="customer-field">
+                        <strong>⏱️</strong> Há 15 minutos
+                    </div>
+                </div>
+
+                <div class="order-items">
+                    <h4>Itens do Pedido:</h4>
+                    <div class="item">
+                        <span>1x X-Tudo Especial</span>
+                        <span>R$ 18,90</span>
+                    </div>
+                    <div class="item">
+                        <span>1x X-Bacon Clássico</span>
+                        <span>R$ 14,90</span>
+                    </div>
+                    <div class="item">
+                        <span><strong>Total:</strong></span>
+                        <span><strong>R$ 35,90</strong></span>
+                    </div>
+                </div>
+
+                <div class="status-container">
+                    <div class="status-buttons">
+                        <button class="status-btn status-pendente active" onclick="updateStatus(this, 'pendente', '001')">🔴 Pendente</button>
+                        <button class="status-btn status-preparando" onclick="updateStatus(this, 'preparando', '001')">🟡 Preparando</button>
+                        <button class="status-btn status-entregando" onclick="updateStatus(this, 'entregando', '001')">🔵 Saindo</button>
+                        <button class="status-btn status-entregue" onclick="updateStatus(this, 'entregue', '001')">🟢 Entregue</button>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-details" onclick="showDetails('001')">👁️ Detalhes</button>
+                        <button class="btn btn-whatsapp" onclick="sendWhatsApp('5598992224032', '001')">💬 WhatsApp</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pedido 2 -->
+            <div class="order-card" data-status="preparando">
+                <div class="order-header">
+                    <div>
+                        <div class="order-id">#002 - Maria Silva</div>
+                        <div class="order-time">Hoje às 00:45</div>
+                    </div>
+                    <div class="order-value">R$ 28,50</div>
+                </div>
+
+                <div class="customer-info">
+                    <div class="customer-field">
+                        <strong>📞</strong> (98) 98765-4321
+                    </div>
+                    <div class="customer-field">
+                        <strong>📍</strong> Av. Principal, 123 - Centro
+                    </div>
+                    <div class="customer-field">
+                        <strong>💳</strong> Cartão de Débito
+                    </div>
+                    <div class="customer-field">
+                        <strong>⏱️</strong> Há 2 minutos
+                    </div>
+                </div>
+
+                <div class="order-items">
+                    <h4>Itens do Pedido:</h4>
+                    <div class="item">
+                        <span>2x X-Burger Simples</span>
+                        <span>R$ 24,00</span>
+                    </div>
+                    <div class="item">
+                        <span>1x Coca-Cola 350ml</span>
+                        <span>R$ 4,50</span>
+                    </div>
+                    <div class="item">
+                        <span><strong>Total:</strong></span>
+                        <span><strong>R$ 28,50</strong></span>
+                    </div>
+                </div>
+
+                <div class="status-container">
+                    <div class="status-buttons">
+                        <button class="status-btn status-pendente" onclick="updateStatus(this, 'pendente', '002')">🔴 Pendente</button>
+                        <button class="status-btn status-preparando active" onclick="updateStatus(this, 'preparando', '002')">🟡 Preparando</button>
+                        <button class="status-btn status-entregando" onclick="updateStatus(this, 'entregando', '002')">🔵 Saindo</button>
+                        <button class="status-btn status-entregue" onclick="updateStatus(this, 'entregue', '002')">🟢 Entregue</button>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-details" onclick="showDetails('002')">👁️ Detalhes</button>
+                        <button class="btn btn-whatsapp" onclick="sendWhatsApp('5598987654321', '002')">💬 WhatsApp</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pedido 3 -->
+            <div class="order-card" data-status="entregue">
+                <div class="order-header">
+                    <div>
+                        <div class="order-id">#003 - João Santos</div>
+                        <div class="order-time">Hoje às 23:15</div>
+                    </div>
+                    <div class="order-value">R$ 42,30</div>
+                </div>
+
+                <div class="customer-info">
+                    <div class="customer-field">
+                        <strong>📞</strong> (98) 91234-5678
+                    </div>
+                    <div class="customer-field">
+                        <strong>📍</strong> Rua das Flores, 456 - Bairro Novo
+                    </div>
+                    <div class="customer-field">
+                        <strong>💳</strong> PIX
+                    </div>
+                    <div class="customer-field">
+                        <strong>⏱️</strong> Há 1 hora
+                    </div>
+                </div>
+
+                <div class="order-items">
+                    <h4>Itens do Pedido:</h4>
+                    <div class="item">
+                        <span>1x X-Especial Premium</span>
+                        <span>R$ 22,90</span>
+                    </div>
+                    <div class="item">
+                        <span>1x Batata Frita Grande</span>
+                        <span>R$ 12,90</span>
+                    </div>
+                    <div class="item">
+                        <span>1x Refrigerante 600ml</span>
+                        <span>R$ 6,50</span>
+                    </div>
+                    <div class="item">
+                        <span><strong>Total:</strong></span>
+                        <span><strong>R$ 42,30</strong></span>
+                    </div>
+                </div>
+
+                <div class="status-container">
+                    <div class="status-buttons">
+                        <button class="status-btn status-pendente" onclick="updateStatus(this, 'pendente', '003')">🔴 Pendente</button>
+                        <button class="status-btn status-preparando" onclick="updateStatus(this, 'preparando', '003')">🟡 Preparando</button>
+                        <button class="status-btn status-entregando" onclick="updateStatus(this, 'entregando', '003')">🔵 Saindo</button>
+                        <button class="status-btn status-entregue active" onclick="updateStatus(this, 'entregue', '003')">🟢 Entregue</button>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-details" onclick="showDetails('003')">👁️ Detalhes</button>
+                        <button class="btn btn-whatsapp" onclick="sendWhatsApp('5598912345678', '003')">💬 WhatsApp</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        function updateStatus(button, newStatus, orderId) {
+            // Remove active class from all status buttons in this card
+            const card = button.closest('.order-card');
+            card.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            button.classList.add('active');
+            
+            // Update card data-status
+            card.setAttribute('data-status', newStatus);
+            
+            // Show notification
+            showNotification(`Pedido #${orderId} atualizado para: ${getStatusText(newStatus)}`);
+            
+            // Here you would make an API call to update the database
+            // Example: updateOrderStatus(orderId, newStatus);
+            
+            // Simulate WhatsApp message sending
+            setTimeout(() => {
+                showNotification(`📱 Mensagem enviada via WhatsApp para o pedido #${orderId}`);
+            }, 1000);
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pendente': 'Pendente',
+                'preparando': 'Em Preparo',
+                'entregando': 'Saindo para Entrega',
+                'entregue': 'Entregue'
+            };
+            return statusMap[status] || status;
+        }
+
+        function filterOrders(status) {
+            // Update active filter button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide orders based on status
+            const orders = document.querySelectorAll('.order-card');
+            orders.forEach(order => {
+                if (status === 'todos' || order.getAttribute('data-status') === status) {
+                    order.style.display = 'block';
+                } else {
+                    order.style.display = 'none';
+                }
+            });
+        }
+
+        function showDetails(orderId) {
+            alert(`Exibindo detalhes completos do pedido #${orderId}\n\nAqui você pode:\n• Ver histórico de status\n• Editar informações\n• Ver tempo de preparo\n• Imprimir comanda`);
+        }
+
+        function sendWhatsApp(phone, orderId) {
+            showNotification(`📱 Abrindo WhatsApp para o pedido #${orderId}...`);
+            // Here you would integrate with your WhatsApp API
+            // window.open(`https://wa.me/${phone}?text=Olá! Sobre seu pedido #${orderId}...`);
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Auto-refresh simulation
+        setInterval(() => {
+            // Here you would fetch new orders from your API
+            console.log('Checking for new orders...');
+        }, 30000);
+
+        // Sound notification for new orders (you can add audio file)
+        function playNotificationSound() {
+            // const audio = new Audio('/path/to/notification.mp3');
+            // audio.play();
+        }
+    </script>
+</body>
+</html>

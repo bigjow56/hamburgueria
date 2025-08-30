@@ -13,9 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags } from "lucide-react";
+import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags, ShoppingBag } from "lucide-react";
 import { AdminDeliveryZones } from "@/components/admin-delivery-zones";
-import type { Product, Category, DeliveryZone, StoreSettings } from "@shared/schema";
+import type { Product, Category, DeliveryZone, StoreSettings, Order, OrderItem } from "@shared/schema";
 
 interface EditingProduct {
   id?: string;
@@ -280,10 +280,14 @@ export default function Admin() {
 
         {/* Admin Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="products" className="flex items-center">
               <Edit3 className="mr-2 h-4 w-4" />
               Produtos
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="flex items-center">
+              <ShoppingBag className="mr-2 h-4 w-4" />
+              Pedidos
             </TabsTrigger>
             <TabsTrigger value="banner" className="flex items-center">
               <Image className="mr-2 h-4 w-4" />
@@ -447,6 +451,10 @@ export default function Admin() {
 
           <TabsContent value="banner" className="space-y-6">
             <BannerManagement />
+          </TabsContent>
+
+          <TabsContent value="orders" className="space-y-6">
+            <OrderManagement />
           </TabsContent>
 
           <TabsContent value="store-info" className="space-y-6">
@@ -1204,5 +1212,246 @@ Mercado Pago integrado"
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Order Management Component
+function OrderManagement() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState("todos");
+
+  // Fetch orders
+  const { data: orders = [] } = useQuery<Order[]>({
+    queryKey: ["/api/orders"],
+  });
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
+      return await apiRequest("PUT", `/api/orders/${orderId}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({
+        title: "Status atualizado!",
+        description: "O status do pedido foi atualizado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao atualizar status",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStatusUpdate = (orderId: string, newStatus: string) => {
+    updateOrderStatusMutation.mutate({ orderId, status: newStatus });
+  };
+
+  const handleWhatsApp = (phone: string, orderNumber: string) => {
+    const message = `Olá! Seu pedido #${orderNumber} foi atualizado. Entre em contato para mais informações.`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
+  // Filter orders based on status
+  const filteredOrders = orders.filter((order: Order) => 
+    statusFilter === "todos" || order.status === statusFilter
+  );
+
+  // Calculate statistics
+  const todayOrders = orders.filter((order: Order) => {
+    const orderDate = new Date(order.createdAt);
+    const today = new Date();
+    return orderDate.toDateString() === today.toDateString();
+  });
+
+  const preparingOrders = orders.filter((order: Order) => order.status === "preparando");
+  const totalRevenue = todayOrders.reduce((sum: number, order: Order) => sum + parseFloat(order.total), 0);
+
+  const statusColors: Record<string, string> = {
+    pendente: "bg-red-500",
+    preparando: "bg-yellow-500", 
+    entregando: "bg-blue-500",
+    entregue: "bg-green-500"
+  };
+
+  const statusLabels: Record<string, string> = {
+    pendente: "🔴 Pendente",
+    preparando: "🟡 Preparando",
+    entregando: "🔵 Saindo",
+    entregue: "🟢 Entregue"
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+          <CardContent className="p-6 text-center">
+            <div className="text-3xl font-bold">{todayOrders.length}</div>
+            <div className="text-sm opacity-90">Pedidos Hoje</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white">
+          <CardContent className="p-6 text-center">
+            <div className="text-3xl font-bold">{preparingOrders.length}</div>
+            <div className="text-sm opacity-90">Em Preparo</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+          <CardContent className="p-6 text-center">
+            <div className="text-3xl font-bold">R$ {totalRevenue.toFixed(2)}</div>
+            <div className="text-sm opacity-90">Faturamento</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <CardContent className="p-6 text-center">
+            <div className="text-3xl font-bold">45min</div>
+            <div className="text-sm opacity-90">Tempo Médio</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "todos", label: "Todos" },
+              { key: "pendente", label: "Pendentes" },
+              { key: "preparando", label: "Em Preparo" },
+              { key: "entregando", label: "Saindo" },
+              { key: "entregue", label: "Entregues" }
+            ].map(filter => (
+              <Button
+                key={filter.key}
+                variant={statusFilter === filter.key ? "default" : "outline"}
+                onClick={() => setStatusFilter(filter.key)}
+                className="rounded-full"
+                data-testid={`filter-${filter.key}`}
+              >
+                {filter.label}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Orders List */}
+      <div className="space-y-4">
+        {filteredOrders.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">
+                {statusFilter === "todos" ? "Nenhum pedido encontrado." : `Nenhum pedido ${statusFilter} encontrado.`}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredOrders.map((order: Order) => (
+            <Card key={order.id} className="border-l-4 border-l-orange-500">
+              <CardContent className="p-6">
+                {/* Order Header */}
+                <div className="flex justify-between items-start mb-4 flex-wrap gap-2">
+                  <div>
+                    <h3 className="text-lg font-semibold">#{order.orderNumber} - {order.customerName}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(order.createdAt).toLocaleDateString('pt-BR')} às{' '}
+                      {new Date(order.createdAt).toLocaleTimeString('pt-BR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </p>
+                  </div>
+                  <div className="text-xl font-bold text-orange-600">
+                    R$ {order.total}
+                  </div>
+                </div>
+
+                {/* Customer Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 p-4 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span>📞</span>
+                    <span className="text-sm">{order.customerPhone}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>📍</span>
+                    <span className="text-sm">{order.streetName}, {order.houseNumber} - {order.neighborhood}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>💳</span>
+                    <span className="text-sm">{order.paymentMethod}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>⏱️</span>
+                    <span className="text-sm">
+                      {Math.floor((Date.now() - new Date(order.createdAt).getTime()) / (1000 * 60))} min atrás
+                    </span>
+                  </div>
+                </div>
+
+                {/* Order Items */}
+                {order.orderItems && order.orderItems.length > 0 && (
+                  <div className="mb-4 p-4 bg-muted/20 rounded-lg">
+                    <h4 className="font-semibold mb-2">Itens do Pedido:</h4>
+                    <div className="space-y-1">
+                      {order.orderItems.map((item: any, index: number) => (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span>{item.quantity}x Produto</span>
+                          <span>R$ {item.totalPrice}</span>
+                        </div>
+                      ))}
+                      <Separator />
+                      <div className="flex justify-between font-semibold">
+                        <span>Total:</span>
+                        <span>R$ {order.total}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Status and Actions */}
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(statusLabels).map(([status, label]) => (
+                      <Button
+                        key={status}
+                        variant={order.status === status ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleStatusUpdate(order.id, status)}
+                        className={`rounded-full ${order.status === status ? statusColors[status] + ' text-white' : ''}`}
+                        disabled={updateOrderStatusMutation.isPending}
+                        data-testid={`status-${status}-${order.orderNumber}`}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleWhatsApp(order.customerPhone, order.orderNumber)}
+                      className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                      data-testid={`whatsapp-${order.orderNumber}`}
+                    >
+                      💬 WhatsApp
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
   );
 }

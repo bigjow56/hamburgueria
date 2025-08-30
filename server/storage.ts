@@ -47,7 +47,8 @@ export interface IStorage {
   addOrderItems(items: InsertOrderItem[]): Promise<OrderItem[]>;
   getOrder(id: string): Promise<Order | undefined>;
   getUserOrders(userId: string): Promise<Order[]>;
-  updateOrderStatus(id: string, status: string): Promise<void>;
+  getAllOrders(): Promise<Order[]>;
+  updateOrderStatus(id: string, status: string): Promise<boolean>;
   
   // Store settings
   getStoreSettings(): Promise<StoreSettings | undefined>;
@@ -177,11 +178,19 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(orders.createdAt));
   }
 
-  async updateOrderStatus(id: string, status: string): Promise<void> {
-    await db
+  async updateOrderStatus(id: string, status: string): Promise<boolean> {
+    const result = await db
       .update(orders)
       .set({ orderStatus: status, updatedAt: new Date() })
       .where(eq(orders.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .orderBy(desc(orders.createdAt));
   }
 
   // Store settings

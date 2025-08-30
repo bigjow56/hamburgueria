@@ -399,6 +399,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all orders for admin
+  app.get("/api/orders", async (req, res) => {
+    try {
+      const orders = await storage.getAllOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  // Update order status
+  app.put("/api/orders/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!status || !["pendente", "preparando", "entregando", "entregue"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const success = await storage.updateOrderStatus(id, status);
+      if (!success) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      res.json({ message: "Order status updated successfully" });
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
