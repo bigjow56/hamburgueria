@@ -489,7 +489,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/expenses/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const result = insertExpenseSchema.safeParse(req.body);
+      // Transform date manually to avoid schema validation issues
+      const expenseData = {
+        ...req.body,
+        date: new Date(req.body.date)
+      };
+      
+      const result = insertExpenseSchema.safeParse(expenseData);
       if (!result.success) {
         return res.status(400).json({ message: "Invalid expense data", errors: result.error.errors });
       }

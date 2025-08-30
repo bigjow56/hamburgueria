@@ -18,7 +18,9 @@ import {
   Receipt, 
   Plus,
   Save,
-  Calendar
+  Calendar,
+  Edit,
+  Trash2
 } from "lucide-react";
 import {
   LineChart,
@@ -72,6 +74,7 @@ export default function Analytics() {
   });
   
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [newExpense, setNewExpense] = useState<NewExpense>({
     description: "",
     amount: "",
@@ -110,6 +113,49 @@ export default function Analytics() {
     onError: () => {
       toast({
         title: "Erro ao registrar despesa",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update expense mutation
+  const updateExpenseMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      return await apiRequest("PUT", `/api/expenses/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+      setEditingExpense(null);
+      toast({
+        title: "Despesa atualizada!",
+        description: "Despesa foi atualizada com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao atualizar despesa",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete expense mutation
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/expenses/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+      toast({
+        title: "Despesa excluída!",
+        description: "Despesa foi removida com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao excluir despesa",
         description: "Tente novamente.",
         variant: "destructive",
       });
@@ -217,10 +263,72 @@ export default function Analytics() {
     });
   };
 
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setNewExpense({
+      description: expense.description,
+      amount: expense.amount,
+      category: expense.category,
+      date: new Date(expense.date).toISOString().split('T')[0]
+    });
+    setShowExpenseForm(true);
+  };
+
+  const handleUpdateExpense = () => {
+    if (!editingExpense) return;
+    
+    if (!newExpense.description.trim() || !newExpense.amount) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha descrição e valor.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateExpenseMutation.mutate({
+      id: editingExpense.id,
+      data: {
+        description: newExpense.description,
+        amount: newExpense.amount,
+        category: newExpense.category,
+        date: newExpense.date
+      }
+    });
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta despesa?")) {
+      deleteExpenseMutation.mutate(id);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingExpense(null);
+    setShowExpenseForm(false);
+    setNewExpense({
+      description: "",
+      amount: "",
+      category: "ingredientes",
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  // Calculate expense breakdown by category for pie chart
+  const expenseByCategory = expenses.reduce((acc, expense) => {
+    const category = expense.category || 'outros';
+    acc[category] = (acc[category] || 0) + parseFloat(expense.amount);
+    return acc;
+  }, {} as Record<string, number>);
+
   const pieData = [
     { name: 'Faturamento', value: kpis.faturamento.value, color: '#10b981' },
-    { name: 'Despesas', value: kpis.despesas.value, color: '#ef4444' }
-  ];
+    ...Object.entries(expenseByCategory).map(([category, value], index) => ({
+      name: category.charAt(0).toUpperCase() + category.slice(1),
+      value,
+      color: ['#ef4444', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'][index] || '#6b7280'
+    }))
+  ].filter(item => item.value > 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -316,7 +424,9 @@ export default function Analytics() {
         {showExpenseForm && (
           <Card className="mb-6 border-blue-200 bg-blue-50">
             <CardHeader>
-              <CardTitle className="text-blue-800">Registrar Nova Despesa</CardTitle>
+              <CardTitle className="text-blue-800">
+                {editingExpense ? 'Editar Despesa' : 'Registrar Nova Despesa'}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -376,19 +486,22 @@ export default function Analytics() {
               <div className="flex justify-end gap-2 mt-4">
                 <Button
                   variant="outline"
-                  onClick={() => setShowExpenseForm(false)}
+                  onClick={handleCancelEdit}
                   data-testid="button-cancel-expense"
                 >
                   Cancelar
                 </Button>
                 <Button
-                  onClick={handleCreateExpense}
-                  disabled={createExpenseMutation.isPending}
+                  onClick={editingExpense ? handleUpdateExpense : handleCreateExpense}
+                  disabled={createExpenseMutation.isPending || updateExpenseMutation.isPending}
                   className="bg-blue-600 hover:bg-blue-700"
                   data-testid="button-save-expense"
                 >
                   <Save className="mr-2 h-4 w-4" />
-                  {createExpenseMutation.isPending ? 'Salvando...' : 'Salvar Despesa'}
+                  {editingExpense 
+                    ? (updateExpenseMutation.isPending ? 'Atualizando...' : 'Atualizar Despesa')
+                    : (createExpenseMutation.isPending ? 'Salvando...' : 'Salvar Despesa')
+                  }
                 </Button>
               </div>
             </CardContent>
@@ -594,14 +707,32 @@ export default function Analytics() {
             <div className="space-y-2">
               {expenses.slice(0, 10).map((expense) => (
                 <div key={expense.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium">{expense.description}</p>
                     <p className="text-sm text-gray-600">
                       {expense.category} • {new Date(expense.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-red-600">{formatCurrency(parseFloat(expense.amount))}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-red-600 mr-2">{formatCurrency(parseFloat(expense.amount))}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditExpense(expense)}
+                      data-testid={`button-edit-expense-${expense.id}`}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteExpense(expense.id)}
+                      disabled={deleteExpenseMutation.isPending}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      data-testid={`button-delete-expense-${expense.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
