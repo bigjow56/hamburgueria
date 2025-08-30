@@ -138,7 +138,7 @@ export default function Analytics() {
       const currentDate = d.toISOString().split('T')[0];
       
       const dayOrders = filteredOrders.filter(order => 
-        order.createdAt!.split('T')[0] === currentDate
+        new Date(order.createdAt!).toISOString().split('T')[0] === currentDate
       );
       
       const dayExpenses = filteredExpenses.filter(expense => 
@@ -213,7 +213,7 @@ export default function Analytics() {
       description: newExpense.description,
       amount: newExpense.amount,
       category: newExpense.category,
-      date: new Date(newExpense.date).toISOString()
+      date: newExpense.date
     });
   };
 
@@ -311,6 +311,89 @@ export default function Analytics() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Expense Form */}
+        {showExpenseForm && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="text-blue-800">Registrar Nova Despesa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label htmlFor="description">Descrição *</Label>
+                  <Input
+                    id="description"
+                    value={newExpense.description}
+                    onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                    placeholder="Ex: Compra de ingredientes"
+                    data-testid="input-expense-description"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="amount">Valor *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    value={newExpense.amount}
+                    onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                    placeholder="0.00"
+                    data-testid="input-expense-amount"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="category">Categoria</Label>
+                  <Select
+                    value={newExpense.category}
+                    onValueChange={(value) => setNewExpense({...newExpense, category: value})}
+                  >
+                    <SelectTrigger data-testid="select-expense-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ingredientes">Ingredientes</SelectItem>
+                      <SelectItem value="marketing">Marketing</SelectItem>
+                      <SelectItem value="aluguel">Aluguel</SelectItem>
+                      <SelectItem value="utilities">Utilities</SelectItem>
+                      <SelectItem value="equipamentos">Equipamentos</SelectItem>
+                      <SelectItem value="outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="date">Data</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={newExpense.date}
+                    onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
+                    max="2024-12-31"
+                    data-testid="input-expense-date"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExpenseForm(false)}
+                  data-testid="button-cancel-expense"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleCreateExpense}
+                  disabled={createExpenseMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-save-expense"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {createExpenseMutation.isPending ? 'Salvando...' : 'Salvar Despesa'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -501,87 +584,6 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* Expense Form */}
-        {showExpenseForm && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Registrar Nova Despesa</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="description">Descrição *</Label>
-                  <Input
-                    id="description"
-                    value={newExpense.description}
-                    onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-                    placeholder="Ex: Compra de ingredientes"
-                    data-testid="input-expense-description"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="amount">Valor *</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    value={newExpense.amount}
-                    onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                    placeholder="0.00"
-                    data-testid="input-expense-amount"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="category">Categoria</Label>
-                  <Select
-                    value={newExpense.category}
-                    onValueChange={(value) => setNewExpense({...newExpense, category: value})}
-                  >
-                    <SelectTrigger data-testid="select-expense-category">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ingredientes">Ingredientes</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="aluguel">Aluguel</SelectItem>
-                      <SelectItem value="utilities">Utilities</SelectItem>
-                      <SelectItem value="equipamentos">Equipamentos</SelectItem>
-                      <SelectItem value="outros">Outros</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="date">Data</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={newExpense.date}
-                    onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                    max="2024-12-31"
-                    data-testid="input-expense-date"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowExpenseForm(false)}
-                  data-testid="button-cancel-expense"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleCreateExpense}
-                  disabled={createExpenseMutation.isPending}
-                  data-testid="button-save-expense"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  {createExpenseMutation.isPending ? 'Salvando...' : 'Salvar Despesa'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Recent Expenses */}
         <Card>

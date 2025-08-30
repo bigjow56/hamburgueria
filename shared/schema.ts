@@ -169,6 +169,8 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  date: z.string().or(z.date()).transform((val) => new Date(val)),
 });
 
 // Types
