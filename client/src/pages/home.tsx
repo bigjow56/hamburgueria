@@ -11,7 +11,7 @@ import { useCart } from "@/hooks/use-cart";
 import { useState } from "react";
 import { CATEGORIES } from "@/lib/constants";
 import { Search, Sandwich, EggFried, Coffee, IceCream, Box, Tags } from "lucide-react";
-import type { Product, Category } from "@shared/schema";
+import type { Product, Category, StoreSettings } from "@shared/schema";
 
 const CATEGORY_ICONS = {
   hamburgers: Sandwich,
@@ -36,10 +36,10 @@ export default function Home() {
   });
 
   const { data: products = [] } = useQuery<Product[]>({
-    queryKey: selectedCategory ? ["/api/products", selectedCategory] : ["/api/products"],
+    queryKey: selectedCategory ? ["/api/products?category=" + selectedCategory] : ["/api/products"],
   });
 
-  const { data: storeSettings } = useQuery({
+  const { data: storeSettings } = useQuery<StoreSettings>({
     queryKey: ["/api/store/settings"],
   });
 

@@ -83,12 +83,6 @@ export default function StoreInfo({ storeSettings }: StoreInfoProps) {
               className="rounded-2xl shadow-2xl w-full" 
             />
             
-            <div className="absolute bottom-6 left-6 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-accent rounded-full animate-pulse"></div>
-                <span className="font-semibold text-card-foreground">Ambiente climatizado</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
