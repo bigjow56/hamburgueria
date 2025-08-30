@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,11 +126,26 @@ export function AdminDeliveryZones() {
     });
   };
 
+  const [tempDefaultFee, setTempDefaultFee] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  useEffect(() => {
+    if (storeSettings?.defaultDeliveryFee) {
+      setTempDefaultFee(storeSettings.defaultDeliveryFee);
+    }
+  }, [storeSettings?.defaultDeliveryFee]);
+
   const handleUpdateDefaultFee = (fee: string) => {
+    setTempDefaultFee(fee);
+    setHasUnsavedChanges(fee !== storeSettings?.defaultDeliveryFee);
+  };
+
+  const handleSaveDefaultFee = () => {
     if (!storeSettings) return;
     updateStoreSettingsMutation.mutate({
-      defaultDeliveryFee: fee,
+      defaultDeliveryFee: tempDefaultFee,
     });
+    setHasUnsavedChanges(false);
   };
 
   const handleEditZone = (zone: DeliveryZone) => {
@@ -201,15 +216,25 @@ export function AdminDeliveryZones() {
 
           <div>
             <Label htmlFor="defaultFee">Taxa de Entrega Padrão (R$)</Label>
-            <Input
-              id="defaultFee"
-              type="number"
-              step="0.01"
-              value={storeSettings?.defaultDeliveryFee || "5.90"}
-              onChange={(e) => handleUpdateDefaultFee(e.target.value)}
-              className="mt-1 max-w-xs"
-              data-testid="input-default-fee"
-            />
+            <div className="flex items-center space-x-2 mt-1">
+              <Input
+                id="defaultFee"
+                type="number"
+                step="0.01"
+                value={tempDefaultFee}
+                onChange={(e) => handleUpdateDefaultFee(e.target.value)}
+                className="max-w-xs"
+                data-testid="input-default-fee"
+              />
+              <Button
+                onClick={handleSaveDefaultFee}
+                disabled={!hasUnsavedChanges || updateStoreSettingsMutation.isPending}
+                size="sm"
+                data-testid="button-save-default-fee"
+              >
+                {updateStoreSettingsMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               {storeSettings?.useNeighborhoodDelivery 
                 ? "Taxa aplicada quando o bairro não está na lista"
