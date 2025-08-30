@@ -448,7 +448,68 @@ interface ProductFormProps {
   isLoading: boolean;
 }
 
+interface NewCategoryForm {
+  name: string;
+  slug: string;
+  icon: string;
+  displayOrder: number;
+}
+
 function ProductForm({ product, setProduct, categories, onSave, onCancel, isCreating, isLoading }: ProductFormProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
+  const [newCategory, setNewCategory] = useState<NewCategoryForm>({
+    name: "",
+    slug: "",
+    icon: "🍔",
+    displayOrder: categories.length + 1
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (categoryData: any) => {
+      return await apiRequest("POST", "/api/categories", categoryData);
+    },
+    onSuccess: async (response) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      const newCat = await response.json();
+      setProduct({ ...product!, categoryId: newCat.id });
+      setShowNewCategoryForm(false);
+      setNewCategory({ name: "", slug: "", icon: "🍔", displayOrder: categories.length + 1 });
+      toast({
+        title: "Categoria criada!",
+        description: "Nova categoria adicionada com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao criar categoria",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateCategory = () => {
+    if (!newCategory.name.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Digite o nome da categoria.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newCategory.slug.trim()) {
+      setNewCategory(prev => ({
+        ...prev,
+        slug: prev.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      }));
+    }
+
+    createCategoryMutation.mutate(newCategory);
+  };
+
   if (!product) return null;
 
   return (
@@ -466,21 +527,94 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
         </div>
         <div>
           <Label htmlFor="category">Categoria *</Label>
-          <Select
-            value={product.categoryId}
-            onValueChange={(value) => setProduct({ ...product, categoryId: value })}
-          >
-            <SelectTrigger data-testid="select-category">
-              <SelectValue placeholder="Selecione a categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.icon} {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Select
+              value={product.categoryId}
+              onValueChange={(value) => setProduct({ ...product, categoryId: value })}
+            >
+              <SelectTrigger data-testid="select-category">
+                <SelectValue placeholder="Selecione a categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.icon} {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowNewCategoryForm(!showNewCategoryForm)}
+              className="w-full"
+              data-testid="button-new-category"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {showNewCategoryForm ? 'Cancelar' : 'Criar Nova Categoria'}
+            </Button>
+            
+            {showNewCategoryForm && (
+              <Card className="p-4 bg-muted/30">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="newCategoryName">Nome *</Label>
+                      <Input
+                        id="newCategoryName"
+                        value={newCategory.name}
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          setNewCategory(prev => ({
+                            ...prev,
+                            name,
+                            slug: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+                          }));
+                        }}
+                        placeholder="Ex: Combos"
+                        data-testid="input-new-category-name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="newCategoryIcon">Ícone *</Label>
+                      <Input
+                        id="newCategoryIcon"
+                        value={newCategory.icon}
+                        onChange={(e) => setNewCategory(prev => ({ ...prev, icon: e.target.value }))}
+                        placeholder="🍔"
+                        data-testid="input-new-category-icon"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button
+                      type="button"
+                      onClick={handleCreateCategory}
+                      disabled={createCategoryMutation.isPending}
+                      size="sm"
+                      data-testid="button-save-category"
+                    >
+                      {createCategoryMutation.isPending ? 'Criando...' : 'Criar Categoria'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowNewCategoryForm(false);
+                        setNewCategory({ name: "", slug: "", icon: "🍔", displayOrder: categories.length + 1 });
+                      }}
+                      size="sm"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
 
