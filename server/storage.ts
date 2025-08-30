@@ -186,6 +186,14 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
+  async updateOrderPaymentStatus(id: string, paymentStatus: string): Promise<boolean> {
+    const result = await db
+      .update(orders)
+      .set({ paymentStatus: paymentStatus, updatedAt: new Date() })
+      .where(eq(orders.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
   async getAllOrders(): Promise<Order[]> {
     return await db
       .select()

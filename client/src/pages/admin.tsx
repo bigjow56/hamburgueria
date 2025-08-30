@@ -1246,8 +1246,32 @@ function OrderManagement() {
     },
   });
 
+  const updateOrderPaymentStatusMutation = useMutation({
+    mutationFn: async ({ orderId, paymentStatus }: { orderId: string; paymentStatus: string }) => {
+      return await apiRequest("PUT", `/api/orders/${orderId}/payment-status`, { paymentStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({
+        title: "Status de pagamento atualizado!",
+        description: "O status de pagamento foi atualizado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao atualizar pagamento",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleStatusUpdate = (orderId: string, newStatus: string) => {
     updateOrderStatusMutation.mutate({ orderId, status: newStatus });
+  };
+
+  const handlePaymentStatusUpdate = (orderId: string, paymentStatus: string) => {
+    updateOrderPaymentStatusMutation.mutate({ orderId, paymentStatus });
   };
 
   const handleWhatsApp = (phone: string, orderNumber: string) => {
@@ -1258,7 +1282,7 @@ function OrderManagement() {
 
   // Filter orders based on status
   const filteredOrders = orders.filter((order: Order) => 
-    statusFilter === "todos" || order.status === statusFilter
+    statusFilter === "todos" || order.orderStatus === statusFilter
   );
 
   // Calculate statistics
@@ -1268,8 +1292,10 @@ function OrderManagement() {
     return orderDate.toDateString() === today.toDateString();
   });
 
-  const preparingOrders = orders.filter((order: Order) => order.status === "preparando");
-  const totalRevenue = todayOrders.reduce((sum: number, order: Order) => sum + parseFloat(order.total), 0);
+  const preparingOrders = orders.filter((order: Order) => order.orderStatus === "preparando");
+  // Only count revenue from paid orders
+  const paidTodayOrders = todayOrders.filter((order: Order) => order.paymentStatus === "paid");
+  const totalRevenue = paidTodayOrders.reduce((sum: number, order: Order) => sum + parseFloat(order.total), 0);
 
   const statusColors: Record<string, string> = {
     pendente: "bg-red-500",
@@ -1423,16 +1449,28 @@ function OrderManagement() {
                     {Object.entries(statusLabels).map(([status, label]) => (
                       <Button
                         key={status}
-                        variant={order.status === status ? "default" : "outline"}
+                        variant={order.orderStatus === status ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleStatusUpdate(order.id, status)}
-                        className={`rounded-full ${order.status === status ? statusColors[status] + ' text-white' : ''}`}
+                        className={`rounded-full ${order.orderStatus === status ? statusColors[status] + ' text-white' : ''}`}
                         disabled={updateOrderStatusMutation.isPending}
                         data-testid={`status-${status}-${order.orderNumber}`}
                       >
                         {label}
                       </Button>
                     ))}
+                    
+                    {/* Payment Status Button */}
+                    <Button
+                      variant={order.paymentStatus === "paid" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePaymentStatusUpdate(order.id, order.paymentStatus === "paid" ? "pending" : "paid")}
+                      className={`rounded-full ${order.paymentStatus === "paid" ? 'bg-green-600 text-white' : 'border-green-300 text-green-700 hover:bg-green-50'}`}
+                      disabled={updateOrderPaymentStatusMutation.isPending}
+                      data-testid={`payment-${order.orderNumber}`}
+                    >
+                      {order.paymentStatus === "paid" ? "✅ Pago" : "💰 Marcar Pago"}
+                    </Button>
                   </div>
                   
                   <div className="flex gap-2">
