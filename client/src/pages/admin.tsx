@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -598,10 +598,24 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
 function BannerManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [formData, setFormData] = useState<Partial<StoreSettings>>({});
+  const [hasChanges, setHasChanges] = useState(false);
 
   const { data: storeSettings } = useQuery<StoreSettings>({
     queryKey: ["/api/store/settings"],
   });
+
+  // Inicializar formData quando os dados chegarem
+  useEffect(() => {
+    if (storeSettings && !hasChanges) {
+      setFormData({
+        bannerTitle: storeSettings.bannerTitle,
+        bannerDescription: storeSettings.bannerDescription,
+        bannerPrice: storeSettings.bannerPrice,
+        bannerImageUrl: storeSettings.bannerImageUrl,
+      });
+    }
+  }, [storeSettings, hasChanges]);
 
   const updateStoreSettingsMutation = useMutation({
     mutationFn: async (data: Partial<StoreSettings>) => {
@@ -609,6 +623,7 @@ function BannerManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/settings"] });
+      setHasChanges(false);
       toast({
         title: "Banner atualizado!",
         description: "As alterações foram salvas com sucesso.",
@@ -623,8 +638,13 @@ function BannerManagement() {
     },
   });
 
-  const handleSaveBanner = (data: Partial<StoreSettings>) => {
-    updateStoreSettingsMutation.mutate(data);
+  const handleInputChange = (field: keyof StoreSettings, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
+  const handleSaveBanner = () => {
+    updateStoreSettingsMutation.mutate(formData);
   };
 
   if (!storeSettings) return <div>Carregando...</div>;
@@ -646,8 +666,8 @@ function BannerManagement() {
             <Label htmlFor="banner-title">Título do Banner</Label>
             <Input
               id="banner-title"
-              value={storeSettings.bannerTitle || ""}
-              onChange={(e) => handleSaveBanner({ bannerTitle: e.target.value })}
+              value={formData.bannerTitle || ""}
+              onChange={(e) => handleInputChange('bannerTitle', e.target.value)}
               placeholder="Ex: Hambúrguers"
               data-testid="input-banner-title"
             />
@@ -656,8 +676,8 @@ function BannerManagement() {
             <Label htmlFor="banner-price">Preço</Label>
             <Input
               id="banner-price"
-              value={storeSettings.bannerPrice || ""}
-              onChange={(e) => handleSaveBanner({ bannerPrice: e.target.value })}
+              value={formData.bannerPrice || ""}
+              onChange={(e) => handleInputChange('bannerPrice', e.target.value)}
               placeholder="Ex: 18.90"
               data-testid="input-banner-price"
             />
@@ -668,8 +688,8 @@ function BannerManagement() {
           <Label htmlFor="banner-description">Descrição</Label>
           <Textarea
             id="banner-description"
-            value={storeSettings.bannerDescription || ""}
-            onChange={(e) => handleSaveBanner({ bannerDescription: e.target.value })}
+            value={formData.bannerDescription || ""}
+            onChange={(e) => handleInputChange('bannerDescription', e.target.value)}
             placeholder="Ex: Ingredientes frescos, sabor incomparável."
             rows={3}
             data-testid="textarea-banner-description"
@@ -680,8 +700,8 @@ function BannerManagement() {
           <Label htmlFor="banner-image">URL da Imagem</Label>
           <Input
             id="banner-image"
-            value={storeSettings.bannerImageUrl || ""}
-            onChange={(e) => handleSaveBanner({ bannerImageUrl: e.target.value })}
+            value={formData.bannerImageUrl || ""}
+            onChange={(e) => handleInputChange('bannerImageUrl', e.target.value)}
             placeholder="https://exemplo.com/imagem-banner.jpg"
             data-testid="input-banner-image"
           />
@@ -690,18 +710,43 @@ function BannerManagement() {
           </p>
         </div>
 
-        {storeSettings.bannerImageUrl && (
+        {formData.bannerImageUrl && (
           <div>
             <Label>Preview da Imagem</Label>
             <div className="border rounded-lg p-4 bg-muted">
               <img
-                src={storeSettings.bannerImageUrl}
+                src={formData.bannerImageUrl}
                 alt="Preview banner"
                 className="max-w-full h-48 object-cover rounded-lg mx-auto"
               />
             </div>
           </div>
         )}
+
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setFormData({
+                bannerTitle: storeSettings?.bannerTitle,
+                bannerDescription: storeSettings?.bannerDescription,
+                bannerPrice: storeSettings?.bannerPrice,
+                bannerImageUrl: storeSettings?.bannerImageUrl,
+              });
+              setHasChanges(false);
+            }}
+            disabled={!hasChanges}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSaveBanner}
+            disabled={updateStoreSettingsMutation.isPending || !hasChanges}
+          >
+            {updateStoreSettingsMutation.isPending ? "Salvando..." : "Salvar Banner"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -711,10 +756,28 @@ function BannerManagement() {
 function StoreInfoManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [formData, setFormData] = useState<Partial<StoreSettings>>({});
+  const [hasChanges, setHasChanges] = useState(false);
 
   const { data: storeSettings } = useQuery<StoreSettings>({
     queryKey: ["/api/store/settings"],
   });
+
+  // Inicializar formData quando os dados chegarem
+  useEffect(() => {
+    if (storeSettings && !hasChanges) {
+      setFormData({
+        storeTitle: storeSettings.storeTitle,
+        storeImageUrl: storeSettings.storeImageUrl,
+        storeAddress: storeSettings.storeAddress,
+        storeNeighborhood: storeSettings.storeNeighborhood,
+        storeHours: storeSettings.storeHours,
+        deliveryTime: storeSettings.deliveryTime,
+        deliveryFeeRange: storeSettings.deliveryFeeRange,
+        paymentMethods: storeSettings.paymentMethods,
+      });
+    }
+  }, [storeSettings, hasChanges]);
 
   const updateStoreSettingsMutation = useMutation({
     mutationFn: async (data: Partial<StoreSettings>) => {
@@ -722,6 +785,7 @@ function StoreInfoManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/store/settings"] });
+      setHasChanges(false);
       toast({
         title: "Informações atualizadas!",
         description: "As alterações foram salvas com sucesso.",
@@ -736,8 +800,13 @@ function StoreInfoManagement() {
     },
   });
 
-  const handleSaveInfo = (data: Partial<StoreSettings>) => {
-    updateStoreSettingsMutation.mutate(data);
+  const handleInputChange = (field: keyof StoreSettings, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
+  const handleSaveInfo = () => {
+    updateStoreSettingsMutation.mutate(formData);
   };
 
   if (!storeSettings) return <div>Carregando...</div>;
@@ -762,8 +831,8 @@ function StoreInfoManagement() {
               <Label htmlFor="store-title">Título da Seção</Label>
               <Input
                 id="store-title"
-                value={storeSettings.storeTitle || ""}
-                onChange={(e) => handleSaveInfo({ storeTitle: e.target.value })}
+                value={formData.storeTitle || ""}
+                onChange={(e) => handleInputChange('storeTitle', e.target.value)}
                 placeholder="Ex: Nossa Loja"
                 data-testid="input-store-title"
               />
@@ -772,8 +841,8 @@ function StoreInfoManagement() {
               <Label htmlFor="store-image">URL da Imagem da Loja</Label>
               <Input
                 id="store-image"
-                value={storeSettings.storeImageUrl || ""}
-                onChange={(e) => handleSaveInfo({ storeImageUrl: e.target.value })}
+                value={formData.storeImageUrl || ""}
+                onChange={(e) => handleInputChange('storeImageUrl', e.target.value)}
                 placeholder="https://exemplo.com/imagem-loja.jpg"
                 data-testid="input-store-image"
               />
@@ -794,8 +863,8 @@ function StoreInfoManagement() {
               <Label htmlFor="store-address">Endereço</Label>
               <Input
                 id="store-address"
-                value={storeSettings.storeAddress || ""}
-                onChange={(e) => handleSaveInfo({ storeAddress: e.target.value })}
+                value={formData.storeAddress || ""}
+                onChange={(e) => handleInputChange('storeAddress', e.target.value)}
                 placeholder="Ex: Rua das Delícias, 123"
                 data-testid="input-store-address"
               />
@@ -804,8 +873,8 @@ function StoreInfoManagement() {
               <Label htmlFor="store-neighborhood">Bairro/Cidade</Label>
               <Input
                 id="store-neighborhood"
-                value={storeSettings.storeNeighborhood || ""}
-                onChange={(e) => handleSaveInfo({ storeNeighborhood: e.target.value })}
+                value={formData.storeNeighborhood || ""}
+                onChange={(e) => handleInputChange('storeNeighborhood', e.target.value)}
                 placeholder="Ex: Centro, São Paulo - SP"
                 data-testid="input-store-neighborhood"
               />
@@ -822,8 +891,8 @@ function StoreInfoManagement() {
             <Label htmlFor="store-hours">Horário de Funcionamento</Label>
             <Textarea
               id="store-hours"
-              value={storeSettings.storeHours || ""}
-              onChange={(e) => handleSaveInfo({ storeHours: e.target.value })}
+              value={formData.storeHours || ""}
+              onChange={(e) => handleInputChange('storeHours', e.target.value)}
               placeholder="Segunda a Sexta: 18h - 23h
 Sábado e Domingo: 18h - 00h"
               rows={3}
@@ -842,8 +911,8 @@ Sábado e Domingo: 18h - 00h"
               <Label htmlFor="delivery-time">Tempo de Entrega</Label>
               <Input
                 id="delivery-time"
-                value={storeSettings.deliveryTime || ""}
-                onChange={(e) => handleSaveInfo({ deliveryTime: e.target.value })}
+                value={formData.deliveryTime || ""}
+                onChange={(e) => handleInputChange('deliveryTime', e.target.value)}
                 placeholder="Ex: Tempo médio: 30-45 minutos"
                 data-testid="input-delivery-time"
               />
@@ -852,8 +921,8 @@ Sábado e Domingo: 18h - 00h"
               <Label htmlFor="delivery-fee-range">Faixa de Taxa de Entrega</Label>
               <Input
                 id="delivery-fee-range"
-                value={storeSettings.deliveryFeeRange || ""}
-                onChange={(e) => handleSaveInfo({ deliveryFeeRange: e.target.value })}
+                value={formData.deliveryFeeRange || ""}
+                onChange={(e) => handleInputChange('deliveryFeeRange', e.target.value)}
                 placeholder="Ex: Taxa: R$ 3,90 - R$ 8,90"
                 data-testid="input-delivery-fee-range"
               />
@@ -863,8 +932,8 @@ Sábado e Domingo: 18h - 00h"
             <Label htmlFor="payment-methods">Métodos de Pagamento</Label>
             <Textarea
               id="payment-methods"
-              value={storeSettings.paymentMethods || ""}
-              onChange={(e) => handleSaveInfo({ paymentMethods: e.target.value })}
+              value={formData.paymentMethods || ""}
+              onChange={(e) => handleInputChange('paymentMethods', e.target.value)}
               placeholder="Dinheiro, Cartão, PIX
 Mercado Pago integrado"
               rows={3}
@@ -874,14 +943,14 @@ Mercado Pago integrado"
         </div>
 
         {/* Preview da Imagem da Loja */}
-        {storeSettings.storeImageUrl && (
+        {formData.storeImageUrl && (
           <>
             <Separator />
             <div>
               <Label>Preview da Imagem da Loja</Label>
               <div className="border rounded-lg p-4 bg-muted">
                 <img
-                  src={storeSettings.storeImageUrl}
+                  src={formData.storeImageUrl}
                   alt="Preview loja"
                   className="max-w-full h-48 object-cover rounded-lg mx-auto"
                 />
@@ -889,6 +958,35 @@ Mercado Pago integrado"
             </div>
           </>
         )}
+
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setFormData({
+                storeTitle: storeSettings?.storeTitle,
+                storeImageUrl: storeSettings?.storeImageUrl,
+                storeAddress: storeSettings?.storeAddress,
+                storeNeighborhood: storeSettings?.storeNeighborhood,
+                storeHours: storeSettings?.storeHours,
+                deliveryTime: storeSettings?.deliveryTime,
+                deliveryFeeRange: storeSettings?.deliveryFeeRange,
+                paymentMethods: storeSettings?.paymentMethods,
+              });
+              setHasChanges(false);
+            }}
+            disabled={!hasChanges}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSaveInfo}
+            disabled={updateStoreSettingsMutation.isPending || !hasChanges}
+          >
+            {updateStoreSettingsMutation.isPending ? "Salvando..." : "Salvar Informações"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
