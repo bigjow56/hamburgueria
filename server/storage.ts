@@ -101,6 +101,7 @@ export interface IStorage {
   addProductAdditional(data: InsertProductAdditional): Promise<ProductAdditional>;
   removeProductIngredient(productId: string, ingredientId: string): Promise<boolean>;
   removeProductAdditional(productId: string, ingredientId: string): Promise<boolean>;
+  updateProductIngredients(productId: string, ingredientConfigs: any[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -441,6 +442,35 @@ export class DatabaseStorage implements IStorage {
         eq(productAdditionals.ingredientId, ingredientId)
       ));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async updateProductIngredients(productId: string, ingredientConfigs: any[]): Promise<void> {
+    // Remove existing product ingredients
+    await db.delete(productIngredients).where(eq(productIngredients.productId, productId));
+    
+    // Remove existing product additionals 
+    await db.delete(productAdditionals).where(eq(productAdditionals.productId, productId));
+
+    // Add new product ingredients and additionals
+    for (const config of ingredientConfigs) {
+      if (config.isIncludedByDefault) {
+        // Add as product ingredient (base ingredient)
+        await db.insert(productIngredients).values({
+          productId,
+          ingredientId: config.ingredientId,
+          isIncludedByDefault: config.isIncludedByDefault,
+          quantity: config.quantity || 1,
+        });
+      }
+
+      // Also add as product additional (for customization)
+      await db.insert(productAdditionals).values({
+        productId,
+        ingredientId: config.ingredientId,
+        customPrice: config.customPrice || null,
+        isActive: config.isActive,
+      });
+    }
   }
 }
 

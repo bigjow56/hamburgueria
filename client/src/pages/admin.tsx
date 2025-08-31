@@ -10,10 +10,11 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags, ShoppingBag, BarChart3 } from "lucide-react";
+import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags, ShoppingBag, BarChart3, ChefHat } from "lucide-react";
 import { AdminDeliveryZones } from "@/components/admin-delivery-zones";
 import type { Product, Category, DeliveryZone, StoreSettings, Order, OrderItem, Ingredient } from "@shared/schema";
 
@@ -28,6 +29,16 @@ interface EditingProduct {
   isAvailable: boolean;
   isFeatured: boolean;
   isPromotion: boolean;
+  ingredients?: ProductIngredientConfig[];
+}
+
+interface ProductIngredientConfig {
+  ingredientId: string;
+  ingredientName?: string;
+  isIncludedByDefault: boolean;
+  quantity: number;
+  customPrice?: string;
+  isActive: boolean;
 }
 
 interface EditingDeliveryZone {
@@ -241,7 +252,26 @@ export default function Admin() {
     },
   });
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = async (product: Product) => {
+    // Load product ingredients
+    let productIngredients: any[] = [];
+    try {
+      const response = await apiRequest("GET", `/api/products/${product.id}/ingredients`);
+      productIngredients = await response.json();
+    } catch (error) {
+      console.error("Error loading product ingredients:", error);
+    }
+
+    // Transform ingredients to match our format
+    const ingredients = productIngredients.map(pi => ({
+      ingredientId: pi.ingredientId,
+      ingredientName: pi.ingredient?.name || '',
+      isIncludedByDefault: pi.isIncludedByDefault || false,
+      quantity: pi.quantity || 1,
+      customPrice: pi.ingredient?.price || "0.00",
+      isActive: true,
+    }));
+
     setEditingProduct({
       id: product.id,
       name: product.name,
@@ -253,6 +283,7 @@ export default function Admin() {
       isAvailable: product.isAvailable ?? true,
       isFeatured: product.isFeatured ?? false,
       isPromotion: product.isPromotion ?? false,
+      ingredients: ingredients,
     });
   };
 
@@ -270,6 +301,7 @@ export default function Admin() {
       isAvailable: editingProduct.isAvailable,
       isFeatured: editingProduct.isFeatured,
       isPromotion: editingProduct.isPromotion,
+      ingredients: editingProduct.ingredients || [],
     };
 
     updateProductMutation.mutate(productData);
@@ -288,6 +320,7 @@ export default function Admin() {
       isAvailable: editingProduct.isAvailable,
       isFeatured: editingProduct.isFeatured,
       isPromotion: editingProduct.isPromotion,
+      ingredients: editingProduct.ingredients || [],
     };
 
     createProductMutation.mutate(productData);
@@ -332,6 +365,7 @@ export default function Admin() {
       isAvailable: true,
       isFeatured: false,
       isPromotion: false,
+      ingredients: [],
     });
     setShowNewProductForm(true);
   };
@@ -1360,14 +1394,10 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
 
       {/* Ingredients Section */}
       <ProductIngredientsSection 
-        productId={product.id}
-        onIngredientsChange={() => {
-          // Força atualização do produto
-          if (product.id) {
-            queryClient.invalidateQueries({ queryKey: ['/api/products', product.id, 'ingredients'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/products', product.id, 'additionals'] });
-          }
-        }}
+        product={product}
+        setProduct={setProduct}
+        ingredients={ingredients}
+        isCreating={isCreating}
       />
 
       <Separator />
@@ -2189,33 +2219,238 @@ function OrderManagement() {
   );
 }
 
-// Product Ingredients Section Component
+// Product Ingredients Management Component
 interface ProductIngredientsSectionProps {
-  productId?: string;
-  onIngredientsChange: () => void;
+  product: EditingProduct;
+  setProduct: (product: EditingProduct) => void;
+  ingredients: Ingredient[];
+  isCreating: boolean;
 }
 
-function ProductIngredientsSection({ productId, onIngredientsChange }: ProductIngredientsSectionProps) {
+function ProductIngredientsSection({ product, setProduct, ingredients, isCreating }: ProductIngredientsSectionProps) {
+  const { toast } = useToast();
+  const [selectedIngredients, setSelectedIngredients] = useState<ProductIngredientConfig[]>(
+    product.ingredients || []
+  );
+
+  // Atualizar o produto quando os ingredientes mudarem
+  useEffect(() => {
+    setProduct({ ...product, ingredients: selectedIngredients });
+  }, [selectedIngredients]);
+
+  const addIngredient = (ingredientId: string) => {
+    const ingredient = ingredients.find(i => i.id === ingredientId);
+    if (!ingredient) return;
+
+    const newIngredientConfig: ProductIngredientConfig = {
+      ingredientId,
+      ingredientName: ingredient.name,
+      isIncludedByDefault: true,
+      quantity: 1,
+      customPrice: ingredient.price || "0.00",
+      isActive: true,
+    };
+
+    setSelectedIngredients(prev => [
+      ...prev.filter(i => i.ingredientId !== ingredientId),
+      newIngredientConfig
+    ]);
+
+    toast({
+      title: "Ingrediente adicionado!",
+      description: `${ingredient.name} foi adicionado ao produto.`,
+    });
+  };
+
+  const updateIngredient = (ingredientId: string, updates: Partial<ProductIngredientConfig>) => {
+    setSelectedIngredients(prev =>
+      prev.map(ing => 
+        ing.ingredientId === ingredientId ? { ...ing, ...updates } : ing
+      )
+    );
+  };
+
+  const removeIngredient = (ingredientId: string) => {
+    setSelectedIngredients(prev => prev.filter(i => i.ingredientId !== ingredientId));
+  };
+
+  const getIngredientsByCategory = (category: string) => {
+    return ingredients.filter(ingredient => ingredient.category === category);
+  };
+
+  const isIngredientSelected = (ingredientId: string) => {
+    return selectedIngredients.some(i => i.ingredientId === ingredientId);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Separator />
+      <div>
+        <Label className="text-base font-semibold flex items-center">
+          <ChefHat className="mr-2 h-4 w-4" />
+          Ingredientes do Produto
+        </Label>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configure os ingredientes que compõem este produto e suas opções de personalização
+        </p>
+      </div>
+
+      {/* Ingredientes Selecionados */}
+      {selectedIngredients.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Ingredientes Configurados ({selectedIngredients.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {selectedIngredients.map((ingredientConfig) => {
+                const ingredient = ingredients.find(i => i.id === ingredientConfig.ingredientId);
+                if (!ingredient) return null;
+
+                return (
+                  <div key={ingredientConfig.ingredientId} className="border rounded-lg p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{ingredient.name}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({ingredient.category})
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeIngredient(ingredientConfig.ingredientId)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <Label className="text-xs">Preço Adicional (R$)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={ingredientConfig.customPrice || "0.00"}
+                          onChange={(e) => updateIngredient(ingredientConfig.ingredientId, { customPrice: e.target.value })}
+                          className="h-8"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Quantidade Máxima</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={ingredientConfig.quantity}
+                          onChange={(e) => updateIngredient(ingredientConfig.ingredientId, { quantity: parseInt(e.target.value) || 1 })}
+                          className="h-8"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={ingredientConfig.isIncludedByDefault}
+                          onCheckedChange={(checked) => updateIngredient(ingredientConfig.ingredientId, { isIncludedByDefault: checked })}
+                        />
+                        <Label className="text-xs">Incluído por padrão</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={ingredientConfig.isActive}
+                          onCheckedChange={(checked) => updateIngredient(ingredientConfig.ingredientId, { isActive: checked })}
+                        />
+                        <Label className="text-xs">Ativo</Label>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Seleção de Ingredientes */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Adicionar Ingredientes</CardTitle>
+            <QuickAddIngredientModal onIngredientAdded={(ingredientId) => addIngredient(ingredientId)} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[
+              { key: 'protein', label: '🥩 Carnes', icon: '🥩' },
+              { key: 'cheese', label: '🧀 Queijos', icon: '🧀' },
+              { key: 'vegetable', label: '🥬 Vegetais', icon: '🥬' },
+              { key: 'sauce', label: '🍯 Molhos', icon: '🍯' },
+              { key: 'bread', label: '🍞 Pães', icon: '🍞' },
+              { key: 'extra', label: '✨ Extras', icon: '✨' }
+            ].map(category => {
+              const categoryIngredients = getIngredientsByCategory(category.key);
+              if (categoryIngredients.length === 0) return null;
+
+              return (
+                <div key={category.key} className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    {category.label}
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {categoryIngredients.map(ingredient => (
+                      <Button
+                        key={ingredient.id}
+                        variant={isIngredientSelected(ingredient.id) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => addIngredient(ingredient.id)}
+                        disabled={isIngredientSelected(ingredient.id)}
+                        className="h-8 text-xs"
+                      >
+                        {category.icon} {ingredient.name}
+                        {parseFloat(ingredient.price || "0") > 0 && (
+                          <span className="ml-1 text-xs">
+                            (+R$ {parseFloat(ingredient.price || "0").toFixed(2)})
+                          </span>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {isCreating && selectedIngredients.length === 0 && (
+        <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg border border-blue-200">
+          💡 <strong>Dica:</strong> Adicione ingredientes para que os clientes possam personalizar este produto
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Quick Add Ingredient Modal
+interface QuickAddIngredientModalProps {
+  onIngredientAdded: (ingredientId: string) => void;
+}
+
+function QuickAddIngredientModal({ onIngredientAdded }: QuickAddIngredientModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showNewIngredientForm, setShowNewIngredientForm] = useState(false);
-  const [newIngredient, setNewIngredient] = useState({
-    name: '',
-    category: 'Extras',
-    price: '',
-    discountPrice: '',
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    category: "extra",
+    price: "0.00",
+    discountPrice: "0.00",
     isRemovable: true,
     isRequired: false,
     maxQuantity: 3,
-    isActive: true
+    isActive: true,
   });
 
-  // Fetch existing ingredients
-  const { data: allIngredients = [] } = useQuery<Ingredient[]>({
-    queryKey: ["/api/ingredients"],
-  });
-
-  // Create new ingredient mutation
   const createIngredientMutation = useMutation({
     mutationFn: async (ingredientData: any) => {
       const data = {
@@ -2223,24 +2458,26 @@ function ProductIngredientsSection({ productId, onIngredientsChange }: ProductIn
         price: parseFloat(ingredientData.price) || 0,
         discountPrice: parseFloat(ingredientData.discountPrice) || 0,
       };
-      return await apiRequest("POST", "/api/ingredients", data);
+      const response = await apiRequest("POST", "/api/ingredients", data);
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (newIngredient) => {
       queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
-      setShowNewIngredientForm(false);
-      setNewIngredient({
-        name: '',
-        category: 'Extras',
-        price: '',
-        discountPrice: '',
+      onIngredientAdded(newIngredient.id);
+      setOpen(false);
+      setFormData({
+        name: "",
+        category: "extra",
+        price: "0.00",
+        discountPrice: "0.00",
         isRemovable: true,
         isRequired: false,
         maxQuantity: 3,
-        isActive: true
+        isActive: true,
       });
       toast({
         title: "Ingrediente criado!",
-        description: "Novo ingrediente foi adicionado com sucesso.",
+        description: `${newIngredient.name} foi criado e adicionado ao produto.`,
       });
     },
     onError: () => {
@@ -2252,8 +2489,9 @@ function ProductIngredientsSection({ productId, onIngredientsChange }: ProductIn
     },
   });
 
-  const handleCreateIngredient = () => {
-    if (!newIngredient.name.trim()) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
       toast({
         title: "Nome obrigatório",
         description: "Digite o nome do ingrediente.",
@@ -2261,188 +2499,115 @@ function ProductIngredientsSection({ productId, onIngredientsChange }: ProductIn
       });
       return;
     }
-    createIngredientMutation.mutate(newIngredient);
+    createIngredientMutation.mutate(formData);
   };
 
-  const ingredientCategories = [...new Set(allIngredients.map(i => i.category))];
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium">Ingredientes do Produto</h3>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowNewIngredientForm(!showNewIngredientForm)}
-          data-testid="button-new-ingredient"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          {showNewIngredientForm ? 'Cancelar' : 'Novo Ingrediente'}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Plus className="mr-2 h-3 w-3" />
+          Criar Ingrediente
         </Button>
-      </div>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Criar Novo Ingrediente</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="ingredientName">Nome *</Label>
+            <Input
+              id="ingredientName"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Ex: Bacon extra"
+            />
+          </div>
 
-      {showNewIngredientForm && (
-        <Card className="p-4 bg-muted/30">
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="newIngredientName">Nome *</Label>
-                <Input
-                  id="newIngredientName"
-                  value={newIngredient.name}
-                  onChange={(e) => setNewIngredient(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ex: Bacon Extra"
-                  data-testid="input-new-ingredient-name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="newIngredientCategory">Categoria</Label>
-                <Select
-                  value={newIngredient.category}
-                  onValueChange={(value) => setNewIngredient(prev => ({ ...prev, category: value }))}
-                >
-                  <SelectTrigger data-testid="select-new-ingredient-category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Extras">🥓 Extras</SelectItem>
-                    <SelectItem value="Molhos">🥫 Molhos</SelectItem>
-                    <SelectItem value="Vegetais">🥬 Vegetais</SelectItem>
-                    <SelectItem value="Queijos">🧀 Queijos</SelectItem>
-                    <SelectItem value="Carnes">🥩 Carnes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div>
+            <Label htmlFor="ingredientCategory">Categoria *</Label>
+            <Select
+              value={formData.category}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="protein">🥩 Carnes</SelectItem>
+                <SelectItem value="cheese">🧀 Queijos</SelectItem>
+                <SelectItem value="vegetable">🥬 Vegetais</SelectItem>
+                <SelectItem value="sauce">🍯 Molhos</SelectItem>
+                <SelectItem value="bread">🍞 Pães</SelectItem>
+                <SelectItem value="extra">✨ Extras</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="ingredientPrice">Preço Adicional (R$)</Label>
+              <Input
+                id="ingredientPrice"
+                type="number"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                placeholder="0.00"
+              />
             </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor="newIngredientPrice">Preço Adicional (R$)</Label>
-                <Input
-                  id="newIngredientPrice"
-                  type="number"
-                  step="0.01"
-                  value={newIngredient.price}
-                  onChange={(e) => setNewIngredient(prev => ({ ...prev, price: e.target.value }))}
-                  placeholder="2.50"
-                  data-testid="input-new-ingredient-price"
-                />
-              </div>
-              <div>
-                <Label htmlFor="newIngredientDiscount">Desconto se Remover (R$)</Label>
-                <Input
-                  id="newIngredientDiscount"
-                  type="number"
-                  step="0.01"
-                  value={newIngredient.discountPrice}
-                  onChange={(e) => setNewIngredient(prev => ({ ...prev, discountPrice: e.target.value }))}
-                  placeholder="0.00"
-                  data-testid="input-new-ingredient-discount"
-                />
-              </div>
-              <div>
-                <Label htmlFor="newIngredientMaxQty">Quantidade Máxima</Label>
-                <Input
-                  id="newIngredientMaxQty"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={newIngredient.maxQuantity}
-                  onChange={(e) => setNewIngredient(prev => ({ ...prev, maxQuantity: parseInt(e.target.value) || 1 }))}
-                  data-testid="input-new-ingredient-max-qty"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-6">
-              <label className="flex items-center space-x-2">
-                <Switch
-                  checked={newIngredient.isRemovable}
-                  onCheckedChange={(checked) => setNewIngredient(prev => ({ ...prev, isRemovable: checked }))}
-                />
-                <span>Removível</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <Switch
-                  checked={newIngredient.isRequired}
-                  onCheckedChange={(checked) => setNewIngredient(prev => ({ ...prev, isRequired: checked }))}
-                />
-                <span>Obrigatório</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <Switch
-                  checked={newIngredient.isActive}
-                  onCheckedChange={(checked) => setNewIngredient(prev => ({ ...prev, isActive: checked }))}
-                />
-                <span>Ativo</span>
-              </label>
-            </div>
-
-            <div className="flex space-x-2">
-              <Button
-                type="button"
-                onClick={handleCreateIngredient}
-                disabled={createIngredientMutation.isPending}
-                size="sm"
-                data-testid="button-save-new-ingredient"
-              >
-                {createIngredientMutation.isPending ? 'Criando...' : 'Criar Ingrediente'}
-              </Button>
+            <div>
+              <Label htmlFor="maxQuantity">Quantidade Máxima</Label>
+              <Input
+                id="maxQuantity"
+                type="number"
+                min="1"
+                value={formData.maxQuantity}
+                onChange={(e) => setFormData(prev => ({ ...prev, maxQuantity: parseInt(e.target.value) || 1 }))}
+              />
             </div>
           </div>
-        </Card>
-      )}
 
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Ingredientes Disponíveis</Label>
-        <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-3">
-          {ingredientCategories.map(category => {
-            const categoryIngredients = allIngredients.filter(i => i.category === category && i.isActive);
-            if (categoryIngredients.length === 0) return null;
+          <div className="flex items-center space-x-4">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isRemovable}
+                onChange={(e) => setFormData(prev => ({ ...prev, isRemovable: e.target.checked }))}
+                className="rounded"
+              />
+              <span className="text-sm">Removível</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isRequired}
+                onChange={(e) => setFormData(prev => ({ ...prev, isRequired: e.target.checked }))}
+                className="rounded"
+              />
+              <span className="text-sm">Obrigatório</span>
+            </label>
+          </div>
 
-            return (
-              <div key={category} className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {category}
-                </h4>
-                {categoryIngredients.map(ingredient => (
-                  <div
-                    key={ingredient.id}
-                    className="flex items-center justify-between p-2 rounded border bg-background"
-                  >
-                    <div className="flex-1">
-                      <span className="text-sm font-medium">{ingredient.name}</span>
-                      <div className="text-xs text-muted-foreground space-x-2">
-                        {ingredient.price && parseFloat(ingredient.price) > 0 && (
-                          <span className="text-orange-600">
-                            +R$ {parseFloat(ingredient.price).toFixed(2)}
-                          </span>
-                        )}
-                        {ingredient.discountPrice && parseFloat(ingredient.discountPrice) > 0 && (
-                          <span className="text-green-600">
-                            -R$ {parseFloat(ingredient.discountPrice).toFixed(2)} se remover
-                          </span>
-                        )}
-                        <span>Máx: {ingredient.maxQuantity || 3}</span>
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {ingredient.isRemovable ? 'Removível' : 'Fixo'} • {ingredient.isRequired ? 'Obrigatório' : 'Opcional'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {!productId && (
-        <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
-          💡 Salve o produto primeiro para poder configurar os ingredientes específicos
-        </div>
-      )}
-    </div>
+          <div className="flex space-x-2 pt-4">
+            <Button
+              type="submit"
+              disabled={createIngredientMutation.isPending}
+              className="flex-1"
+            >
+              {createIngredientMutation.isPending ? "Criando..." : "Criar e Adicionar"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -242,11 +242,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product Management
   app.put("/api/products/:id", async (req, res) => {
     try {
-      const productData = insertProductSchema.parse(req.body);
-      const product = await storage.updateProduct(req.params.id, productData);
+      const { ingredients, ...productData } = req.body;
+      const validatedProductData = insertProductSchema.parse(productData);
+      
+      const product = await storage.updateProduct(req.params.id, validatedProductData);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
+
+      // Update product ingredients if provided
+      if (ingredients && Array.isArray(ingredients)) {
+        await storage.updateProductIngredients(req.params.id, ingredients);
+      }
+      
       res.json(product);
     } catch (error) {
       console.error("Error updating product:", error);
@@ -260,8 +268,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/products", async (req, res) => {
     try {
-      const productData = insertProductSchema.parse(req.body);
-      const product = await storage.createProduct(productData);
+      const { ingredients, ...productData } = req.body;
+      const validatedProductData = insertProductSchema.parse(productData);
+      
+      const product = await storage.createProduct(validatedProductData);
+      
+      // Add product ingredients if provided
+      if (ingredients && Array.isArray(ingredients)) {
+        await storage.updateProductIngredients(product.id, ingredients);
+      }
+      
       res.status(201).json(product);
     } catch (error) {
       console.error("Error creating product:", error);
