@@ -166,12 +166,29 @@ export default function Analytics() {
   const chartData = useMemo(() => {
     const startDate = new Date(period.startDate);
     const endDate = new Date(period.endDate);
+    // Include the entire end date by setting time to end of day
+    endDate.setHours(23, 59, 59, 999);
     const data: DailyData[] = [];
 
     // Filter orders and expenses by period
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.createdAt!);
       return orderDate >= startDate && orderDate <= endDate && order.paymentStatus === 'paid';
+    });
+
+    console.log('Debug Analytics:', {
+      period,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      totalOrders: orders.length,
+      paidOrders: orders.filter(o => o.paymentStatus === 'paid').length,
+      filteredOrders: filteredOrders.length,
+      filteredOrdersData: filteredOrders.map(o => ({
+        id: o.id,
+        total: o.total,
+        date: o.createdAt,
+        paymentStatus: o.paymentStatus
+      }))
     });
 
     const filteredExpenses = expenses.filter(expense => {
