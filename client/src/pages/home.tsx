@@ -12,7 +12,6 @@ import { useState } from "react";
 import { CATEGORIES } from "@/lib/constants";
 import { Search, Sandwich, EggFried, Coffee, IceCream, Box, Tags } from "lucide-react";
 import type { Product, Category, StoreSettings } from "@shared/schema";
-import bannerImage from "@assets/generated_images/Hamburger_for_animation_test_34bf052f.png";
 
 const CATEGORY_ICONS = {
   hamburgers: Sandwich,
@@ -86,19 +85,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Animated Banner Section */}
-        <section className="py-12 bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-            <div className="flex justify-center items-center h-40">
-              <img
-                src={bannerImage}
-                alt="Banner animado dos melhores hambúrguers"
-                className="h-32 object-contain animate-slide-center"
-                data-testid="animated-banner-image"
-              />
-            </div>
-          </div>
-        </section>
 
         {/* Category Navigation */}
         <section id="menu" className="py-8 bg-background border-b border-border">
