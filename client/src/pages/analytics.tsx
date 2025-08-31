@@ -332,26 +332,33 @@ export default function Analytics() {
   ].filter(item => item.value > 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
-        <Card className="mb-6">
+        <Card className="mb-8 shadow-xl border-0 bg-gradient-to-r from-white to-slate-50 backdrop-blur-sm">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center mb-2">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center">
                 <Button
                   variant="ghost"
                   onClick={() => setLocation("/admin")}
-                  className="mr-4 p-2"
+                  className="mr-4 p-2 hover:bg-slate-100 rounded-xl transition-all duration-200"
                   data-testid="button-back-admin"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <h1 className="text-3xl font-bold text-gray-900">📊 Dashboard Analytics</h1>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-xl">
+                    📊
+                  </div>
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    Dashboard Analytics
+                  </h1>
+                </div>
               </div>
               <Button 
                 onClick={() => setShowExpenseForm(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 rounded-xl px-6 py-3"
                 data-testid="button-new-expense"
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -362,18 +369,26 @@ export default function Analytics() {
         </Card>
 
         {/* Period Selector */}
-        <Card className="mb-6 bg-blue-50">
+        <Card className="mb-8 bg-gradient-to-r from-indigo-50 to-blue-50 border-0 shadow-lg backdrop-blur-sm">
           <CardContent className="pt-6">
-            <h2 className="text-lg font-semibold mb-4">Seleção de Período</h2>
-            <div className="flex flex-wrap items-center gap-4">
+            <h2 className="text-xl font-bold mb-6 text-slate-700 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+              Seleção de Período
+            </h2>
+            <div className="flex flex-wrap items-center gap-6">
               {/* Quick periods */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {['7', '30', '90', '180', '365'].map((days) => (
                   <Button
                     key={days}
                     variant={period.quickPeriod === days ? "default" : "outline"}
                     size="sm"
                     onClick={() => handleQuickPeriod(days)}
+                    className={`rounded-xl transition-all duration-200 font-medium ${
+                      period.quickPeriod === days 
+                        ? 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5' 
+                        : 'border-slate-300 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700'
+                    }`}
                     data-testid={`button-period-${days}`}
                   >
                     {days === '7' ? '7 dias' : 
@@ -384,38 +399,42 @@ export default function Analytics() {
                 ))}
               </div>
               
-              <div className="flex items-center gap-4">
-                <div>
-                  <Label htmlFor="startDate">Data Inicial</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={period.startDate}
-                    onChange={(e) => setPeriod({...period, startDate: e.target.value, quickPeriod: ""})}
-                    max="2025-12-31"
-                    min="2024-01-01"
-                    data-testid="input-start-date"
-                  />
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="startDate" className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Data Inicial</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={period.startDate}
+                      onChange={(e) => setPeriod({...period, startDate: e.target.value, quickPeriod: ""})}
+                      max="2025-12-31"
+                      min="2024-01-01"
+                      className="mt-1 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-indigo-500"
+                      data-testid="input-start-date"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="endDate" className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Data Final</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={period.endDate}
+                      onChange={(e) => setPeriod({...period, endDate: e.target.value, quickPeriod: ""})}
+                      max="2025-12-31"
+                      min="2024-01-01"
+                      className="mt-1 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-indigo-500"
+                      data-testid="input-end-date"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="endDate">Data Final</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={period.endDate}
-                    onChange={(e) => setPeriod({...period, endDate: e.target.value, quickPeriod: ""})}
-                    max="2025-12-31"
-                    min="2024-01-01"
-                    data-testid="input-end-date"
-                  />
+                
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/70 rounded-xl border border-indigo-200">
+                  <Calendar className="h-4 w-4 text-indigo-600" />
+                  <span className="text-sm font-medium text-slate-700">
+                    Período: {Math.ceil((new Date(period.endDate).getTime() - new Date(period.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} dias
+                  </span>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-blue-600" />
-                <span className="text-sm text-gray-600">
-                  Período: {Math.ceil((new Date(period.endDate).getTime() - new Date(period.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} dias
-                </span>
               </div>
             </div>
           </CardContent>
@@ -510,107 +529,144 @@ export default function Analytics() {
         )}
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-white shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+          {/* Faturamento Card */}
+          <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-emerald-50 to-green-50">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-green-500"></div>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Faturamento Total</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(kpis.faturamento.value)}</p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+                  💰
                 </div>
-                <div className="flex items-center">
-                  <DollarSign className="h-8 w-8 text-green-600" />
+                <div className="text-right">
+                  <div className="flex items-center gap-1 text-emerald-600">
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-sm font-semibold">+{kpis.faturamento.change}%</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center mt-2">
-                <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                <span className="text-sm text-green-600">+{kpis.faturamento.change}%</span>
+              <div>
+                <p className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-2">Faturamento Total</p>
+                <p className="text-3xl font-bold text-emerald-700">{formatCurrency(kpis.faturamento.value)}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-sm">
+          {/* Despesas Card */}
+          <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-red-50 to-rose-50">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 to-rose-500"></div>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Despesas Totais</p>
-                  <p className="text-2xl font-bold text-red-600">{formatCurrency(kpis.despesas.value)}</p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+                  📤
                 </div>
-                <div className="flex items-center">
-                  <Receipt className="h-8 w-8 text-red-600" />
+                <div className="text-right">
+                  <div className="flex items-center gap-1 text-emerald-600">
+                    <TrendingDown className="h-4 w-4" />
+                    <span className="text-sm font-semibold">{kpis.despesas.change}%</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center mt-2">
-                <TrendingDown className="h-4 w-4 text-green-600 mr-1" />
-                <span className="text-sm text-green-600">{kpis.despesas.change}%</span>
+              <div>
+                <p className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-2">Despesas Totais</p>
+                <p className="text-3xl font-bold text-red-700">{formatCurrency(kpis.despesas.value)}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-sm">
+          {/* Lucro Card */}
+          <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Lucro Líquido</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(kpis.lucro.value)}</p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+                  📈
                 </div>
-                <div className="flex items-center">
-                  <TrendingUp className="h-8 w-8 text-blue-600" />
+                <div className="text-right">
+                  <div className="flex items-center gap-1 text-emerald-600">
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-sm font-semibold">+{kpis.lucro.change}%</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center mt-2">
-                <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                <span className="text-sm text-green-600">+{kpis.lucro.change}%</span>
+              <div>
+                <p className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-2">Lucro Líquido</p>
+                <p className="text-3xl font-bold text-blue-700">{formatCurrency(kpis.lucro.value)}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-sm">
+          {/* Clientes Card */}
+          <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-purple-50 to-pink-50">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 to-pink-500"></div>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Clientes Médios/Dia</p>
-                  <p className="text-2xl font-bold text-purple-600">{kpis.clientes.value.toFixed(1)}</p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+                  👥
                 </div>
-                <div className="flex items-center">
-                  <Users className="h-8 w-8 text-purple-600" />
+                <div className="text-right">
+                  <div className="flex items-center gap-1 text-emerald-600">
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-sm font-semibold">+{kpis.clientes.change}%</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center mt-2">
-                <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                <span className="text-sm text-green-600">+{kpis.clientes.change}%</span>
+              <div>
+                <p className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-2">Clientes Médios/Dia</p>
+                <p className="text-3xl font-bold text-purple-700">{kpis.clientes.value.toFixed(1)}</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
           {/* Area Chart - Faturamento */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Evolução do Faturamento</CardTitle>
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-emerald-50 overflow-hidden group hover:shadow-2xl transition-all duration-300">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-700">
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center text-white">
+                  📊
+                </div>
+                Evolução do Faturamento
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorFaturamento" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#059669" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#059669" stopOpacity={0.1}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tickFormatter={formatDate} />
-                  <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                  <CartesianGrid strokeDasharray="2 4" stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={formatDate}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                  />
+                  <YAxis 
+                    tickFormatter={(value) => formatCurrency(value)}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                  />
                   <Tooltip 
                     labelFormatter={(label) => `Data: ${formatDate(label)}`}
                     formatter={(value: number) => [formatCurrency(value), 'Faturamento']}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                    }}
                   />
                   <Area 
                     type="monotone" 
                     dataKey="faturamento" 
-                    stroke="#10b981" 
+                    stroke="#059669" 
+                    strokeWidth={3}
                     fillOpacity={1} 
                     fill="url(#colorFaturamento)" 
                   />
@@ -620,49 +676,111 @@ export default function Analytics() {
           </Card>
 
           {/* Bar Chart - Faturamento vs Despesas */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Faturamento vs Despesas</CardTitle>
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50 overflow-hidden group hover:shadow-2xl transition-all duration-300">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-700">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white">
+                  ⚖️
+                </div>
+                Faturamento vs Despesas
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tickFormatter={formatDate} />
-                  <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                  <CartesianGrid strokeDasharray="2 4" stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={formatDate}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                  />
+                  <YAxis 
+                    tickFormatter={(value) => formatCurrency(value)}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                  />
                   <Tooltip 
                     labelFormatter={(label) => `Data: ${formatDate(label)}`}
                     formatter={(value: number, name: string) => [formatCurrency(value), name === 'faturamento' ? 'Faturamento' : 'Despesas']}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                    }}
                   />
-                  <Legend />
-                  <Bar dataKey="faturamento" fill="#10b981" name="Faturamento" />
-                  <Bar dataKey="despesas" fill="#ef4444" name="Despesas" />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
+                  <Bar dataKey="faturamento" fill="#059669" name="Faturamento" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="despesas" fill="#dc2626" name="Despesas" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
+        </div>
+
+        {/* Bottom Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
           {/* Line Chart - Lucro */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tendência de Lucro</CardTitle>
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-indigo-50 overflow-hidden group hover:shadow-2xl transition-all duration-300">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-700">
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white">
+                  📈
+                </div>
+                Tendência de Lucro
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tickFormatter={formatDate} />
-                  <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                  <defs>
+                    <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="2 4" stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={formatDate}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                  />
+                  <YAxis 
+                    tickFormatter={(value) => formatCurrency(value)}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                  />
                   <Tooltip 
                     labelFormatter={(label) => `Data: ${formatDate(label)}`}
                     formatter={(value: number) => [formatCurrency(value), 'Lucro']}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="lucro"
+                    stroke="#6366f1"
+                    strokeWidth={3}
+                    fill="url(#colorLucro)"
+                    fillOpacity={0.3}
                   />
                   <Line 
                     type="monotone" 
                     dataKey="lucro" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2}
-                    dot={{ fill: '#3b82f6' }}
+                    stroke="#6366f1" 
+                    strokeWidth={3}
+                    dot={{ fill: '#6366f1', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: '#6366f1', stroke: 'white', strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -670,12 +788,17 @@ export default function Analytics() {
           </Card>
 
           {/* Pie Chart - Distribuição */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Distribuição Financeira</CardTitle>
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-purple-50 overflow-hidden group hover:shadow-2xl transition-all duration-300">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-700">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center text-white">
+                  🎯
+                </div>
+                Distribuição Financeira
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie
                     data={pieData}
@@ -683,15 +806,25 @@ export default function Analytics() {
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
+                    stroke="white"
+                    strokeWidth={3}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip 
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -700,45 +833,69 @@ export default function Analytics() {
 
 
         {/* Recent Expenses */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Despesas Recentes</CardTitle>
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-slate-50 overflow-hidden">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-700">
+              <div className="w-8 h-8 bg-gradient-to-br from-slate-500 to-gray-600 rounded-lg flex items-center justify-center text-white">
+                📋
+              </div>
+              Despesas Recentes
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {expenses.slice(0, 10).map((expense) => (
-                <div key={expense.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium">{expense.description}</p>
-                    <p className="text-sm text-gray-600">
-                      {expense.category} • {new Date(expense.date).toLocaleDateString('pt-BR')}
-                    </p>
+            <div className="space-y-3">
+              {expenses.slice(0, 10).map((expense, index) => (
+                <div 
+                  key={expense.id} 
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-white to-slate-50 rounded-xl border border-slate-100 hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 group"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 bg-gradient-to-br from-red-100 to-rose-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <Receipt className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-700">{expense.description}</p>
+                      <p className="text-sm text-slate-500 flex items-center gap-2">
+                        <span className="px-2 py-1 bg-slate-100 rounded-md text-xs font-medium">{expense.category}</span>
+                        • {new Date(expense.date).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-red-600 mr-2">{formatCurrency(parseFloat(expense.amount))}</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditExpense(expense)}
-                      data-testid={`button-edit-expense-${expense.id}`}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteExpense(expense.id)}
-                      disabled={deleteExpenseMutation.isPending}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      data-testid={`button-delete-expense-${expense.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="flex items-center gap-3">
+                    <p className="font-bold text-red-600 text-lg">{formatCurrency(parseFloat(expense.amount))}</p>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditExpense(expense)}
+                        className="h-8 w-8 p-0 border-slate-300 hover:border-blue-400 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                        data-testid={`button-edit-expense-${expense.id}`}
+                      >
+                        <Edit className="h-3 w-3 text-blue-600" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteExpense(expense.id)}
+                        disabled={deleteExpenseMutation.isPending}
+                        className="h-8 w-8 p-0 border-slate-300 hover:border-red-400 hover:bg-red-50 rounded-lg transition-all duration-200"
+                        data-testid={`button-delete-expense-${expense.id}`}
+                      >
+                        <Trash2 className="h-3 w-3 text-red-600" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
               {expenses.length === 0 && (
-                <p className="text-center text-gray-500 py-8">Nenhuma despesa registrada ainda.</p>
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Receipt className="h-10 w-10 text-slate-400" />
+                  </div>
+                  <p className="text-slate-500 font-medium text-lg">Nenhuma despesa registrada ainda.</p>
+                  <p className="text-slate-400 text-sm mt-2">Clique em "Registrar Gasto" para adicionar uma despesa</p>
+                </div>
               )}
             </div>
           </CardContent>

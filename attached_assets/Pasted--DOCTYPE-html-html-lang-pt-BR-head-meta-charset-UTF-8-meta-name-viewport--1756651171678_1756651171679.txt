@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Analytics</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+
+        .header h1 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .register-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-size: 14px;
+        }
+
+        .register-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .period-selector {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .period-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .period-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .period-btn {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .period-btn.active {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .date-inputs {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .date-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .date-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .date-group input {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--accent-color);
+        }
+
+        .metric-card.revenue {
+            --accent-color: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .metric-card.expenses {
+            --accent-color: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .metric-card.profit {
+            --accent-color: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .metric-card.clients {
+            --accent-color: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .metric-title {
+            color: #666;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metric-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .metric-icon.revenue { background: #11998e; }
+        .metric-icon.expenses { background: #ff6b6b; }
+        .metric-icon.profit { background: #4facfe; }
+        .metric-icon.clients { background: #a8a8ea; }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .metric-change {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .metric-change.positive { color: #11998e; }
+        .metric-change.negative { color: #ff6b6b; }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .bottom-charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+                border-radius: 12px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid,
+            .bottom-charts {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card {
+                min-width: unset;
+            }
+
+            .date-inputs {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container fade-in">
+        <div class="header">
+            <h1>
+                <div class="icon">📊</div>
+                Dashboard Analytics
+            </h1>
+            <button class="register-btn">+ Registrar Gasto</button>
+        </div>
+
+        <div class="period-selector">
+            <div class="period-title">Seleção de Período</div>
+            <div class="period-buttons">
+                <button class="period-btn">7 dias</button>
+                <button class="period-btn active">30 dias</button>
+                <button class="period-btn">3 meses</button>
+                <button class="period-btn">6 meses</button>
+                <button class="period-btn">1 ano</button>
+            </div>
+            <div class="date-inputs">
+                <div class="date-group">
+                    <label>Data Inicial</label>
+                    <input type="date" value="2025-08-01">
+                </div>
+                <div class="date-group">
+                    <label>Data Final</label>
+                    <input type="date" value="2025-08-31">
+                </div>
+                <div style="color: #666; font-size: 14px; margin-left: 10px;">
+                    📅 Período: 31 dias
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card revenue">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <div class="metric-icon revenue">💰</div>
+                        Faturamento Total
+                    </div>
+                </div>
+                <div class="metric-value">R$ 8.450,00</div>
+                <div class="metric-change positive">
+                    ↗️ +12,5%
+                </div>
+            </div>
+
+            <div class="metric-card expenses">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <div class="metric-icon expenses">📤</div>
+                        Despesas Totais
+                    </div>
+                </div>
+                <div class="metric-value">R$ 3.200,00</div>
+                <div class="metric-change negative">
+                    ↗️ +5,2%
+                </div>
+            </div>
+
+            <div class="metric-card profit">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <div class="metric-icon profit">📈</div>
+                        Lucro Líquido
+                    </div>
+                </div>
+                <div class="metric-value">R$ 5.250,00</div>
+                <div class="metric-change positive">
+                    ↗️ +18,7%
+                </div>
+            </div>
+
+            <div class="metric-card clients">
+                <div class="metric-header">
+                    <div class="metric-title">
+                        <div class="metric-icon clients">👥</div>
+                        Clientes Médios/Dia
+                    </div>
+                </div>
+                <div class="metric-value">47</div>
+                <div class="metric-change positive">
+                    ↗️ +8,3%
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-title">📊 Evolução do Faturamento</div>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">⚖️ Faturamento vs Despesas</div>
+                <div class="chart-container">
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-charts">
+            <div class="chart-card">
+                <div class="chart-title">📈 Tendência de Lucro</div>
+                <div class="chart-container">
+                    <canvas id="profitChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">🏦 Distribuição Financeira</div>
+                <div class="chart-container">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração global dos gráficos
+        Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        Chart.defaults.color = '#666';
+
+        // Dados simulados
+        const dates = ['03/08', '07/08', '11/08', '14/08', '18/08', '22/08', '26/08', '30/08'];
+        const revenueData = [1200, 1800, 2200, 3100, 2800, 3500, 4200, 5100];
+        const expensesData = [400, 600, 800, 1200, 900, 1100, 1400, 1700];
+        const profitData = revenueData.map((rev, i) => rev - expensesData[i]);
+
+        // Gráfico de Evolução do Faturamento
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Faturamento',
+                    data: revenueData,
+                    borderColor: '#11998e',
+                    backgroundColor: 'rgba(17, 153, 142, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#11998e',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR');
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+
+        // Gráfico de Comparação Faturamento vs Despesas
+        new Chart(document.getElementById('comparisonChart'), {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: 'Faturamento',
+                        data: revenueData,
+                        borderColor: '#11998e',
+                        backgroundColor: 'rgba(17, 153, 142, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Despesas',
+                        data: expensesData,
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR');
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de Tendência de Lucro
+        new Chart(document.getElementById('profitChart'), {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Lucro',
+                    data: profitData,
+                    borderColor: '#4facfe',
+                    backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#4facfe',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR');
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de Pizza - Distribuição Financeira
+        new Chart(document.getElementById('distributionChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Lucro Líquido', 'Despesas Operacionais', 'Impostos', 'Reserva'],
+                datasets: [{
+                    data: [5250, 2100, 800, 300],
+                    backgroundColor: [
+                        '#4facfe',
+                        '#ff6b6b',
+                        '#feca57',
+                        '#a8edea'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+
+        // Interatividade dos botões de período
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Animação ao carregar
+        document.querySelectorAll('.metric-card, .chart-card').forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+            card.classList.add('fade-in');
+        });
+    </script>
+</body>
+</html>
