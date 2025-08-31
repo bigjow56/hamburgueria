@@ -52,6 +52,7 @@ export interface IStorage {
   getUserOrders(userId: string): Promise<Order[]>;
   getAllOrders(): Promise<Order[]>;
   updateOrderStatus(id: string, status: string): Promise<boolean>;
+  updateOrderPaymentStatus(id: string, paymentStatus: string): Promise<boolean>;
   
   // Store settings
   getStoreSettings(): Promise<StoreSettings | undefined>;
