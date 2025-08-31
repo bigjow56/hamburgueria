@@ -171,7 +171,7 @@ export default function Analytics() {
     // Filter orders and expenses by period
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.createdAt!);
-      return orderDate >= startDate && orderDate <= endDate && order.paymentStatus === 'completed';
+      return orderDate >= startDate && orderDate <= endDate && order.paymentStatus === 'paid';
     });
 
     const filteredExpenses = expenses.filter(expense => {
