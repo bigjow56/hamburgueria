@@ -133,6 +133,22 @@ export function ProductCustomization({ cartItem, isOpen, onClose, onSave, inline
   const originalPrice = parseFloat(cartItem.product.price);
   const priceDifference = currentPrice - originalPrice;
 
+  // Debug: Check if we have data
+  const hasIngredients = productIngredients && productIngredients.length > 0;
+  const hasAdditionals = productAdditionals && productAdditionals.length > 0;
+  
+  // If no ingredients or additionals, show a message
+  if (!hasIngredients && !hasAdditionals) {
+    return inline ? (
+      <div className="space-y-4 p-4 text-center text-muted-foreground" data-testid="no-customization">
+        <p>Este produto ainda não possui opções de personalização.</p>
+        <Button onClick={onClose} variant="outline" size="sm">
+          Fechar
+        </Button>
+      </div>
+    ) : null;
+  }
+
   const content = (
     <div className="space-y-6">
           {/* Current Price Display */}
