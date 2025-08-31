@@ -12,7 +12,7 @@ import { useState } from "react";
 import { CATEGORIES } from "@/lib/constants";
 import { Search, Sandwich, EggFried, Coffee, IceCream, Box, Tags } from "lucide-react";
 import type { Product, Category, StoreSettings } from "@shared/schema";
-import bannerImage from "@assets/{54750D3A-F65D-43AB-8407-E45AD14FEC89}_1756602514679.png";
+import bannerImage from "@assets/generated_images/Hamburger_for_animation_test_34bf052f.png";
 
 const CATEGORY_ICONS = {
   hamburgers: Sandwich,
