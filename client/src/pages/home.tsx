@@ -32,12 +32,25 @@ export default function Home() {
   });
 
   const { data: featuredProducts = [] } = useQuery<Product[]>({
-    queryKey: ["/api/products/featured"],
+    queryKey: ["/api/products/featured", "customer"],
+    queryFn: () => fetch("/api/products/featured?admin=true").then(res => res.json()),
   });
 
-  const { data: products = [] } = useQuery<Product[]>({
-    queryKey: selectedCategory ? ["/api/products?category=" + selectedCategory] : ["/api/products"],
+  // For customer view, we need to include unavailable products but show them as "esgotado"
+  const { data: allProducts = [] } = useQuery<Product[]>({
+    queryKey: selectedCategory ? ["/api/products", "customer", selectedCategory] : ["/api/products", "customer"],
+    queryFn: () => {
+      const url = selectedCategory 
+        ? `/api/products?category=${selectedCategory}&admin=true`
+        : "/api/products?admin=true";
+      return fetch(url).then(res => res.json());
+    },
   });
+
+  // Filter products based on category but include all (available and unavailable)
+  const products = selectedCategory 
+    ? allProducts.filter(p => p.categoryId === selectedCategory)
+    : allProducts;
 
   const { data: storeSettings } = useQuery<StoreSettings>({
     queryKey: ["/api/store/settings"],

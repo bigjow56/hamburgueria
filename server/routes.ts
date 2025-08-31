@@ -111,7 +111,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products/featured", async (req, res) => {
     try {
-      const products = await storage.getFeaturedProducts();
+      const { admin } = req.query;
+      let products;
+      
+      if (admin === 'true') {
+        // Get all featured products including unavailable ones (for customer view to show as "esgotado")
+        products = await storage.getAllProducts().then(allProducts => 
+          allProducts.filter(p => p.isFeatured === true)
+        );
+      } else {
+        // Original behavior - only available featured products
+        products = await storage.getFeaturedProducts();
+      }
+      
       res.json(products);
     } catch (error) {
       console.error("Error fetching featured products:", error);
