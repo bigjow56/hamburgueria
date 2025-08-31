@@ -654,10 +654,13 @@ export default function Admin() {
                   <span>Ingredientes e Adicionais</span>
                   <Button
                     onClick={() => setShowNewIngredientForm(true)}
+                    size="sm"
+                    className="px-3 py-2 text-sm"
                     data-testid="button-add-ingredient"
                   >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Adicionar Ingrediente
+                    <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Adicionar Ingrediente</span>
+                    <span className="sm:hidden">+ Ingrediente</span>
                   </Button>
                 </CardTitle>
               </CardHeader>
@@ -1595,7 +1598,7 @@ function BannerManagement() {
     },
   });
 
-  const handleInputChange = (field: keyof StoreSettings, value: string) => {
+  const handleInputChange = (field: keyof StoreSettings, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
@@ -1690,7 +1693,7 @@ function BannerManagement() {
               type="checkbox"
               id="use-image-background"
               checked={formData.bannerUseImageBackground || false}
-              onChange={(e) => handleInputChange('bannerUseImageBackground', e.target.checked.toString())}
+              onChange={(e) => handleInputChange('bannerUseImageBackground', e.target.checked)}
               className="rounded"
               data-testid="checkbox-use-image-background"
             />
@@ -1855,7 +1858,7 @@ function StoreInfoManagement() {
     },
   });
 
-  const handleInputChange = (field: keyof StoreSettings, value: string) => {
+  const handleInputChange = (field: keyof StoreSettings, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
