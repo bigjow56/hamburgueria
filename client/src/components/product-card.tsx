@@ -22,7 +22,7 @@ export default function ProductCard({ product, onAddToCart, showBadge = false }:
         <img 
           src={product.imageUrl} 
           alt={product.name} 
-          className={`w-full h-48 object-cover transition-transform duration-500 ${
+          className={`w-full h-32 sm:h-40 md:h-48 object-cover transition-transform duration-500 ${
             isAvailable ? 'group-hover:scale-110' : 'grayscale'
           }`} 
         />
@@ -63,18 +63,18 @@ export default function ProductCard({ product, onAddToCart, showBadge = false }:
         )}
       </div>
       
-      <CardContent className="p-6">
-        <h3 className="text-xl font-semibold text-card-foreground mb-2">{product.name}</h3>
-        <p className="text-muted-foreground mb-4 line-clamp-2">{product.description}</p>
+      <CardContent className="p-3 sm:p-4 md:p-6">
+        <h3 className="text-sm sm:text-base md:text-xl font-semibold text-card-foreground mb-1 sm:mb-2 line-clamp-1">{product.name}</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 line-clamp-2 md:line-clamp-2">{product.description}</p>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+        <div className="space-y-2 md:space-y-0 md:flex md:items-center md:justify-between">
+          <div className="flex items-center space-x-1 sm:space-x-2">
             {hasDiscount && (
-              <span className="text-lg text-muted-foreground line-through">
+              <span className="text-xs sm:text-sm md:text-lg text-muted-foreground line-through">
                 R$ {parseFloat(product.originalPrice!).toFixed(2)}
               </span>
             )}
-            <span className="text-2xl font-bold text-primary">
+            <span className="text-sm sm:text-lg md:text-2xl font-bold text-primary">
               R$ {parseFloat(product.price).toFixed(2)}
             </span>
           </div>
@@ -82,19 +82,21 @@ export default function ProductCard({ product, onAddToCart, showBadge = false }:
           {isAvailable ? (
             <Button
               onClick={() => onAddToCart(product)}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground px-6 py-2 rounded-lg font-semibold transition-colors"
+              className="bg-accent hover:bg-accent/90 text-accent-foreground w-full md:w-auto px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-semibold transition-colors"
               data-testid={`button-add-to-cart-${product.id}`}
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Adicionar
+              <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Adicionar</span>
+              <span className="sm:hidden">+</span>
             </Button>
           ) : (
             <Button
               disabled
-              className="bg-muted text-muted-foreground px-6 py-2 rounded-lg font-semibold cursor-not-allowed"
+              className="bg-muted text-muted-foreground w-full md:w-auto px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-semibold cursor-not-allowed"
               data-testid={`button-unavailable-${product.id}`}
             >
-              😞 Esgotado
+              <span className="hidden sm:inline">😞 Esgotado</span>
+              <span className="sm:hidden">😞</span>
             </Button>
           )}
         </div>

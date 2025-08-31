@@ -1,0 +1,33 @@
+ layout atual está quebrando no mobile. Componentes de desktop estão sendo espremidos, causando sobreposição e barras de rolagem horizontais, o que é péssimo para a usabilidade.
+
+O Problema: A navegação (Produtos, Ingredientes, Pedidos...) e os cards de produtos foram pensados para uma tela larga.
+
+Plano de Ação para Corrigir:
+
+A Barra de Navegação (O Maior Problema):
+
+Solução: Transforme essa barra em abas que podem ser arrastadas para o lado (swipeable tabs). É a abordagem mais moderna e usada em apps nativos. O usuário vê as primeiras 3-4 opções e pode simplesmente arrastar o dedo para ver o resto.
+
+Como fazer: Com CSS, você pode usar display: flex; no container das abas e overflow-x: auto; para permitir a rolagem horizontal apenas nessa pequena barra, sem afetar a página inteira.
+
+Os Cards de "Gerenciar Produtos":
+
+Solução: Reestruture o layout interno dos cards para um formato vertical. Em telas pequenas, a informação deve fluir de cima para baixo.
+
+Passo a passo da mudança:
+
+Informações do Produto: O nome, a descrição e o preço devem ficar empilhados verticalmente à esquerda.
+
+Ações (Botões): Os botões de Disponível, Editar e Deletar estão espalhados. Agrupe-os!
+
+Use Ícones: Troque "Editar" por um ícone de lápis e "Deletar" por um ícone de lixeira. Isso economiza um espaço imenso e é universalmente entendido.
+
+Posicionamento: Coloque os ícones de ação juntos, no canto superior ou inferior direito do card. O botão "Disponível" pode ficar mais destacado, talvez abaixo do preço.
+
+Botões Principais:
+
+Os botões "Analytics" e "Novo Produto" no topo estão sendo cortados. No mobile, esses botões de ação principal devem ter destaque.
+
+Solução: Considere movê-los para uma barra de ferramentas fixa na parte inferior da tela (um bottom navigation bar). É onde o polegar do usuário descansa, tornando ações importantes como "Adicionar Produto" extremamente fáceis e rápidas.
+
+Resumo da Melhoria do Admin: O objetivo é eliminar toda rolagem horizontal e garantir que cada card de informação seja legível e que todas as ações (botões) sejam fáceis de tocar.

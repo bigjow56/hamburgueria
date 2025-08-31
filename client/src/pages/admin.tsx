@@ -378,37 +378,41 @@ export default function Admin() {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center mb-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center mb-1 sm:mb-2">
                   <Button
                     variant="ghost"
                     onClick={() => setLocation("/")}
-                    className="mr-4 p-2"
+                    className="mr-2 sm:mr-4 p-1 sm:p-2"
                     data-testid="button-back-home"
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
-                  <h1 className="text-3xl font-bold text-foreground">🍔 Painel Administrativo</h1>
+                  <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-foreground truncate">🍔 Painel Administrativo</h1>
                 </div>
-                <p className="text-muted-foreground">Gerencie seus produtos sem mexer no código</p>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Gerencie seus produtos sem mexer no código</p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <Button 
                   onClick={() => setLocation("/admin/analytics")}
                   variant="outline"
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  size="sm"
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 px-2 sm:px-4"
                   data-testid="button-analytics"
                 >
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Analytics
+                  <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Analytics</span>
+                  <span className="sm:hidden">📊</span>
                 </Button>
                 <Button 
                   onClick={startNewProduct}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                  size="sm"
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground px-2 sm:px-4"
                   data-testid="button-new-product"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo Produto
+                  <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Novo Produto</span>
+                  <span className="sm:hidden">+</span>
                 </Button>
               </div>
             </div>
@@ -417,32 +421,40 @@ export default function Admin() {
 
         {/* Admin Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="products" className="flex items-center">
-              <Edit3 className="mr-2 h-4 w-4" />
-              Produtos
-            </TabsTrigger>
-            <TabsTrigger value="ingredients" className="flex items-center">
-              <Tags className="mr-2 h-4 w-4" />
-              Ingredientes
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center">
-              <ShoppingBag className="mr-2 h-4 w-4" />
-              Pedidos
-            </TabsTrigger>
-            <TabsTrigger value="banner" className="flex items-center">
-              <Image className="mr-2 h-4 w-4" />
-              Banner
-            </TabsTrigger>
-            <TabsTrigger value="store-info" className="flex items-center">
-              <Settings className="mr-2 h-4 w-4" />
-              Loja
-            </TabsTrigger>
-            <TabsTrigger value="delivery" className="flex items-center">
-              <MapPin className="mr-2 h-4 w-4" />
-              Entrega
-            </TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto pb-2">
+            <TabsList className="flex min-w-max gap-1 w-auto bg-transparent p-0">
+              <TabsTrigger value="products" className="flex items-center whitespace-nowrap px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Edit3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Produtos</span>
+                <span className="sm:hidden">Prod.</span>
+              </TabsTrigger>
+              <TabsTrigger value="ingredients" className="flex items-center whitespace-nowrap px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Tags className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Ingredientes</span>
+                <span className="sm:hidden">Ingr.</span>
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="flex items-center whitespace-nowrap px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <ShoppingBag className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Pedidos</span>
+                <span className="sm:hidden">Ped.</span>
+              </TabsTrigger>
+              <TabsTrigger value="banner" className="flex items-center whitespace-nowrap px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Image className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Banner</span>
+                <span className="sm:hidden">Ban.</span>
+              </TabsTrigger>
+              <TabsTrigger value="store-info" className="flex items-center whitespace-nowrap px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Settings className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Loja</span>
+                <span className="sm:hidden">Loja</span>
+              </TabsTrigger>
+              <TabsTrigger value="delivery" className="flex items-center whitespace-nowrap px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <MapPin className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Entrega</span>
+                <span className="sm:hidden">Entr.</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="products" className="space-y-6">
             {/* New Product Form */}
@@ -494,90 +506,109 @@ export default function Admin() {
                       isLoading={updateProductMutation.isPending}
                     />
                   ) : (
-                    <div className="flex items-start space-x-4">
-                      {/* Product Image */}
-                      <div className="relative group">
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.name}
-                          className="w-24 h-24 object-cover rounded-lg"
-                        />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer rounded-lg flex items-center justify-center transition-opacity">
-                          <Image className="text-white h-5 w-5" />
-                        </div>
-                      </div>
-
-                      {/* Product Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold">{product.name}</h3>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              onClick={() => handleToggleAvailability(product)}
-                              variant={product.isAvailable ? "default" : "secondary"}
-                              size="sm"
-                              data-testid={`button-toggle-${product.id}`}
-                            >
-                              {product.isAvailable ? (
-                                <>
-                                  <ToggleRight className="mr-1 h-3 w-3" />
-                                  Disponível
-                                </>
-                              ) : (
-                                <>
-                                  <ToggleLeft className="mr-1 h-3 w-3" />
-                                  Indisponível
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              onClick={() => handleEdit(product)}
-                              variant="outline"
-                              size="sm"
-                              data-testid={`button-edit-${product.id}`}
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              onClick={() => handleDelete(product.id)}
-                              variant="outline"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              data-testid={`button-delete-${product.id}`}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                    <div className="space-y-3">
+                      {/* Mobile Layout */}
+                      <div className="flex items-start space-x-3">
+                        {/* Product Image */}
+                        <div className="relative group flex-shrink-0">
+                          <img 
+                            src={product.imageUrl} 
+                            alt={product.name}
+                            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-cover rounded-lg"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer rounded-lg flex items-center justify-center transition-opacity">
+                            <Image className="text-white h-4 w-4" />
                           </div>
                         </div>
-                        
-                        <p className="text-muted-foreground mb-2">{product.description}</p>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            {product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price) && (
-                              <span className="text-sm text-muted-foreground line-through">
-                                R$ {parseFloat(product.originalPrice).toFixed(2)}
-                              </span>
-                            )}
-                            <span className="text-xl font-bold text-accent">
-                              R$ {parseFloat(product.price).toFixed(2)}
-                            </span>
+
+                        {/* Product Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-sm sm:text-base md:text-lg font-semibold truncate">{product.name}</h3>
+                              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">{product.description}</p>
+                            </div>
+                            
+                            {/* Availability Toggle - Always visible */}
+                            <div className="flex-shrink-0 ml-2">
+                              <Button
+                                onClick={() => handleToggleAvailability(product)}
+                                variant={product.isAvailable ? "default" : "secondary"}
+                                size="sm"
+                                className="px-2 py-1 text-xs h-7"
+                                data-testid={`button-toggle-${product.id}`}
+                              >
+                                {product.isAvailable ? (
+                                  <>
+                                    <ToggleRight className="mr-1 h-3 w-3" />
+                                    <span className="hidden sm:inline">Disponível</span>
+                                    <span className="sm:hidden">Disp</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ToggleLeft className="mr-1 h-3 w-3" />
+                                    <span className="hidden sm:inline">Indisponível</span>
+                                    <span className="sm:hidden">Indisp</span>
+                                  </>
+                                )}
+                              </Button>
+                            </div>
                           </div>
                           
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline">
+                          {/* Price and Category */}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              {product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price) && (
+                                <span className="text-xs sm:text-sm text-muted-foreground line-through">
+                                  R$ {parseFloat(product.originalPrice).toFixed(2)}
+                                </span>
+                              )}
+                              <span className="text-sm sm:text-lg md:text-xl font-bold text-accent">
+                                R$ {parseFloat(product.price).toFixed(2)}
+                              </span>
+                            </div>
+                            
+                            <Badge variant="outline" className="text-xs">
                               {getCategoryName(product.categoryId)}
                             </Badge>
-                            {product.isFeatured && (
-                              <Badge className="bg-secondary text-secondary-foreground">
-                                Destaque
-                              </Badge>
-                            )}
-                            {product.isPromotion && (
-                              <Badge className="bg-primary text-primary-foreground">
-                                Promoção
-                              </Badge>
-                            )}
+                          </div>
+                          
+                          {/* Badges and Actions */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1">
+                              {product.isFeatured && (
+                                <Badge className="bg-secondary text-secondary-foreground text-xs px-1.5 py-0.5">
+                                  Destaque
+                                </Badge>
+                              )}
+                              {product.isPromotion && (
+                                <Badge className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5">
+                                  Promoção
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {/* Action Buttons */}
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                onClick={() => handleEdit(product)}
+                                variant="outline"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                data-testid={`button-edit-${product.id}`}
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                onClick={() => handleDelete(product.id)}
+                                variant="outline"
+                                size="sm"
+                                className="text-destructive hover:text-destructive h-7 w-7 p-0"
+                                data-testid={`button-delete-${product.id}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
