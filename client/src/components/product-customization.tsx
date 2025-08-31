@@ -46,6 +46,13 @@ export function ProductCustomization({ cartItem, isOpen, onClose, onSave, inline
     setModifications(cartItem.modifications);
   }, [cartItem.modifications]);
 
+  // Apply modifications in real-time for inline mode
+  useEffect(() => {
+    if (inline) {
+      onSave(modifications);
+    }
+  }, [modifications, inline, onSave]);
+
   const calculatePrice = () => {
     let basePrice = parseFloat(cartItem.product.price);
     

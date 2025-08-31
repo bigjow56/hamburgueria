@@ -1441,6 +1441,9 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
           placeholder="https://images.unsplash.com/photo-..."
           data-testid="input-image-url"
         />
+        <p className="text-xs text-muted-foreground mt-1">
+          Recomendado: 600x400px para melhor qualidade
+        </p>
       </div>
 
       <div className="flex items-center space-x-6">
@@ -1675,7 +1678,7 @@ function BannerManagement() {
                 data-testid="input-banner-background-image"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Imagem que cobrirá todo o fundo do banner
+                Imagem que cobrirá todo o fundo do banner (recomendado: 1920x1080px)
               </p>
             </div>
           )}
@@ -1881,7 +1884,7 @@ function StoreInfoManagement() {
                 data-testid="input-store-image"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Foto do interior/exterior da hamburgueria
+                Foto do interior/exterior da hamburgueria (recomendado: 800x600px)
               </p>
             </div>
           </div>
