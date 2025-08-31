@@ -89,12 +89,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Products
   app.get("/api/products", async (req, res) => {
     try {
-      const { category } = req.query;
+      const { category, admin } = req.query;
       let products;
       
       if (category && typeof category === 'string') {
         products = await storage.getProductsByCategory(category);
+      } else if (admin === 'true') {
+        // Admin view - show all products including unavailable ones
+        products = await storage.getAllProducts();
       } else {
+        // Customer view - only show available products
         products = await storage.getProducts();
       }
       

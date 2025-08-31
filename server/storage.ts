@@ -50,6 +50,7 @@ export interface IStorage {
   
   // Product operations
   getProducts(): Promise<Product[]>;
+  getAllProducts(): Promise<Product[]>; // For admin - shows all products including unavailable
   getProductsByCategory(categoryId: string): Promise<Product[]>;
   getFeaturedProducts(): Promise<Product[]>;
   getProduct(id: string): Promise<Product | undefined>;
@@ -136,6 +137,10 @@ export class DatabaseStorage implements IStorage {
   // Product operations
   async getProducts(): Promise<Product[]> {
     return await db.select().from(products).where(eq(products.isAvailable, true));
+  }
+
+  async getAllProducts(): Promise<Product[]> {
+    return await db.select().from(products);
   }
 
   async getProductsByCategory(categoryId: string): Promise<Product[]> {

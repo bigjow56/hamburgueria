@@ -171,7 +171,8 @@ export default function Admin() {
   });
 
   const { data: products = [] } = useQuery<Product[]>({
-    queryKey: ["/api/products"],
+    queryKey: ["/api/products", "admin"],
+    queryFn: () => fetch("/api/products?admin=true").then(res => res.json()),
   });
 
   const { data: categories = [] } = useQuery<Category[]>({
