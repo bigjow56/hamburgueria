@@ -394,7 +394,7 @@ export default function Analytics() {
                     type="date"
                     value={period.startDate}
                     onChange={(e) => setPeriod({...period, startDate: e.target.value, quickPeriod: ""})}
-                    max="2024-12-31"
+                    max="2025-12-31"
                     min="2024-01-01"
                     data-testid="input-start-date"
                   />
@@ -406,7 +406,7 @@ export default function Analytics() {
                     type="date"
                     value={period.endDate}
                     onChange={(e) => setPeriod({...period, endDate: e.target.value, quickPeriod: ""})}
-                    max="2024-12-31"
+                    max="2025-12-31"
                     min="2024-01-01"
                     data-testid="input-end-date"
                   />
@@ -481,7 +481,7 @@ export default function Analytics() {
                     type="date"
                     value={newExpense.date}
                     onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                    max="2024-12-31"
+                    max="2025-12-31"
                     data-testid="input-expense-date"
                   />
                 </div>
