@@ -46,12 +46,12 @@ export function ProductCustomization({ cartItem, isOpen, onClose, onSave, inline
     setModifications(cartItem.modifications);
   }, [cartItem.modifications]);
 
-  // Apply modifications in real-time for inline mode
-  useEffect(() => {
-    if (inline) {
-      onSave(modifications);
-    }
-  }, [modifications, inline, onSave]);
+  // Apply modifications in real-time for inline mode (disabled to prevent auto-close)
+  // useEffect(() => {
+  //   if (inline) {
+  //     onSave(modifications);
+  //   }
+  // }, [modifications, inline, onSave]);
 
   const calculatePrice = () => {
     let basePrice = parseFloat(cartItem.product.price);
@@ -277,24 +277,48 @@ export function ProductCustomization({ cartItem, isOpen, onClose, onSave, inline
           )}
 
           {/* Action Buttons */}
-          <div className="flex space-x-2 pt-4">
-            <Button
-              onClick={handleSave}
-              className="flex-1 bg-accent hover:bg-accent/90"
-              data-testid="button-save-customization"
-            >
-              <Save className="mr-2 h-4 w-4" />
-              Salvar Personalização
-            </Button>
-            <Button
-              onClick={onClose}
-              variant="outline"
-              data-testid="button-cancel-customization"
-            >
-              <X className="mr-2 h-4 w-4" />
-              Cancelar
-            </Button>
-          </div>
+          {!inline && (
+            <div className="flex space-x-2 pt-4">
+              <Button
+                onClick={handleSave}
+                className="flex-1 bg-accent hover:bg-accent/90"
+                data-testid="button-save-customization"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Salvar Personalização
+              </Button>
+              <Button
+                onClick={onClose}
+                variant="outline"
+                data-testid="button-cancel-customization"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Cancelar
+              </Button>
+            </div>
+          )}
+          
+          {/* Inline Action Buttons */}
+          {inline && (
+            <div className="flex space-x-2 pt-4 border-t">
+              <Button
+                onClick={handleSave}
+                className="flex-1 bg-accent hover:bg-accent/90"
+                data-testid="button-save-customization-inline"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Aplicar Personalização
+              </Button>
+              <Button
+                onClick={onClose}
+                variant="outline"
+                className="px-6"
+                data-testid="button-cancel-customization-inline"
+              >
+                Fechar
+              </Button>
+            </div>
+          )}
         </div>
   );
 
