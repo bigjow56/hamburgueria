@@ -7,6 +7,10 @@ import {
   storeSettings,
   deliveryZones,
   expenses,
+  ingredients,
+  productIngredients,
+  productAdditionals,
+  orderItemModifications,
   type User,
   type InsertUser,
   type Category,
@@ -22,6 +26,14 @@ import {
   type InsertDeliveryZone,
   type Expense,
   type InsertExpense,
+  type Ingredient,
+  type InsertIngredient,
+  type ProductIngredient,
+  type InsertProductIngredient,
+  type ProductAdditional,
+  type InsertProductAdditional,
+  type OrderItemModification,
+  type InsertOrderItemModification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -73,6 +85,22 @@ export interface IStorage {
   createExpense(expense: InsertExpense): Promise<Expense>;
   updateExpense(id: string, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
   deleteExpense(id: string): Promise<boolean>;
+  
+  // Ingredients
+  getIngredients(): Promise<Ingredient[]>;
+  getIngredientsByCategory(category: string): Promise<Ingredient[]>;
+  getIngredient(id: string): Promise<Ingredient | undefined>;
+  createIngredient(ingredient: InsertIngredient): Promise<Ingredient>;
+  updateIngredient(id: string, ingredient: Partial<InsertIngredient>): Promise<Ingredient | undefined>;
+  deleteIngredient(id: string): Promise<boolean>;
+  
+  // Product Ingredients & Additionals
+  getProductIngredients(productId: string): Promise<ProductIngredient[]>;
+  getProductAdditionals(productId: string): Promise<ProductAdditional[]>;
+  addProductIngredient(data: InsertProductIngredient): Promise<ProductIngredient>;
+  addProductAdditional(data: InsertProductAdditional): Promise<ProductAdditional>;
+  removeProductIngredient(productId: string, ingredientId: string): Promise<boolean>;
+  removeProductAdditional(productId: string, ingredientId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -304,6 +332,114 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExpense(id: string): Promise<boolean> {
     const result = await db.delete(expenses).where(eq(expenses.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Ingredients operations
+  async getIngredients(): Promise<Ingredient[]> {
+    return await db
+      .select()
+      .from(ingredients)
+      .where(eq(ingredients.isActive, true))
+      .orderBy(ingredients.category, ingredients.name);
+  }
+
+  async getIngredientsByCategory(category: string): Promise<Ingredient[]> {
+    return await db
+      .select()
+      .from(ingredients)
+      .where(and(
+        eq(ingredients.category, category),
+        eq(ingredients.isActive, true)
+      ))
+      .orderBy(ingredients.name);
+  }
+
+  async getIngredient(id: string): Promise<Ingredient | undefined> {
+    const [ingredient] = await db.select().from(ingredients).where(eq(ingredients.id, id));
+    return ingredient;
+  }
+
+  async createIngredient(ingredientData: InsertIngredient): Promise<Ingredient> {
+    const [ingredient] = await db.insert(ingredients).values(ingredientData).returning();
+    return ingredient;
+  }
+
+  async updateIngredient(id: string, ingredientData: Partial<InsertIngredient>): Promise<Ingredient | undefined> {
+    const [ingredient] = await db
+      .update(ingredients)
+      .set(ingredientData)
+      .where(eq(ingredients.id, id))
+      .returning();
+    return ingredient;
+  }
+
+  async deleteIngredient(id: string): Promise<boolean> {
+    const result = await db.delete(ingredients).where(eq(ingredients.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Product Ingredients & Additionals operations
+  async getProductIngredients(productId: string): Promise<ProductIngredient[]> {
+    return await db
+      .select({
+        id: productIngredients.id,
+        productId: productIngredients.productId,
+        ingredientId: productIngredients.ingredientId,
+        isIncludedByDefault: productIngredients.isIncludedByDefault,
+        quantity: productIngredients.quantity,
+        ingredient: ingredients
+      })
+      .from(productIngredients)
+      .leftJoin(ingredients, eq(productIngredients.ingredientId, ingredients.id))
+      .where(eq(productIngredients.productId, productId));
+  }
+
+  async getProductAdditionals(productId: string): Promise<ProductAdditional[]> {
+    return await db
+      .select({
+        id: productAdditionals.id,
+        productId: productAdditionals.productId,
+        ingredientId: productAdditionals.ingredientId,
+        customPrice: productAdditionals.customPrice,
+        isActive: productAdditionals.isActive,
+        ingredient: ingredients
+      })
+      .from(productAdditionals)
+      .leftJoin(ingredients, eq(productAdditionals.ingredientId, ingredients.id))
+      .where(and(
+        eq(productAdditionals.productId, productId),
+        eq(productAdditionals.isActive, true)
+      ));
+  }
+
+  async addProductIngredient(data: InsertProductIngredient): Promise<ProductIngredient> {
+    const [productIngredient] = await db.insert(productIngredients).values(data).returning();
+    return productIngredient;
+  }
+
+  async addProductAdditional(data: InsertProductAdditional): Promise<ProductAdditional> {
+    const [productAdditional] = await db.insert(productAdditionals).values(data).returning();
+    return productAdditional;
+  }
+
+  async removeProductIngredient(productId: string, ingredientId: string): Promise<boolean> {
+    const result = await db
+      .delete(productIngredients)
+      .where(and(
+        eq(productIngredients.productId, productId),
+        eq(productIngredients.ingredientId, ingredientId)
+      ));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async removeProductAdditional(productId: string, ingredientId: string): Promise<boolean> {
+    const result = await db
+      .delete(productAdditionals)
+      .where(and(
+        eq(productAdditionals.productId, productId),
+        eq(productAdditionals.ingredientId, ingredientId)
+      ));
     return (result.rowCount ?? 0) > 0;
   }
 }

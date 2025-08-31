@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema } from "@shared/schema";
+import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema } from "@shared/schema";
 import { z } from "zod";
 
 const createOrderRequestSchema = z.object({
@@ -494,6 +494,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting expense:", error);
       res.status(500).json({ message: "Failed to delete expense" });
+    }
+  });
+
+  // Ingredients Routes
+  app.get("/api/ingredients", async (req, res) => {
+    try {
+      const { category } = req.query;
+      let ingredients;
+      
+      if (category && typeof category === 'string') {
+        ingredients = await storage.getIngredientsByCategory(category);
+      } else {
+        ingredients = await storage.getIngredients();
+      }
+      
+      res.json(ingredients);
+    } catch (error) {
+      console.error("Error fetching ingredients:", error);
+      res.status(500).json({ message: "Failed to fetch ingredients" });
+    }
+  });
+
+  app.post("/api/ingredients", async (req, res) => {
+    try {
+      const ingredientData = insertIngredientSchema.parse(req.body);
+      const ingredient = await storage.createIngredient(ingredientData);
+      res.status(201).json(ingredient);
+    } catch (error) {
+      console.error("Error creating ingredient:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid ingredient data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create ingredient" });
+      }
+    }
+  });
+
+  app.put("/api/ingredients/:id", async (req, res) => {
+    try {
+      const ingredientData = insertIngredientSchema.partial().parse(req.body);
+      const ingredient = await storage.updateIngredient(req.params.id, ingredientData);
+      if (!ingredient) {
+        return res.status(404).json({ message: "Ingredient not found" });
+      }
+      res.json(ingredient);
+    } catch (error) {
+      console.error("Error updating ingredient:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid ingredient data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update ingredient" });
+      }
+    }
+  });
+
+  app.delete("/api/ingredients/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteIngredient(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Ingredient not found" });
+      }
+      res.json({ message: "Ingredient deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting ingredient:", error);
+      res.status(500).json({ message: "Failed to delete ingredient" });
+    }
+  });
+
+  // Product Ingredients Routes
+  app.get("/api/products/:id/ingredients", async (req, res) => {
+    try {
+      const ingredients = await storage.getProductIngredients(req.params.id);
+      res.json(ingredients);
+    } catch (error) {
+      console.error("Error fetching product ingredients:", error);
+      res.status(500).json({ message: "Failed to fetch product ingredients" });
+    }
+  });
+
+  app.get("/api/products/:id/additionals", async (req, res) => {
+    try {
+      const additionals = await storage.getProductAdditionals(req.params.id);
+      res.json(additionals);
+    } catch (error) {
+      console.error("Error fetching product additionals:", error);
+      res.status(500).json({ message: "Failed to fetch product additionals" });
+    }
+  });
+
+  app.post("/api/products/:id/ingredients", async (req, res) => {
+    try {
+      const data = insertProductIngredientSchema.parse({
+        ...req.body,
+        productId: req.params.id
+      });
+      const productIngredient = await storage.addProductIngredient(data);
+      res.status(201).json(productIngredient);
+    } catch (error) {
+      console.error("Error adding product ingredient:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid product ingredient data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to add product ingredient" });
+      }
+    }
+  });
+
+  app.post("/api/products/:id/additionals", async (req, res) => {
+    try {
+      const data = insertProductAdditionalSchema.parse({
+        ...req.body,
+        productId: req.params.id
+      });
+      const productAdditional = await storage.addProductAdditional(data);
+      res.status(201).json(productAdditional);
+    } catch (error) {
+      console.error("Error adding product additional:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid product additional data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to add product additional" });
+      }
     }
   });
 

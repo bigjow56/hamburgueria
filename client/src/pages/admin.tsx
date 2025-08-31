@@ -15,7 +15,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags, ShoppingBag, BarChart3 } from "lucide-react";
 import { AdminDeliveryZones } from "@/components/admin-delivery-zones";
-import type { Product, Category, DeliveryZone, StoreSettings, Order, OrderItem } from "@shared/schema";
+import type { Product, Category, DeliveryZone, StoreSettings, Order, OrderItem, Ingredient } from "@shared/schema";
 
 interface EditingProduct {
   id?: string;
@@ -37,6 +37,18 @@ interface EditingDeliveryZone {
   isActive: boolean;
 }
 
+interface EditingIngredient {
+  id?: string;
+  name: string;
+  category: string;
+  price: string;
+  discountPrice: string;
+  isRemovable: boolean;
+  isRequired: boolean;
+  maxQuantity: number;
+  isActive: boolean;
+}
+
 export default function Admin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -46,6 +58,8 @@ export default function Admin() {
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [editingDeliveryZone, setEditingDeliveryZone] = useState<EditingDeliveryZone | null>(null);
   const [showNewZoneForm, setShowNewZoneForm] = useState(false);
+  const [editingIngredient, setEditingIngredient] = useState<EditingIngredient | null>(null);
+  const [showNewIngredientForm, setShowNewIngredientForm] = useState(false);
   const [activeTab, setActiveTab] = useState("products");
 
   // Delete category mutation
@@ -72,6 +86,79 @@ export default function Admin() {
     },
   });
 
+  // Ingredient mutations
+  const createIngredientMutation = useMutation({
+    mutationFn: async (ingredientData: EditingIngredient) => {
+      const data = {
+        ...ingredientData,
+        price: parseFloat(ingredientData.price) || 0,
+        discountPrice: parseFloat(ingredientData.discountPrice) || 0,
+      };
+      return await apiRequest("POST", "/api/ingredients", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
+      setShowNewIngredientForm(false);
+      toast({
+        title: "Ingrediente criado!",
+        description: "Novo ingrediente foi adicionado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao criar ingrediente",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateIngredientMutation = useMutation({
+    mutationFn: async (ingredientData: EditingIngredient) => {
+      const data = {
+        ...ingredientData,
+        price: parseFloat(ingredientData.price) || 0,
+        discountPrice: parseFloat(ingredientData.discountPrice) || 0,
+      };
+      return await apiRequest("PUT", `/api/ingredients/${ingredientData.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
+      setEditingIngredient(null);
+      toast({
+        title: "Ingrediente atualizado!",
+        description: "As alterações foram salvas com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao atualizar ingrediente",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteIngredientMutation = useMutation({
+    mutationFn: async (ingredientId: string) => {
+      return await apiRequest("DELETE", `/api/ingredients/${ingredientId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
+      toast({
+        title: "Ingrediente removido!",
+        description: "Ingrediente foi removido com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao remover ingrediente",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
@@ -82,6 +169,10 @@ export default function Admin() {
 
   const { data: deliveryZones = [] } = useQuery<DeliveryZone[]>({
     queryKey: ["/api/delivery-zones"],
+  });
+
+  const { data: ingredients = [] } = useQuery<Ingredient[]>({
+    queryKey: ["/api/ingredients"],
   });
 
   const { data: storeSettings } = useQuery<StoreSettings>({
@@ -291,10 +382,14 @@ export default function Admin() {
 
         {/* Admin Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="products" className="flex items-center">
               <Edit3 className="mr-2 h-4 w-4" />
               Produtos
+            </TabsTrigger>
+            <TabsTrigger value="ingredients" className="flex items-center">
+              <Tags className="mr-2 h-4 w-4" />
+              Ingredientes
             </TabsTrigger>
             <TabsTrigger value="orders" className="flex items-center">
               <ShoppingBag className="mr-2 h-4 w-4" />
@@ -460,6 +555,178 @@ export default function Admin() {
         </Card>
           </TabsContent>
 
+          <TabsContent value="ingredients" className="space-y-6">
+            {/* New Ingredient Form */}
+            {showNewIngredientForm && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Novo Ingrediente</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNewIngredientForm(false)}
+                      data-testid="button-cancel-new-ingredient"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <NewIngredientForm 
+                    onSubmit={(data) => createIngredientMutation.mutate(data)}
+                    isLoading={createIngredientMutation.isPending}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Ingredients List */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Ingredientes e Adicionais</span>
+                  <Button
+                    onClick={() => setShowNewIngredientForm(true)}
+                    data-testid="button-add-ingredient"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Ingrediente
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Group ingredients by category */}
+                  {[
+                    { key: 'protein', label: '🥩 Carnes' },
+                    { key: 'cheese', label: '🧀 Queijos' },
+                    { key: 'vegetable', label: '🥬 Vegetais' },
+                    { key: 'sauce', label: '🍯 Molhos' },
+                    { key: 'bread', label: '🍞 Pães' },
+                    { key: 'extra', label: '✨ Extras' }
+                  ].map(category => {
+                    const categoryIngredients = ingredients.filter(ingredient => ingredient.category === category.key);
+                    
+                    if (categoryIngredients.length === 0) return null;
+                    
+                    return (
+                      <div key={category.key} className="space-y-3">
+                        <h3 className="text-lg font-semibold text-muted-foreground border-b pb-2">
+                          {category.label}
+                        </h3>
+                        <div className="grid gap-3">
+                          {categoryIngredients.map((ingredient) => (
+                            <div
+                              key={ingredient.id}
+                              className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${
+                                !ingredient.isActive ? 'opacity-50 bg-muted/50' : 'hover:bg-muted/50'
+                              }`}
+                              data-testid={`ingredient-card-${ingredient.id}`}
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3">
+                                  <h4 className="font-semibold">{ingredient.name}</h4>
+                                  <Badge variant={ingredient.isActive ? "default" : "secondary"}>
+                                    {ingredient.isActive ? "Ativo" : "Inativo"}
+                                  </Badge>
+                                  {ingredient.isRequired && (
+                                    <Badge variant="destructive">
+                                      Obrigatório
+                                    </Badge>
+                                  )}
+                                  {!ingredient.isRemovable && (
+                                    <Badge variant="secondary">
+                                      Não removível
+                                    </Badge>
+                                  )}
+                                  {parseFloat(ingredient.price) > 0 && (
+                                    <Badge variant="outline">
+                                      +R$ {parseFloat(ingredient.price).toFixed(2)}
+                                    </Badge>
+                                  )}
+                                  {parseFloat(ingredient.discountPrice) > 0 && (
+                                    <Badge variant="outline" className="bg-green-100 text-green-800">
+                                      -R$ {parseFloat(ingredient.discountPrice).toFixed(2)} se remover
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setEditingIngredient({
+                                    id: ingredient.id,
+                                    name: ingredient.name,
+                                    category: ingredient.category,
+                                    price: ingredient.price.toString(),
+                                    discountPrice: ingredient.discountPrice.toString(),
+                                    isRemovable: ingredient.isRemovable,
+                                    isRequired: ingredient.isRequired,
+                                    maxQuantity: ingredient.maxQuantity,
+                                    isActive: ingredient.isActive,
+                                  })}
+                                  data-testid={`button-edit-ingredient-${ingredient.id}`}
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => deleteIngredientMutation.mutate(ingredient.id)}
+                                  disabled={deleteIngredientMutation.isPending}
+                                  data-testid={`button-delete-ingredient-${ingredient.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {ingredients.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Tags className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                      <p>Nenhum ingrediente cadastrado.</p>
+                      <p className="text-sm">Clique em "Adicionar Ingrediente" para começar.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Edit Ingredient Modal */}
+            {editingIngredient && (
+              <Card className="border-2 border-primary">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Editar Ingrediente</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingIngredient(null)}
+                      data-testid="button-cancel-edit-ingredient"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <EditIngredientForm 
+                    ingredient={editingIngredient}
+                    onSubmit={(data) => updateIngredientMutation.mutate(data)}
+                    isLoading={updateIngredientMutation.isPending}
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
           <TabsContent value="banner" className="space-y-6">
             <BannerManagement />
           </TabsContent>
@@ -478,6 +745,294 @@ export default function Admin() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+// New Ingredient Form Component
+function NewIngredientForm({ onSubmit, isLoading }: { 
+  onSubmit: (data: EditingIngredient) => void;
+  isLoading: boolean;
+}) {
+  const [formData, setFormData] = useState<EditingIngredient>({
+    name: "",
+    category: "",
+    price: "0",
+    discountPrice: "0",
+    isRemovable: true,
+    isRequired: false,
+    maxQuantity: 1,
+    isActive: true,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.name.trim() && formData.category) {
+      onSubmit(formData);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="ingredient-name">Nome do Ingrediente</Label>
+          <Input
+            id="ingredient-name"
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Ex: Bacon extra, Queijo cheddar..."
+            data-testid="input-ingredient-name"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="ingredient-category">Categoria</Label>
+          <Select 
+            value={formData.category} 
+            onValueChange={(value) => setFormData({ ...formData, category: value })}
+          >
+            <SelectTrigger data-testid="select-ingredient-category">
+              <SelectValue placeholder="Selecione uma categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="protein">🥩 Carnes</SelectItem>
+              <SelectItem value="cheese">🧀 Queijos</SelectItem>
+              <SelectItem value="vegetable">🥬 Vegetais</SelectItem>
+              <SelectItem value="sauce">🍯 Molhos</SelectItem>
+              <SelectItem value="bread">🍞 Pães</SelectItem>
+              <SelectItem value="extra">✨ Extras</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="ingredient-price">Preço Adicional (R$)</Label>
+          <Input
+            id="ingredient-price"
+            type="number"
+            step="0.01"
+            min="0"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            placeholder="0.00"
+            data-testid="input-ingredient-price"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="ingredient-discount">Desconto se Remover (R$)</Label>
+          <Input
+            id="ingredient-discount"
+            type="number"
+            step="0.01"
+            min="0"
+            value={formData.discountPrice}
+            onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
+            placeholder="0.00"
+            data-testid="input-ingredient-discount"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="ingredient-max-qty">Quantidade Máxima</Label>
+          <Input
+            id="ingredient-max-qty"
+            type="number"
+            min="1"
+            max="10"
+            value={formData.maxQuantity}
+            onChange={(e) => setFormData({ ...formData, maxQuantity: parseInt(e.target.value) || 1 })}
+            data-testid="input-ingredient-max-qty"
+          />
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="ingredient-removable"
+            checked={formData.isRemovable}
+            onCheckedChange={(checked) => setFormData({ ...formData, isRemovable: checked })}
+            data-testid="switch-ingredient-removable"
+          />
+          <Label htmlFor="ingredient-removable">Removível</Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="ingredient-required"
+            checked={formData.isRequired}
+            onCheckedChange={(checked) => setFormData({ ...formData, isRequired: checked })}
+            data-testid="switch-ingredient-required"
+          />
+          <Label htmlFor="ingredient-required">Obrigatório</Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="ingredient-active"
+            checked={formData.isActive}
+            onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+            data-testid="switch-ingredient-active"
+          />
+          <Label htmlFor="ingredient-active">Ativo</Label>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          disabled={isLoading || !formData.name.trim() || !formData.category}
+          data-testid="button-save-ingredient"
+        >
+          <Save className="mr-2 h-4 w-4" />
+          {isLoading ? "Salvando..." : "Salvar Ingrediente"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// Edit Ingredient Form Component
+function EditIngredientForm({ 
+  ingredient, 
+  onSubmit, 
+  isLoading 
+}: { 
+  ingredient: EditingIngredient;
+  onSubmit: (data: EditingIngredient) => void;
+  isLoading: boolean;
+}) {
+  const [formData, setFormData] = useState<EditingIngredient>(ingredient);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.name.trim() && formData.category) {
+      onSubmit(formData);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="edit-ingredient-name">Nome do Ingrediente</Label>
+          <Input
+            id="edit-ingredient-name"
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Ex: Bacon extra, Queijo cheddar..."
+            data-testid="input-edit-ingredient-name"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="edit-ingredient-category">Categoria</Label>
+          <Select 
+            value={formData.category} 
+            onValueChange={(value) => setFormData({ ...formData, category: value })}
+          >
+            <SelectTrigger data-testid="select-edit-ingredient-category">
+              <SelectValue placeholder="Selecione uma categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="protein">🥩 Carnes</SelectItem>
+              <SelectItem value="cheese">🧀 Queijos</SelectItem>
+              <SelectItem value="vegetable">🥬 Vegetais</SelectItem>
+              <SelectItem value="sauce">🍯 Molhos</SelectItem>
+              <SelectItem value="bread">🍞 Pães</SelectItem>
+              <SelectItem value="extra">✨ Extras</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="edit-ingredient-price">Preço Adicional (R$)</Label>
+          <Input
+            id="edit-ingredient-price"
+            type="number"
+            step="0.01"
+            min="0"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            placeholder="0.00"
+            data-testid="input-edit-ingredient-price"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="edit-ingredient-discount">Desconto se Remover (R$)</Label>
+          <Input
+            id="edit-ingredient-discount"
+            type="number"
+            step="0.01"
+            min="0"
+            value={formData.discountPrice}
+            onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
+            placeholder="0.00"
+            data-testid="input-edit-ingredient-discount"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="edit-ingredient-max-qty">Quantidade Máxima</Label>
+          <Input
+            id="edit-ingredient-max-qty"
+            type="number"
+            min="1"
+            max="10"
+            value={formData.maxQuantity}
+            onChange={(e) => setFormData({ ...formData, maxQuantity: parseInt(e.target.value) || 1 })}
+            data-testid="input-edit-ingredient-max-qty"
+          />
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="edit-ingredient-removable"
+            checked={formData.isRemovable}
+            onCheckedChange={(checked) => setFormData({ ...formData, isRemovable: checked })}
+            data-testid="switch-edit-ingredient-removable"
+          />
+          <Label htmlFor="edit-ingredient-removable">Removível</Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="edit-ingredient-required"
+            checked={formData.isRequired}
+            onCheckedChange={(checked) => setFormData({ ...formData, isRequired: checked })}
+            data-testid="switch-edit-ingredient-required"
+          />
+          <Label htmlFor="edit-ingredient-required">Obrigatório</Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="edit-ingredient-active"
+            checked={formData.isActive}
+            onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+            data-testid="switch-edit-ingredient-active"
+          />
+          <Label htmlFor="edit-ingredient-active">Ativo</Label>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          disabled={isLoading || !formData.name.trim() || !formData.category}
+          data-testid="button-update-ingredient"
+        >
+          <Save className="mr-2 h-4 w-4" />
+          {isLoading ? "Salvando..." : "Atualizar Ingrediente"}
+        </Button>
+      </div>
+    </form>
   );
 }
 

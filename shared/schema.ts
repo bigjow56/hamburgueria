@@ -134,6 +134,49 @@ export const expenses = pgTable("expenses", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Ingredients/Additionals table
+export const ingredients = pgTable("ingredients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // 'protein', 'cheese', 'vegetable', 'sauce', 'extra'
+  price: decimal("price", { precision: 10, scale: 2 }).notNull().default("0.00"), // preço adicional
+  discountPrice: decimal("discount_price", { precision: 10, scale: 2 }).default("0.00"), // desconto se removido
+  isRemovable: boolean("is_removable").default(true), // pode ser removido?
+  isRequired: boolean("is_required").default(false), // ingrediente obrigatório?
+  maxQuantity: integer("max_quantity").default(3), // quantidade máxima permitida
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Product ingredients (base ingredients for each product)
+export const productIngredients = pgTable("product_ingredients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").references(() => products.id).notNull(),
+  ingredientId: varchar("ingredient_id").references(() => ingredients.id).notNull(),
+  isIncludedByDefault: boolean("is_included_by_default").default(true),
+  quantity: integer("quantity").default(1),
+});
+
+// Product additionals (available additionals for each product)
+export const productAdditionals = pgTable("product_additionals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").references(() => products.id).notNull(),
+  ingredientId: varchar("ingredient_id").references(() => ingredients.id).notNull(),
+  customPrice: decimal("custom_price", { precision: 10, scale: 2 }), // preço específico para este produto (opcional)
+  isActive: boolean("is_active").default(true),
+});
+
+// Order item modifications (customizations applied to order items)
+export const orderItemModifications = pgTable("order_item_modifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderItemId: varchar("order_item_id").references(() => orderItems.id).notNull(),
+  ingredientId: varchar("ingredient_id").references(() => ingredients.id).notNull(),
+  modificationType: text("modification_type").notNull(), // 'add', 'remove', 'extra'
+  quantity: integer("quantity").default(1),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -174,6 +217,23 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
   date: z.string().or(z.date()).transform((val) => new Date(val)),
 });
 
+export const insertIngredientSchema = createInsertSchema(ingredients).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductIngredientSchema = createInsertSchema(productIngredients).omit({
+  id: true,
+});
+
+export const insertProductAdditionalSchema = createInsertSchema(productAdditionals).omit({
+  id: true,
+});
+
+export const insertOrderItemModificationSchema = createInsertSchema(orderItemModifications).omit({
+  id: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -195,5 +255,17 @@ export type InsertDeliveryZone = z.infer<typeof insertDeliveryZoneSchema>;
 
 export type Expense = typeof expenses.$inferSelect;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+
+export type Ingredient = typeof ingredients.$inferSelect;
+export type InsertIngredient = z.infer<typeof insertIngredientSchema>;
+
+export type ProductIngredient = typeof productIngredients.$inferSelect;
+export type InsertProductIngredient = z.infer<typeof insertProductIngredientSchema>;
+
+export type ProductAdditional = typeof productAdditionals.$inferSelect;
+export type InsertProductAdditional = z.infer<typeof insertProductAdditionalSchema>;
+
+export type OrderItemModification = typeof orderItemModifications.$inferSelect;
+export type InsertOrderItemModification = z.infer<typeof insertOrderItemModificationSchema>;
 
 export type StoreSettings = typeof storeSettings.$inferSelect;
