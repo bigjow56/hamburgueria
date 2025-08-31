@@ -1358,6 +1358,18 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
         </label>
       </div>
 
+      {/* Ingredients Section */}
+      <ProductIngredientsSection 
+        productId={product.id}
+        onIngredientsChange={() => {
+          // Força atualização do produto
+          if (product.id) {
+            queryClient.invalidateQueries({ queryKey: ['/api/products', product.id, 'ingredients'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/products', product.id, 'additionals'] });
+          }
+        }}
+      />
+
       <Separator />
 
       <div className="flex space-x-2">
@@ -2173,6 +2185,264 @@ function OrderManagement() {
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+// Product Ingredients Section Component
+interface ProductIngredientsSectionProps {
+  productId?: string;
+  onIngredientsChange: () => void;
+}
+
+function ProductIngredientsSection({ productId, onIngredientsChange }: ProductIngredientsSectionProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showNewIngredientForm, setShowNewIngredientForm] = useState(false);
+  const [newIngredient, setNewIngredient] = useState({
+    name: '',
+    category: 'Extras',
+    price: '',
+    discountPrice: '',
+    isRemovable: true,
+    isRequired: false,
+    maxQuantity: 3,
+    isActive: true
+  });
+
+  // Fetch existing ingredients
+  const { data: allIngredients = [] } = useQuery<Ingredient[]>({
+    queryKey: ["/api/ingredients"],
+  });
+
+  // Create new ingredient mutation
+  const createIngredientMutation = useMutation({
+    mutationFn: async (ingredientData: any) => {
+      const data = {
+        ...ingredientData,
+        price: parseFloat(ingredientData.price) || 0,
+        discountPrice: parseFloat(ingredientData.discountPrice) || 0,
+      };
+      return await apiRequest("POST", "/api/ingredients", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
+      setShowNewIngredientForm(false);
+      setNewIngredient({
+        name: '',
+        category: 'Extras',
+        price: '',
+        discountPrice: '',
+        isRemovable: true,
+        isRequired: false,
+        maxQuantity: 3,
+        isActive: true
+      });
+      toast({
+        title: "Ingrediente criado!",
+        description: "Novo ingrediente foi adicionado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao criar ingrediente",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateIngredient = () => {
+    if (!newIngredient.name.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Digite o nome do ingrediente.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createIngredientMutation.mutate(newIngredient);
+  };
+
+  const ingredientCategories = [...new Set(allIngredients.map(i => i.category))];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium">Ingredientes do Produto</h3>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowNewIngredientForm(!showNewIngredientForm)}
+          data-testid="button-new-ingredient"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          {showNewIngredientForm ? 'Cancelar' : 'Novo Ingrediente'}
+        </Button>
+      </div>
+
+      {showNewIngredientForm && (
+        <Card className="p-4 bg-muted/30">
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="newIngredientName">Nome *</Label>
+                <Input
+                  id="newIngredientName"
+                  value={newIngredient.name}
+                  onChange={(e) => setNewIngredient(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Ex: Bacon Extra"
+                  data-testid="input-new-ingredient-name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newIngredientCategory">Categoria</Label>
+                <Select
+                  value={newIngredient.category}
+                  onValueChange={(value) => setNewIngredient(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger data-testid="select-new-ingredient-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Extras">🥓 Extras</SelectItem>
+                    <SelectItem value="Molhos">🥫 Molhos</SelectItem>
+                    <SelectItem value="Vegetais">🥬 Vegetais</SelectItem>
+                    <SelectItem value="Queijos">🧀 Queijos</SelectItem>
+                    <SelectItem value="Carnes">🥩 Carnes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="newIngredientPrice">Preço Adicional (R$)</Label>
+                <Input
+                  id="newIngredientPrice"
+                  type="number"
+                  step="0.01"
+                  value={newIngredient.price}
+                  onChange={(e) => setNewIngredient(prev => ({ ...prev, price: e.target.value }))}
+                  placeholder="2.50"
+                  data-testid="input-new-ingredient-price"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newIngredientDiscount">Desconto se Remover (R$)</Label>
+                <Input
+                  id="newIngredientDiscount"
+                  type="number"
+                  step="0.01"
+                  value={newIngredient.discountPrice}
+                  onChange={(e) => setNewIngredient(prev => ({ ...prev, discountPrice: e.target.value }))}
+                  placeholder="0.00"
+                  data-testid="input-new-ingredient-discount"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newIngredientMaxQty">Quantidade Máxima</Label>
+                <Input
+                  id="newIngredientMaxQty"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={newIngredient.maxQuantity}
+                  onChange={(e) => setNewIngredient(prev => ({ ...prev, maxQuantity: parseInt(e.target.value) || 1 }))}
+                  data-testid="input-new-ingredient-max-qty"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-6">
+              <label className="flex items-center space-x-2">
+                <Switch
+                  checked={newIngredient.isRemovable}
+                  onCheckedChange={(checked) => setNewIngredient(prev => ({ ...prev, isRemovable: checked }))}
+                />
+                <span>Removível</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <Switch
+                  checked={newIngredient.isRequired}
+                  onCheckedChange={(checked) => setNewIngredient(prev => ({ ...prev, isRequired: checked }))}
+                />
+                <span>Obrigatório</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <Switch
+                  checked={newIngredient.isActive}
+                  onCheckedChange={(checked) => setNewIngredient(prev => ({ ...prev, isActive: checked }))}
+                />
+                <span>Ativo</span>
+              </label>
+            </div>
+
+            <div className="flex space-x-2">
+              <Button
+                type="button"
+                onClick={handleCreateIngredient}
+                disabled={createIngredientMutation.isPending}
+                size="sm"
+                data-testid="button-save-new-ingredient"
+              >
+                {createIngredientMutation.isPending ? 'Criando...' : 'Criar Ingrediente'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Ingredientes Disponíveis</Label>
+        <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-3">
+          {ingredientCategories.map(category => {
+            const categoryIngredients = allIngredients.filter(i => i.category === category && i.isActive);
+            if (categoryIngredients.length === 0) return null;
+
+            return (
+              <div key={category} className="space-y-2">
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {category}
+                </h4>
+                {categoryIngredients.map(ingredient => (
+                  <div
+                    key={ingredient.id}
+                    className="flex items-center justify-between p-2 rounded border bg-background"
+                  >
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{ingredient.name}</span>
+                      <div className="text-xs text-muted-foreground space-x-2">
+                        {ingredient.price && parseFloat(ingredient.price) > 0 && (
+                          <span className="text-orange-600">
+                            +R$ {parseFloat(ingredient.price).toFixed(2)}
+                          </span>
+                        )}
+                        {ingredient.discountPrice && parseFloat(ingredient.discountPrice) > 0 && (
+                          <span className="text-green-600">
+                            -R$ {parseFloat(ingredient.discountPrice).toFixed(2)} se remover
+                          </span>
+                        )}
+                        <span>Máx: {ingredient.maxQuantity || 3}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {ingredient.isRemovable ? 'Removível' : 'Fixo'} • {ingredient.isRequired ? 'Obrigatório' : 'Opcional'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {!productId && (
+        <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
+          💡 Salve o produto primeiro para poder configurar os ingredientes específicos
+        </div>
+      )}
     </div>
   );
 }

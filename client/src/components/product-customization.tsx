@@ -16,6 +16,7 @@ interface ProductCustomizationProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (modifications: CartItemModification[]) => void;
+  inline?: boolean;
 }
 
 interface ExtendedProductIngredient extends ProductIngredient {
@@ -26,7 +27,7 @@ interface ExtendedProductAdditional extends ProductAdditional {
   ingredient: Ingredient;
 }
 
-export function ProductCustomization({ cartItem, isOpen, onClose, onSave }: ProductCustomizationProps) {
+export function ProductCustomization({ cartItem, isOpen, onClose, onSave, inline = false }: ProductCustomizationProps) {
   const [modifications, setModifications] = useState<CartItemModification[]>(cartItem.modifications);
   
   // Fetch product ingredients and additionals
@@ -123,21 +124,8 @@ export function ProductCustomization({ cartItem, isOpen, onClose, onSave }: Prod
   const originalPrice = parseFloat(cartItem.product.price);
   const priceDifference = currentPrice - originalPrice;
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-product-customization">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Personalizar {cartItem.product.name}</span>
-            <Badge variant={priceDifference > 0 ? "destructive" : priceDifference < 0 ? "secondary" : "outline"}>
-              {priceDifference > 0 ? `+R$ ${priceDifference.toFixed(2)}` : 
-               priceDifference < 0 ? `-R$ ${Math.abs(priceDifference).toFixed(2)}` : 
-               'Mesmo preço'}
-            </Badge>
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
+  const content = (
+    <div className="space-y-6">
           {/* Current Price Display */}
           <div className="bg-muted/50 p-4 rounded-lg">
             <div className="flex justify-between items-center">
@@ -283,6 +271,38 @@ export function ProductCustomization({ cartItem, isOpen, onClose, onSave }: Prod
             </Button>
           </div>
         </div>
+  );
+
+  if (inline) {
+    return (
+      <div className="space-y-4" data-testid="inline-product-customization">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium">Personalizar {cartItem.product.name}</h3>
+          <Badge variant={priceDifference > 0 ? "destructive" : priceDifference < 0 ? "secondary" : "outline"}>
+            {priceDifference > 0 ? `+R$ ${priceDifference.toFixed(2)}` : 
+             priceDifference < 0 ? `-R$ ${Math.abs(priceDifference).toFixed(2)}` : 
+             'Mesmo preço'}
+          </Badge>
+        </div>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-product-customization">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Personalizar {cartItem.product.name}</span>
+            <Badge variant={priceDifference > 0 ? "destructive" : priceDifference < 0 ? "secondary" : "outline"}>
+              {priceDifference > 0 ? `+R$ ${priceDifference.toFixed(2)}` : 
+               priceDifference < 0 ? `-R$ ${Math.abs(priceDifference).toFixed(2)}` : 
+               'Mesmo preço'}
+            </Badge>
+          </DialogTitle>
+        </DialogHeader>
+        {content}
       </DialogContent>
     </Dialog>
   );

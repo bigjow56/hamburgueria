@@ -10,7 +10,7 @@ import { ArrowLeft, Edit3, ShoppingCart, ChevronRight, Trash2, Plus, Minus } fro
 
 export function OrderReview() {
   const { items, subtotal, removeFromCart, updateQuantity, updateItemModifications } = useCart();
-  const [customizingItem, setCustomizingItem] = useState<CartItem | null>(null);
+  const [customizingItemId, setCustomizingItemId] = useState<string | null>(null);
 
   if (items.length === 0) {
     return (
@@ -150,11 +150,11 @@ export function OrderReview() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setCustomizingItem(item)}
+                              onClick={() => setCustomizingItemId(customizingItemId === item.id ? null : item.id)}
                               data-testid={`button-customize-${item.id}`}
                             >
                               <Edit3 className="mr-2 h-3 w-3" />
-                              Personalizar
+                              {customizingItemId === item.id ? 'Fechar' : 'Personalizar'}
                             </Button>
                           </div>
 
@@ -172,6 +172,22 @@ export function OrderReview() {
                       </div>
                     </div>
                   </CardContent>
+                  
+                  {/* Inline Customization */}
+                  {customizingItemId === item.id && (
+                    <div className="border-t bg-muted/20 p-4">
+                      <ProductCustomization
+                        cartItem={item}
+                        isOpen={true}
+                        onClose={() => setCustomizingItemId(null)}
+                        onSave={(modifications) => {
+                          updateItemModifications(item.id, modifications);
+                          setCustomizingItemId(null);
+                        }}
+                        inline={true}
+                      />
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>
@@ -232,18 +248,6 @@ export function OrderReview() {
         </div>
       </div>
 
-      {/* Product Customization Modal */}
-      {customizingItem && (
-        <ProductCustomization
-          cartItem={customizingItem}
-          isOpen={!!customizingItem}
-          onClose={() => setCustomizingItem(null)}
-          onSave={(modifications) => {
-            updateItemModifications(customizingItem.id, modifications);
-            setCustomizingItem(null);
-          }}
-        />
-      )}
     </div>
   );
 }
