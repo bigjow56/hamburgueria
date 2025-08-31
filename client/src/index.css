@@ -132,3 +132,23 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Animação personalizada - lado a lado com parada no centro */
+.animate-slide-center {
+  animation: slideCenter 4s ease-in-out infinite;
+}
+
+@keyframes slideCenter {
+  0% {
+    transform: translateX(-100px);
+  }
+  25% {
+    transform: translateX(0);
+  }
+  75% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(100px);
+  }
+}

@@ -12,6 +12,7 @@ import { useState } from "react";
 import { CATEGORIES } from "@/lib/constants";
 import { Search, Sandwich, EggFried, Coffee, IceCream, Box, Tags } from "lucide-react";
 import type { Product, Category, StoreSettings } from "@shared/schema";
+import bannerImage from "@assets/{54750D3A-F65D-43AB-8407-E45AD14FEC89}_1756602514679.png";
 
 const CATEGORY_ICONS = {
   hamburgers: Sandwich,
@@ -58,7 +59,7 @@ export default function Home() {
       
       <main>
         <HeroSection 
-          storeSettings={storeSettings}
+          storeSettings={storeSettings || null}
           onScrollToMenu={scrollToMenu}
         />
 
@@ -81,6 +82,20 @@ export default function Home() {
                   showBadge
                 />
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Animated Banner Section */}
+        <section className="py-12 bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div className="flex justify-center items-center h-40">
+              <img
+                src={bannerImage}
+                alt="Banner animado dos melhores hambúrguers"
+                className="h-32 object-contain animate-slide-center"
+                data-testid="animated-banner-image"
+              />
             </div>
           </div>
         </section>
@@ -159,7 +174,7 @@ export default function Home() {
           </div>
         </section>
 
-        <StoreInfo storeSettings={storeSettings} />
+        <StoreInfo storeSettings={storeSettings || null} />
       </main>
 
       <Footer />
