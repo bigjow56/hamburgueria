@@ -170,11 +170,23 @@ export default function Analytics() {
     endDate.setHours(23, 59, 59, 999);
     const data: DailyData[] = [];
 
+    // Debug logging
+    console.log('Period:', period);
+    console.log('Start Date:', startDate.toISOString());
+    console.log('End Date:', endDate.toISOString());
+    console.log('All orders:', orders);
+
     // Filter orders and expenses by period
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.createdAt!);
-      return orderDate >= startDate && orderDate <= endDate && order.paymentStatus === 'paid';
+      console.log('Order date:', orderDate.toISOString(), 'Payment status:', order.paymentStatus);
+      const isInPeriod = orderDate >= startDate && orderDate <= endDate;
+      const isPaid = order.paymentStatus === 'paid';
+      console.log('Is in period:', isInPeriod, 'Is paid:', isPaid);
+      return isInPeriod && isPaid;
     });
+
+    console.log('Filtered orders:', filteredOrders);
 
 
     const filteredExpenses = expenses.filter(expense => {
