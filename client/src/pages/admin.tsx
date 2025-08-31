@@ -1098,6 +1098,11 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
     displayOrder: categories.length + 1
   });
 
+  // Fetch ingredients
+  const { data: ingredients = [] } = useQuery<Ingredient[]>({
+    queryKey: ["/api/ingredients"],
+  });
+
   const createCategoryMutation = useMutation({
     mutationFn: async (categoryData: any) => {
       return await apiRequest("POST", "/api/categories", categoryData);
