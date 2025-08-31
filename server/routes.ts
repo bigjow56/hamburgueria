@@ -33,35 +33,6 @@ const createOrderRequestSchema = z.object({
   message: "Address fields are required for delivery orders"
 });
 
-// Função para enviar dados para n8n
-async function sendToN8n(orderData: any, orderItems: any[]) {
-  try {
-    const n8nPayload = {
-      order: orderData,
-      items: orderItems,
-      timestamp: new Date().toISOString(),
-      total: orderData.total,
-      subtotal: orderData.subtotal,
-      deliveryFee: orderData.deliveryFee
-    };
-
-    const response = await fetch('https://n8n-curso-n8n.yao8ay.easypanel.host/webhook-test/hamburgueria', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(n8nPayload),
-    });
-
-    if (!response.ok) {
-      console.error('Failed to send to n8n:', response.status, response.statusText);
-    } else {
-      console.log('Successfully sent order to n8n');
-    }
-  } catch (error) {
-    console.error('Error sending to n8n:', error);
-  }
-}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Categories
@@ -211,7 +182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const orderData = {
         customerName: requestData.customerName,
-        customerPhone: requestData.customerPhoneInternational || requestData.customerPhone, // Use international number for n8n
+        customerPhone: requestData.customerPhone,
         customerEmail: requestData.customerEmail,
         deliveryType: requestData.deliveryType,
         streetName: requestData.streetName || "",
@@ -228,19 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const order = await storage.createOrder(orderData);
       
-      // Prepare items for n8n (with product names) before saving to database
-      const orderItemsForN8n = orderItems.map(item => ({
-        ...item,
-        orderId: order.id,
-      }));
-
-      // Update order data with international phone for n8n
-      const orderForN8n = {
-        ...order,
-        customerPhone: requestData.customerPhoneInternational || order.customerPhone,
-      };
-
-      // Prepare items for database (without productName as it's not in the schema)
+      // Prepare items for database
       const orderItemsForDb = orderItems.map(item => ({
         productId: item.productId,
         quantity: item.quantity,
@@ -250,9 +209,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       
       await storage.addOrderItems(orderItemsForDb);
-
-      // Enviar dados para n8n (with product names and international phone)
-      await sendToN8n(orderForN8n, orderItemsForN8n);
 
       res.status(201).json({ 
         success: true, 
