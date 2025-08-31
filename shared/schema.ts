@@ -220,6 +220,9 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
 export const insertIngredientSchema = createInsertSchema(ingredients).omit({
   id: true,
   createdAt: true,
+}).extend({
+  price: z.string().or(z.number()).transform((val) => val.toString()),
+  discountPrice: z.string().or(z.number()).transform((val) => val.toString()),
 });
 
 export const insertProductIngredientSchema = createInsertSchema(productIngredients).omit({

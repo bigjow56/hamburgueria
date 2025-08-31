@@ -7,6 +7,7 @@ import { CartProvider } from "@/hooks/use-cart";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Checkout from "@/pages/checkout";
+import { OrderReview } from "@/pages/order-review";
 import Admin from "@/pages/admin";
 import AdminLogin from "@/pages/admin-login";
 import Analytics from "@/pages/analytics";
@@ -15,6 +16,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/order-review" component={OrderReview} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />

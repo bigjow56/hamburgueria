@@ -2,8 +2,9 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/hooks/use-cart";
-import { Minus, Plus, X, CreditCard } from "lucide-react";
+import { Minus, Plus, X, Edit3 } from "lucide-react";
 
 export default function CartSidebar() {
   const [, setLocation] = useLocation();
@@ -22,7 +23,7 @@ export default function CartSidebar() {
 
   const handleCheckout = () => {
     toggleCartSidebar();
-    setLocation("/checkout");
+    setLocation("/order-review");
   };
 
   return (
@@ -57,7 +58,7 @@ export default function CartSidebar() {
               <div className="flex-1 overflow-y-auto space-y-4">
                 {items.map((item) => (
                   <div 
-                    key={`${item.product.id}-${item.quantity}`} 
+                    key={item.id} 
                     className="flex items-center space-x-4 bg-muted/30 rounded-lg p-4"
                   >
                     <img 
@@ -68,28 +69,48 @@ export default function CartSidebar() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-card-foreground">{item.product.name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        R$ {parseFloat(item.product.price).toFixed(2)}
+                        R$ {item.customPrice ? item.customPrice.toFixed(2) : parseFloat(item.product.price).toFixed(2)}
+                        {item.customPrice && item.customPrice !== parseFloat(item.product.price) && (
+                          <span className="ml-1 line-through text-xs">
+                            R$ {parseFloat(item.product.price).toFixed(2)}
+                          </span>
+                        )}
                       </p>
+                      {item.modifications && item.modifications.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {item.modifications.slice(0, 2).map((mod, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {mod.modificationType === 'remove' ? 'Sem ' : '+ '}
+                              {mod.ingredient.name}
+                            </Badge>
+                          ))}
+                          {item.modifications.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{item.modifications.length - 2} mais
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                        data-testid={`button-decrease-${item.product.id}`}
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        data-testid={`button-decrease-${item.id}`}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="w-8 text-center font-semibold" data-testid={`quantity-${item.product.id}`}>
+                      <span className="w-8 text-center font-semibold" data-testid={`quantity-${item.id}`}>
                         {item.quantity}
                       </span>
                       <Button
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                        data-testid={`button-increase-${item.product.id}`}
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        data-testid={`button-increase-${item.id}`}
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
@@ -97,8 +118,8 @@ export default function CartSidebar() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => removeFromCart(item.product.id)}
-                        data-testid={`button-remove-${item.product.id}`}
+                        onClick={() => removeFromCart(item.id)}
+                        data-testid={`button-remove-${item.id}`}
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -129,10 +150,10 @@ export default function CartSidebar() {
                   onClick={handleCheckout}
                   className="w-full bg-accent hover:bg-accent/90 text-accent-foreground py-4 text-lg font-bold"
                   size="lg"
-                  data-testid="button-checkout"
+                  data-testid="button-review-order"
                 >
-                  <CreditCard className="mr-2 h-5 w-5" />
-                  FINALIZAR PEDIDO
+                  <Edit3 className="mr-2 h-5 w-5" />
+                  REVISAR PEDIDO
                 </Button>
               </div>
             </>

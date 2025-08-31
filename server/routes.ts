@@ -562,6 +562,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/ingredients/:id", async (req, res) => {
+    try {
+      const ingredient = await storage.getIngredient(req.params.id);
+      if (!ingredient) {
+        return res.status(404).json({ message: "Ingredient not found" });
+      }
+      res.json(ingredient);
+    } catch (error) {
+      console.error("Error fetching ingredient:", error);
+      res.status(500).json({ message: "Failed to fetch ingredient" });
+    }
+  });
+
   // Product Ingredients Routes
   app.get("/api/products/:id/ingredients", async (req, res) => {
     try {
