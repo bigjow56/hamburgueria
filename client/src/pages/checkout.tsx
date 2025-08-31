@@ -32,6 +32,7 @@ export default function Checkout() {
     referencePoint: "",
     paymentMethod: "",
     specialInstructions: "",
+    deliveryType: "delivery", // "delivery" or "pickup"
   });
 
   const [deliveryFee, setDeliveryFee] = useState(5.90);
@@ -71,7 +72,14 @@ export default function Checkout() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.customerName || !formData.customerPhone || !formData.streetName || !formData.houseNumber || !formData.neighborhood || !formData.paymentMethod) {
+    // Different validation for delivery vs pickup
+    const requiredFields = formData.deliveryType === "delivery" 
+      ? ["customerName", "customerPhone", "streetName", "houseNumber", "neighborhood", "paymentMethod"]
+      : ["customerName", "customerPhone", "paymentMethod"];
+    
+    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+    
+    if (missingFields.length > 0) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -103,8 +111,13 @@ export default function Checkout() {
     createOrderMutation.mutate(orderData);
   };
 
-  // Update delivery fee when neighborhood changes
+  // Update delivery fee when neighborhood or delivery type changes
   useEffect(() => {
+    if (formData.deliveryType === "pickup") {
+      setDeliveryFee(0);
+      return;
+    }
+    
     if (!storeSettings?.useNeighborhoodDelivery) {
       setDeliveryFee(parseFloat(storeSettings?.defaultDeliveryFee || "5.90"));
       return;
@@ -119,7 +132,7 @@ export default function Checkout() {
     } else {
       setDeliveryFee(parseFloat(storeSettings?.defaultDeliveryFee || "5.90"));
     }
-  }, [formData.neighborhood, storeSettings, deliveryZones]);
+  }, [formData.neighborhood, formData.deliveryType, storeSettings, deliveryZones]);
 
   if (items.length === 0) {
     return (
@@ -166,6 +179,34 @@ export default function Checkout() {
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-4">
+                    {/* Delivery Type Selection */}
+                    <div>
+                      <Label>Tipo de Pedido *</Label>
+                      <div className="grid grid-cols-2 gap-3 mt-2">
+                        <Button
+                          type="button"
+                          variant={formData.deliveryType === "delivery" ? "default" : "outline"}
+                          onClick={() => setFormData({...formData, deliveryType: "delivery"})}
+                          className="h-auto py-4 flex flex-col items-center"
+                          data-testid="button-delivery-type"
+                        >
+                          <div className="text-2xl mb-1">🚚</div>
+                          <div className="font-medium">Entrega</div>
+                          <div className="text-xs text-muted-foreground">Em casa</div>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={formData.deliveryType === "pickup" ? "default" : "outline"}
+                          onClick={() => setFormData({...formData, deliveryType: "pickup"})}
+                          className="h-auto py-4 flex flex-col items-center"
+                          data-testid="button-pickup-type"
+                        >
+                          <div className="text-2xl mb-1">🏪</div>
+                          <div className="font-medium">Retirada</div>
+                          <div className="text-xs text-muted-foreground">Na loja</div>
+                        </Button>
+                      </div>
+                    </div>
                     <div>
                       <Label htmlFor="customerName">Nome Completo *</Label>
                       <Input
@@ -205,77 +246,94 @@ export default function Checkout() {
                       />
                     </div>
 
-                    <div>
-                      <Label htmlFor="streetName">Nome da Rua *</Label>
-                      <Input
-                        id="streetName"
-                        value={formData.streetName}
-                        onChange={(e) => setFormData({...formData, streetName: e.target.value})}
-                        placeholder="Ex: Rua das Flores"
-                        required
-                        data-testid="input-street-name"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="houseNumber">Número da Casa *</Label>
-                        <Input
-                          id="houseNumber"
-                          value={formData.houseNumber}
-                          onChange={(e) => setFormData({...formData, houseNumber: e.target.value})}
-                          placeholder="Ex: 123"
-                          required
-                          data-testid="input-house-number"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="neighborhood">Bairro *</Label>
-                        {storeSettings?.useNeighborhoodDelivery ? (
-                          <Select
-                            value={formData.neighborhood}
-                            onValueChange={(value) => setFormData({...formData, neighborhood: value})}
-                          >
-                            <SelectTrigger data-testid="select-neighborhood">
-                              <SelectValue placeholder="Selecione o bairro" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {deliveryZones.map((zone) => (
-                                <SelectItem key={zone.id} value={zone.neighborhoodName}>
-                                  <div className="flex items-center justify-between w-full">
-                                    <span>{zone.neighborhoodName}</span>
-                                    <span className="text-sm text-muted-foreground ml-2">
-                                      +R$ {parseFloat(zone.deliveryFee).toFixed(2)}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
+                    {/* Address fields - only for delivery */}
+                    {formData.deliveryType === "delivery" && (
+                      <>
+                        <div>
+                          <Label htmlFor="streetName">Nome da Rua *</Label>
                           <Input
-                            id="neighborhood"
-                            value={formData.neighborhood}
-                            onChange={(e) => setFormData({...formData, neighborhood: e.target.value})}
-                            placeholder="Ex: Centro"
+                            id="streetName"
+                            value={formData.streetName}
+                            onChange={(e) => setFormData({...formData, streetName: e.target.value})}
+                            placeholder="Ex: Rua das Flores"
                             required
-                            data-testid="input-neighborhood"
+                            data-testid="input-street-name"
                           />
-                        )}
-                      </div>
-                    </div>
+                        </div>
 
-                    <div>
-                      <Label htmlFor="referencePoint">Ponto de Referência</Label>
-                      <Input
-                        id="referencePoint"
-                        value={formData.referencePoint}
-                        onChange={(e) => setFormData({...formData, referencePoint: e.target.value})}
-                        placeholder="Ex: Próximo ao mercado (opcional)"
-                        data-testid="input-reference-point"
-                      />
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="houseNumber">Número da Casa *</Label>
+                            <Input
+                              id="houseNumber"
+                              value={formData.houseNumber}
+                              onChange={(e) => setFormData({...formData, houseNumber: e.target.value})}
+                              placeholder="Ex: 123"
+                              required
+                              data-testid="input-house-number"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="neighborhood">Bairro *</Label>
+                            {storeSettings?.useNeighborhoodDelivery ? (
+                              <Select
+                                value={formData.neighborhood}
+                                onValueChange={(value) => setFormData({...formData, neighborhood: value})}
+                              >
+                                <SelectTrigger data-testid="select-neighborhood">
+                                  <SelectValue placeholder="Selecione o bairro" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {deliveryZones.map((zone) => (
+                                    <SelectItem key={zone.id} value={zone.neighborhoodName}>
+                                      <div className="flex items-center justify-between w-full">
+                                        <span>{zone.neighborhoodName}</span>
+                                        <span className="text-sm text-muted-foreground ml-2">
+                                          +R$ {parseFloat(zone.deliveryFee).toFixed(2)}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                id="neighborhood"
+                                value={formData.neighborhood}
+                                onChange={(e) => setFormData({...formData, neighborhood: e.target.value})}
+                                placeholder="Ex: Centro"
+                                required
+                                data-testid="input-neighborhood"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="referencePoint">Ponto de Referência</Label>
+                          <Input
+                            id="referencePoint"
+                            value={formData.referencePoint}
+                            onChange={(e) => setFormData({...formData, referencePoint: e.target.value})}
+                            placeholder="Ex: Próximo ao mercado (opcional)"
+                            data-testid="input-reference-point"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Store info for pickup */}
+                    {formData.deliveryType === "pickup" && (
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h3 className="font-medium text-blue-900 mb-2">📍 Endereço da Loja</h3>
+                        <p className="text-sm text-blue-800">{storeSettings?.storeAddress}</p>
+                        <p className="text-sm text-blue-800">{storeSettings?.storeNeighborhood}</p>
+                        <p className="text-xs text-blue-600 mt-2">
+                          <strong>Horário:</strong> {storeSettings?.storeHours?.split('\\n').join(' | ')}
+                        </p>
+                      </div>
+                    )}
 
                     <div>
                       <Label htmlFor="paymentMethod">Forma de Pagamento *</Label>
@@ -367,8 +425,8 @@ export default function Checkout() {
                       <span>R$ {subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Taxa de entrega</span>
-                      <span>R$ {deliveryFee.toFixed(2)}</span>
+                      <span>{formData.deliveryType === "pickup" ? "Taxa de entrega" : "Taxa de entrega"}</span>
+                      <span>{formData.deliveryType === "pickup" ? "Grátis" : `R$ ${deliveryFee.toFixed(2)}`}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between text-xl font-bold">
@@ -379,8 +437,8 @@ export default function Checkout() {
 
                   <div className="mt-6 p-4 bg-muted/50 rounded-lg">
                     <div className="flex items-center justify-between text-sm">
-                      <span>Tempo estimado de entrega:</span>
-                      <Badge variant="secondary">30-45 min</Badge>
+                      <span>{formData.deliveryType === "pickup" ? "Tempo estimado de preparo:" : "Tempo estimado de entrega:"}</span>
+                      <Badge variant="secondary">{formData.deliveryType === "pickup" ? "15-20 min" : "30-45 min"}</Badge>
                     </div>
                   </div>
                 </div>

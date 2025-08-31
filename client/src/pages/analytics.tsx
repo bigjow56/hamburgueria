@@ -176,20 +176,6 @@ export default function Analytics() {
       return orderDate >= startDate && orderDate <= endDate && order.paymentStatus === 'paid';
     });
 
-    console.log('Debug Analytics:', {
-      period,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      totalOrders: orders.length,
-      paidOrders: orders.filter(o => o.paymentStatus === 'paid').length,
-      filteredOrders: filteredOrders.length,
-      filteredOrdersData: filteredOrders.map(o => ({
-        id: o.id,
-        total: o.total,
-        date: o.createdAt,
-        paymentStatus: o.paymentStatus
-      }))
-    });
 
     const filteredExpenses = expenses.filter(expense => {
       const expenseDate = new Date(expense.date);

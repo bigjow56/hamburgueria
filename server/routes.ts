@@ -11,9 +11,10 @@ const createOrderRequestSchema = z.object({
   customerEmail: z.string().optional().refine((val) => !val || z.string().email().safeParse(val).success, {
     message: "Invalid email"
   }),
-  streetName: z.string().min(1),
-  houseNumber: z.string().min(1),
-  neighborhood: z.string().min(1),
+  deliveryType: z.enum(["delivery", "pickup"]).default("delivery"),
+  streetName: z.string().optional(),
+  houseNumber: z.string().optional(),
+  neighborhood: z.string().optional(),
   referencePoint: z.string().optional(),
   paymentMethod: z.string().min(1),
   specialInstructions: z.string().optional(),
@@ -22,6 +23,14 @@ const createOrderRequestSchema = z.object({
     quantity: z.number().min(1),
     unitPrice: z.string(),
   })),
+}).refine((data) => {
+  // If delivery type is "delivery", address fields are required
+  if (data.deliveryType === "delivery") {
+    return data.streetName && data.houseNumber && data.neighborhood;
+  }
+  return true; // For pickup, address fields are optional
+}, {
+  message: "Address fields are required for delivery orders"
 });
 
 // Função para enviar dados para n8n
@@ -183,14 +192,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }));
 
-      // Calculate delivery fee based on neighborhood
+      // Calculate delivery fee based on delivery type and neighborhood
       const storeSettings = await storage.getStoreSettings();
-      let deliveryFee = parseFloat(storeSettings?.defaultDeliveryFee || "5.90");
+      let deliveryFee = 0;
       
-      if (storeSettings?.useNeighborhoodDelivery) {
-        const zoneDeliveryFee = await storage.getDeliveryFeeByNeighborhood(requestData.neighborhood);
-        if (zoneDeliveryFee !== null) {
-          deliveryFee = zoneDeliveryFee;
+      if (requestData.deliveryType === "delivery") {
+        deliveryFee = parseFloat(storeSettings?.defaultDeliveryFee || "5.90");
+        
+        if (storeSettings?.useNeighborhoodDelivery && requestData.neighborhood) {
+          const zoneDeliveryFee = await storage.getDeliveryFeeByNeighborhood(requestData.neighborhood);
+          if (zoneDeliveryFee !== null) {
+            deliveryFee = zoneDeliveryFee;
+          }
         }
       }
       
@@ -200,16 +213,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerName: requestData.customerName,
         customerPhone: requestData.customerPhoneInternational || requestData.customerPhone, // Use international number for n8n
         customerEmail: requestData.customerEmail,
-        streetName: requestData.streetName,
-        houseNumber: requestData.houseNumber,
-        neighborhood: requestData.neighborhood,
+        deliveryType: requestData.deliveryType,
+        streetName: requestData.streetName || "",
+        houseNumber: requestData.houseNumber || "",
+        neighborhood: requestData.neighborhood || "",
         referencePoint: requestData.referencePoint,
         paymentMethod: requestData.paymentMethod,
         specialInstructions: requestData.specialInstructions,
         subtotal: subtotal.toFixed(2),
         deliveryFee: deliveryFee.toFixed(2),
         total: total.toFixed(2),
-        estimatedDeliveryTime: 45, // 45 minutes default
+        estimatedDeliveryTime: requestData.deliveryType === "pickup" ? 20 : 45, // 20 min for pickup, 45 for delivery
       };
 
       const order = await storage.createOrder(orderData);

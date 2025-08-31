@@ -45,10 +45,11 @@ export const orders = pgTable("orders", {
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),
   customerEmail: text("customer_email"),
+  deliveryType: text("delivery_type").default("delivery"), // "delivery" or "pickup"
   // Campos separados de endereço
-  streetName: text("street_name").notNull(),
-  houseNumber: text("house_number").notNull(),
-  neighborhood: text("neighborhood").notNull(),
+  streetName: text("street_name"),
+  houseNumber: text("house_number"),
+  neighborhood: text("neighborhood"),
   referencePoint: text("reference_point"),
   paymentMethod: text("payment_method").notNull(),
   paymentStatus: text("payment_status").default("pending"),
