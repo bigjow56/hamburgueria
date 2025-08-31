@@ -101,8 +101,10 @@ export function ProductCustomization({ cartItem, isOpen, onClose, onSave, inline
     );
 
     if (newQuantity > 0) {
-      // Add new extra modification
-      const extraPrice = parseFloat(ingredient.price || '0');
+      // Find the ingredient in additionals to get custom price
+      const productAdditional = productAdditionals?.find(pa => pa.ingredientId === ingredient.id);
+      const extraPrice = parseFloat(productAdditional?.customPrice || ingredient.price || '0');
+      
       filteredMods.push({
         ingredientId: ingredient.id,
         ingredient,

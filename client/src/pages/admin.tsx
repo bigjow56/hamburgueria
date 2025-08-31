@@ -844,11 +844,24 @@ function NewIngredientForm({ onSubmit, isLoading }: {
           <Label htmlFor="ingredient-price">Preço Adicional (R$)</Label>
           <Input
             id="ingredient-price"
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
+            inputMode="decimal"
             value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty string, numbers and decimal point
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setFormData({ ...formData, price: value });
+              }
+            }}
+            onBlur={(e) => {
+              const value = e.target.value;
+              if (value && !isNaN(parseFloat(value))) {
+                setFormData({ ...formData, price: parseFloat(value).toFixed(2) });
+              } else {
+                setFormData({ ...formData, price: '0.00' });
+              }
+            }}
             placeholder="0.00"
             data-testid="input-ingredient-price"
           />
@@ -858,11 +871,24 @@ function NewIngredientForm({ onSubmit, isLoading }: {
           <Label htmlFor="ingredient-discount">Desconto se Remover (R$)</Label>
           <Input
             id="ingredient-discount"
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
+            inputMode="decimal"
             value={formData.discountPrice}
-            onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty string, numbers and decimal point
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setFormData({ ...formData, discountPrice: value });
+              }
+            }}
+            onBlur={(e) => {
+              const value = e.target.value;
+              if (value && !isNaN(parseFloat(value))) {
+                setFormData({ ...formData, discountPrice: parseFloat(value).toFixed(2) });
+              } else {
+                setFormData({ ...formData, discountPrice: '0.00' });
+              }
+            }}
             placeholder="0.00"
             data-testid="input-ingredient-discount"
           />
@@ -986,11 +1012,24 @@ function EditIngredientForm({
           <Label htmlFor="edit-ingredient-price">Preço Adicional (R$)</Label>
           <Input
             id="edit-ingredient-price"
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
+            inputMode="decimal"
             value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty string, numbers and decimal point
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setFormData({ ...formData, price: value });
+              }
+            }}
+            onBlur={(e) => {
+              const value = e.target.value;
+              if (value && !isNaN(parseFloat(value))) {
+                setFormData({ ...formData, price: parseFloat(value).toFixed(2) });
+              } else {
+                setFormData({ ...formData, price: '0.00' });
+              }
+            }}
             placeholder="0.00"
             data-testid="input-edit-ingredient-price"
           />
@@ -1000,11 +1039,24 @@ function EditIngredientForm({
           <Label htmlFor="edit-ingredient-discount">Desconto se Remover (R$)</Label>
           <Input
             id="edit-ingredient-discount"
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
+            inputMode="decimal"
             value={formData.discountPrice}
-            onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty string, numbers and decimal point
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setFormData({ ...formData, discountPrice: value });
+              }
+            }}
+            onBlur={(e) => {
+              const value = e.target.value;
+              if (value && !isNaN(parseFloat(value))) {
+                setFormData({ ...formData, discountPrice: parseFloat(value).toFixed(2) });
+              } else {
+                setFormData({ ...formData, discountPrice: '0.00' });
+              }
+            }}
             placeholder="0.00"
             data-testid="input-edit-ingredient-discount"
           />
@@ -1317,10 +1369,24 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
           <Label htmlFor="price">Preço *</Label>
           <Input
             id="price"
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={product.price}
-            onChange={(e) => setProduct({ ...product, price: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty string, numbers and decimal point
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setProduct({ ...product, price: value });
+              }
+            }}
+            onBlur={(e) => {
+              const value = e.target.value;
+              if (value && !isNaN(parseFloat(value))) {
+                setProduct({ ...product, price: parseFloat(value).toFixed(2) });
+              } else {
+                setProduct({ ...product, price: '0.00' });
+              }
+            }}
             placeholder="18.90"
             data-testid="input-product-price"
           />
@@ -1329,10 +1395,24 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
           <Label htmlFor="originalPrice">Preço Original (opcional)</Label>
           <Input
             id="originalPrice"
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={product.originalPrice}
-            onChange={(e) => setProduct({ ...product, originalPrice: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty string, numbers and decimal point
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setProduct({ ...product, originalPrice: value });
+              }
+            }}
+            onBlur={(e) => {
+              const value = e.target.value;
+              if (value && !isNaN(parseFloat(value))) {
+                setProduct({ ...product, originalPrice: parseFloat(value).toFixed(2) });
+              } else {
+                setProduct({ ...product, originalPrice: '' });
+              }
+            }}
             placeholder="22.90"
             data-testid="input-original-price"
           />
