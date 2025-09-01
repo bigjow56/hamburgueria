@@ -282,6 +282,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recalculate product price based on ingredients
+  app.post("/api/products/:id/recalculate-price", async (req, res) => {
+    try {
+      const product = await storage.recalculateProductPrice(req.params.id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      res.json({ 
+        message: "Price recalculated successfully", 
+        product: product,
+        newPrice: product.price 
+      });
+    } catch (error) {
+      console.error("Error recalculating product price:", error);
+      res.status(500).json({ message: "Failed to recalculate product price" });
+    }
+  });
+
+  // Get product ingredients
+  app.get("/api/products/:id/ingredients", async (req, res) => {
+    try {
+      const ingredients = await storage.getProductIngredients(req.params.id);
+      res.json(ingredients);
+    } catch (error) {
+      console.error("Error fetching product ingredients:", error);
+      res.status(500).json({ message: "Failed to fetch product ingredients" });
+    }
+  });
+
+  // Get product additional options
+  app.get("/api/products/:id/additionals", async (req, res) => {
+    try {
+      const additionals = await storage.getProductAdditionals(req.params.id);
+      res.json(additionals);
+    } catch (error) {
+      console.error("Error fetching product additionals:", error);
+      res.status(500).json({ message: "Failed to fetch product additionals" });
+    }
+  });
+
+  // Recalculate all product prices (admin function)
+  app.post("/api/products/recalculate-all-prices", async (req, res) => {
+    try {
+      const allProducts = await storage.getAllProducts();
+      const results = [];
+      
+      for (const product of allProducts) {
+        try {
+          const updatedProduct = await storage.recalculateProductPrice(product.id);
+          results.push({
+            productId: product.id,
+            productName: product.name,
+            oldPrice: product.price,
+            newPrice: updatedProduct?.price || product.price,
+            success: true
+          });
+        } catch (error) {
+          results.push({
+            productId: product.id,
+            productName: product.name,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+      
+      res.json({ 
+        message: "Price recalculation completed", 
+        results: results,
+        totalProcessed: results.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+    } catch (error) {
+      console.error("Error recalculating all product prices:", error);
+      res.status(500).json({ message: "Failed to recalculate product prices" });
+    }
+  });
+
   app.post("/api/products", async (req, res) => {
     try {
       const { ingredients, ...productData } = req.body;

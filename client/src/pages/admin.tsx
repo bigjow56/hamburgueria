@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags, ShoppingBag, BarChart3, ChefHat } from "lucide-react";
+import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags, ShoppingBag, BarChart3, ChefHat, Calculator } from "lucide-react";
 import { AdminDeliveryZones } from "@/components/admin-delivery-zones";
 import type { Product, Category, DeliveryZone, StoreSettings, Order, OrderItem, Ingredient } from "@shared/schema";
 
@@ -211,6 +211,55 @@ export default function Admin() {
       });
     },
   });
+
+  const recalculateAllMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/products/recalculate-all-prices", {});
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Preços recalculados!",
+        description: `${data.successful} produtos atualizados com sucesso.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao recalcular preços",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRecalculateAllPrices = () => {
+    recalculateAllMutation.mutate();
+  };
+
+  const recalculateProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      return await apiRequest("POST", `/api/products/${productId}/recalculate-price`, {});
+    },
+    onSuccess: (data, productId) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      const product = products.find(p => p.id === productId);
+      toast({
+        title: "Preço recalculado!",
+        description: `${product?.name}: R$ ${parseFloat(data.newPrice).toFixed(2)}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao recalcular preço",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRecalculatePrice = (productId: string) => {
+    recalculateProductMutation.mutate(productId);
+  };
 
   const createProductMutation = useMutation({
     mutationFn: async (productData: any) => {
@@ -486,9 +535,22 @@ export default function Admin() {
             {/* Products List */}
             <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Edit3 className="mr-2 h-5 w-5" />
-              Gerenciar Produtos ({products.length})
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center">
+                <Edit3 className="mr-2 h-5 w-5" />
+                Gerenciar Produtos ({products.length})
+              </span>
+              <Button
+                onClick={handleRecalculateAllPrices}
+                disabled={recalculateAllMutation.isPending}
+                size="sm"
+                variant="outline"
+                className="px-3 py-2 text-sm"
+                data-testid="button-recalculate-all-prices"
+              >
+                <Calculator className="mr-1 h-3 w-3" />
+                {recalculateAllMutation.isPending ? "Recalculando..." : "Recalcular Preços"}
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -590,6 +652,17 @@ export default function Admin() {
                             
                             {/* Action Buttons */}
                             <div className="flex items-center space-x-1">
+                              <Button
+                                onClick={() => handleRecalculatePrice(product.id)}
+                                variant="outline"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                disabled={recalculateProductMutation.isPending}
+                                title="Recalcular preço baseado nos ingredientes"
+                                data-testid={`button-recalculate-${product.id}`}
+                              >
+                                <Calculator className="h-3 w-3" />
+                              </Button>
                               <Button
                                 onClick={() => handleEdit(product)}
                                 variant="outline"

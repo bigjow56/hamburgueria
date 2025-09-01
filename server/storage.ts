@@ -57,6 +57,7 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, product: InsertProduct): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<boolean>;
+  calculateProductPrice(productId: string): Promise<number>;
   
   // Order operations
   createOrder(order: InsertOrder): Promise<Order>;
@@ -103,6 +104,7 @@ export interface IStorage {
   removeProductIngredient(productId: string, ingredientId: string): Promise<boolean>;
   removeProductAdditional(productId: string, ingredientId: string): Promise<boolean>;
   updateProductIngredients(productId: string, ingredientConfigs: any[]): Promise<void>;
+  recalculateProductPrice(productId: string): Promise<Product | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -139,6 +141,26 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(products).where(eq(products.isAvailable, true));
   }
 
+  // Calculate product price based on its ingredients
+  async calculateProductPrice(productId: string): Promise<number> {
+    const productIngredientsData = await db
+      .select({
+        ingredientPrice: ingredients.price,
+        quantity: productIngredients.quantity
+      })
+      .from(productIngredients)
+      .leftJoin(ingredients, eq(productIngredients.ingredientId, ingredients.id))
+      .where(eq(productIngredients.productId, productId));
+    
+    const totalPrice = productIngredientsData.reduce((sum, item) => {
+      const price = parseFloat(item.ingredientPrice || '0');
+      const quantity = item.quantity || 1;
+      return sum + (price * quantity);
+    }, 0);
+    
+    return Math.round(totalPrice * 100) / 100; // Round to 2 decimal places
+  }
+
   async getAllProducts(): Promise<Product[]> {
     return await db.select().from(products);
   }
@@ -164,14 +186,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProduct(productData: InsertProduct): Promise<Product> {
-    const [product] = await db.insert(products).values(productData).returning();
+    // If price is not provided, set it to 0 initially
+    let finalProductData = productData;
+    if (!productData.price) {
+      finalProductData = {
+        ...productData,
+        price: "0.00"
+      };
+    }
+    
+    const [product] = await db.insert(products).values(finalProductData).returning();
     return product;
   }
 
   async updateProduct(id: string, productData: InsertProduct): Promise<Product | undefined> {
+    // If price is not provided, calculate it from ingredients
+    let finalProductData = productData;
+    if (!productData.price) {
+      const calculatedPrice = await this.calculateProductPrice(id);
+      finalProductData = {
+        ...productData,
+        price: calculatedPrice.toString()
+      };
+    }
+    
     const [product] = await db
       .update(products)
-      .set(productData)
+      .set(finalProductData)
       .where(eq(products.id, id))
       .returning();
     return product;
@@ -476,6 +517,19 @@ export class DatabaseStorage implements IStorage {
         isActive: config.isActive,
       });
     }
+    
+    // Automatically recalculate product price after updating ingredients
+    await this.recalculateProductPrice(productId);
+  }
+
+  async recalculateProductPrice(productId: string): Promise<Product | undefined> {
+    const calculatedPrice = await this.calculateProductPrice(productId);
+    const [product] = await db
+      .update(products)
+      .set({ price: calculatedPrice.toString() })
+      .where(eq(products.id, productId))
+      .returning();
+    return product;
   }
 }
 
