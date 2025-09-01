@@ -491,6 +491,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProductIngredients(productId: string, ingredientConfigs: any[]): Promise<void> {
+    // Only update ingredients if ingredientConfigs is provided and not empty
+    if (!ingredientConfigs || ingredientConfigs.length === 0) {
+      return; // Don't delete existing ingredients if no new ones are provided
+    }
+
     // Remove existing product ingredients
     await db.delete(productIngredients).where(eq(productIngredients.productId, productId));
     
