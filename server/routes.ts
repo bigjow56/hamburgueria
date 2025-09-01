@@ -266,8 +266,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      // Update product ingredients if provided
-      if (ingredients && Array.isArray(ingredients)) {
+      // Update product ingredients if provided and not empty
+      if (ingredients && Array.isArray(ingredients) && ingredients.length > 0) {
         await storage.updateProductIngredients(req.params.id, ingredients);
       }
       
@@ -359,8 +359,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const product = await storage.createProduct(validatedProductData);
       
-      // Add product ingredients if provided
-      if (ingredients && Array.isArray(ingredients)) {
+      // Add product ingredients if provided and not empty
+      if (ingredients && Array.isArray(ingredients) && ingredients.length > 0) {
         await storage.updateProductIngredients(product.id, ingredients);
       }
       
