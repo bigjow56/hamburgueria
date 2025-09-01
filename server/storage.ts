@@ -518,8 +518,8 @@ export class DatabaseStorage implements IStorage {
       });
     }
     
-    // Automatically recalculate product price after updating ingredients
-    await this.recalculateProductPrice(productId);
+    // Don't automatically recalculate price when updating ingredients
+    // Let the user manually set prices or use the explicit recalculate function
   }
 
   async recalculateProductPrice(productId: string): Promise<Product | undefined> {
