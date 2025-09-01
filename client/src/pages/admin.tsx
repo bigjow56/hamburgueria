@@ -240,12 +240,14 @@ export default function Admin() {
     mutationFn: async (productId: string) => {
       return await apiRequest("POST", `/api/products/${productId}/recalculate-price`, {});
     },
-    onSuccess: (data, productId) => {
+    onSuccess: async (response, productId) => {
+      const data = await response.json();
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       const product = products.find(p => p.id === productId);
+      const newPrice = data.newPrice || data.product?.price || "0.00";
       toast({
         title: "Preço recalculado!",
-        description: `${product?.name}: R$ ${parseFloat(data.newPrice).toFixed(2)}`,
+        description: `${product?.name}: R$ ${parseFloat(newPrice).toFixed(2)}`,
       });
     },
     onError: () => {
