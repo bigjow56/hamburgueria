@@ -301,16 +301,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get product ingredients
-  app.get("/api/products/:id/ingredients", async (req, res) => {
-    try {
-      const ingredients = await storage.getProductIngredients(req.params.id);
-      res.json(ingredients);
-    } catch (error) {
-      console.error("Error fetching product ingredients:", error);
-      res.status(500).json({ message: "Failed to fetch product ingredients" });
-    }
-  });
 
   // Get product additional options
   app.get("/api/products/:id/additionals", async (req, res) => {
@@ -687,11 +677,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Product Ingredients Routes
+  // Product Ingredients Routes - Returns additionals with customPrice and isActive fields
   app.get("/api/products/:id/ingredients", async (req, res) => {
     try {
-      const ingredients = await storage.getProductIngredients(req.params.id);
-      res.json(ingredients);
+      const additionals = await storage.getProductAdditionals(req.params.id);
+      res.json(additionals);
     } catch (error) {
       console.error("Error fetching product ingredients:", error);
       res.status(500).json({ message: "Failed to fetch product ingredients" });

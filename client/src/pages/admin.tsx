@@ -320,8 +320,8 @@ export default function Admin() {
       ingredientName: pi.ingredient?.name || '',
       isIncludedByDefault: pi.isIncludedByDefault || false,
       quantity: pi.quantity || 1,
-      customPrice: pi.ingredient?.price || "0.00",
-      isActive: true,
+      customPrice: pi.customPrice || pi.ingredient?.price || "0.00",
+      isActive: pi.isActive !== undefined ? pi.isActive : true,
     }));
 
     setEditingProduct({
