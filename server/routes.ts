@@ -266,10 +266,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      // Update product ingredients if provided and not empty
-      if (ingredients && Array.isArray(ingredients) && ingredients.length > 0) {
-        await storage.updateProductIngredients(req.params.id, ingredients);
-      }
+      // NOTE: Ingredients are managed separately through dedicated endpoints
+      // This prevents accidental deletion of ingredients during product edits
+      // To update ingredients, use the dedicated ingredient management interface
       
       res.json(product);
     } catch (error) {

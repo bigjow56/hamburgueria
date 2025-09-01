@@ -504,15 +504,13 @@ export class DatabaseStorage implements IStorage {
 
     // Add new product ingredients and additionals
     for (const config of ingredientConfigs) {
-      if (config.isIncludedByDefault) {
-        // Add as product ingredient (base ingredient)
-        await db.insert(productIngredients).values({
-          productId,
-          ingredientId: config.ingredientId,
-          isIncludedByDefault: config.isIncludedByDefault,
-          quantity: config.quantity || 1,
-        });
-      }
+      // Always add as product ingredient (base ingredient) - these are core ingredients for price calculation
+      await db.insert(productIngredients).values({
+        productId,
+        ingredientId: config.ingredientId,
+        isIncludedByDefault: true, // Force to true - these are base ingredients
+        quantity: config.quantity || 1,
+      });
 
       // Also add as product additional (for customization)
       await db.insert(productAdditionals).values({
