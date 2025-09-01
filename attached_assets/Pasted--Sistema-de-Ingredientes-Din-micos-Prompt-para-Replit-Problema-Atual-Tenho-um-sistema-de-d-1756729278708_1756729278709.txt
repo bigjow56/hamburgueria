@@ -1,0 +1,334 @@
+# Sistema de Ingredientes Dinâmicos - Prompt para Replit
+
+## Problema Atual
+Tenho um sistema de delivery em Node.js + Supabase onde cadastro produtos com ingredientes personalizáveis, mas toda vez que fecho o navegador perco todos os dados dos ingredientes. Os dados estão sendo salvos apenas localmente e não no banco de dados.
+
+## Estrutura Atual
+- **Backend**: Node.js com Supabase
+- **Tabela existente**: `products` (com id, name, price, description, etc.)
+- **Frontend**: Interface administrativa para cadastrar produtos e ingredientes
+
+## O que precisa ser implementado:
+
+### 1. CRIAR TABELAS NO SUPABASE
+
+Execute no SQL Editor do Supabase:
+
+```sql
+-- Tabela de ingredientes
+CREATE TABLE ingredientes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  price DECIMAL(10,2) NOT NULL DEFAULT 0,
+  category VARCHAR(100) DEFAULT 'outros',
+  is_active BOOLEAN DEFAULT true,
+  is_required BOOLEAN DEFAULT false,
+  is_removable BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tabela de relacionamento produto-ingredientes
+CREATE TABLE produto_ingredientes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id VARCHAR(255) REFERENCES products(id) ON DELETE CASCADE,
+  ingredient_id UUID REFERENCES ingredientes(id) ON DELETE CASCADE,
+  additional_price DECIMAL(10,2) DEFAULT 0,
+  max_quantity INTEGER DEFAULT 1,
+  is_included_by_default BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(product_id, ingredient_id)
+);
+
+-- Índices para performance
+CREATE INDEX idx_produto_ingredientes_product ON produto_ingredientes(product_id);
+CREATE INDEX idx_produto_ingredientes_ingredient ON produto_ingredientes(ingredient_id);
+CREATE INDEX idx_ingredientes_active ON ingredientes(is_active);
+```
+
+### 2. CRIAR APIS NO BACKEND (Node.js)
+
+#### API para Ingredientes:
+
+```javascript
+// GET - Listar todos os ingredientes
+app.get('/api/ingredientes', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('ingredientes')
+      .select('*')
+      .eq('is_active', true)
+      .order('category', { ascending: true })
+      .order('name', { ascending: true });
+    
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST - Criar ingrediente
+app.post('/api/ingredientes', async (req, res) => {
+  try {
+    const { name, price, category, is_active, is_required, is_removable } = req.body;
+    
+    const { data, error } = await supabase
+      .from('ingredientes')
+      .insert([{
+        name,
+        price: parseFloat(price),
+        category: category || 'outros',
+        is_active: is_active !== undefined ? is_active : true,
+        is_required: is_required || false,
+        is_removable: is_removable !== undefined ? is_removable : true
+      }])
+      .select();
+    
+    if (error) throw error;
+    res.json({ success: true, data: data[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT - Atualizar ingrediente
+app.put('/api/ingredientes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, price, category, is_active, is_required, is_removable } = req.body;
+    
+    const { data, error } = await supabase
+      .from('ingredientes')
+      .update({
+        name,
+        price: parseFloat(price),
+        category,
+        is_active,
+        is_required,
+        is_removable,
+        updated_at: new Date()
+      })
+      .eq('id', id)
+      .select();
+    
+    if (error) throw error;
+    res.json({ success: true, data: data[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE - Remover ingrediente
+app.delete('/api/ingredientes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { error } = await supabase
+      .from('ingredientes')
+      .update({ is_active: false })
+      .eq('id', id);
+    
+    if (error) throw error;
+    res.json({ success: true, message: 'Ingrediente removido' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+#### API para Produto-Ingredientes:
+
+```javascript
+// POST - Associar ingredientes ao produto
+app.post('/api/produto-ingredientes', async (req, res) => {
+  try {
+    const { product_id, ingredients } = req.body;
+    
+    // Remove ingredientes antigos do produto
+    await supabase
+      .from('produto_ingredientes')
+      .delete()
+      .eq('product_id', product_id);
+    
+    // Adiciona novos ingredientes
+    if (ingredients && ingredients.length > 0) {
+      const ingredientsToInsert = ingredients.map(ing => ({
+        product_id,
+        ingredient_id: ing.ingredient_id,
+        additional_price: parseFloat(ing.additional_price || 0),
+        max_quantity: parseInt(ing.max_quantity || 1),
+        is_included_by_default: ing.is_included_by_default || false,
+        is_active: ing.is_active !== undefined ? ing.is_active : true
+      }));
+      
+      const { data, error } = await supabase
+        .from('produto_ingredientes')
+        .insert(ingredientsToInsert)
+        .select();
+      
+      if (error) throw error;
+      res.json({ success: true, data });
+    } else {
+      res.json({ success: true, data: [] });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET - Buscar ingredientes de um produto
+app.get('/api/produto-ingredientes/:product_id', async (req, res) => {
+  try {
+    const { product_id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('produto_ingredientes')
+      .select(`
+        *,
+        ingredientes (
+          id,
+          name,
+          price,
+          category,
+          is_required,
+          is_removable
+        )
+      `)
+      .eq('product_id', product_id)
+      .eq('is_active', true);
+    
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET - Buscar produto com seus ingredientes
+app.get('/api/products/:id/with-ingredients', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        produto_ingredientes!inner (
+          additional_price,
+          max_quantity,
+          is_included_by_default,
+          is_active,
+          ingredientes (
+            id,
+            name,
+            price,
+            category,
+            is_required,
+            is_removable
+          )
+        )
+      `)
+      .eq('id', id);
+    
+    if (error) throw error;
+    res.json({ success: true, data: data[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+### 3. ATUALIZAR O FRONTEND
+
+#### Modificar a função de salvar produto para incluir ingredientes:
+
+```javascript
+const salvarProduto = async (produtoData, ingredientes) => {
+  try {
+    // 1. Salvar o produto
+    const produtoResponse = await fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(produtoData)
+    });
+    
+    const produto = await produtoResponse.json();
+    
+    if (produto.success) {
+      // 2. Salvar os ingredientes do produto
+      const ingredientesResponse = await fetch('/api/produto-ingredientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_id: produto.data.id,
+          ingredients: ingredientes
+        })
+      });
+      
+      const resultIngredientes = await ingredientesResponse.json();
+      
+      if (resultIngredientes.success) {
+        alert('Produto e ingredientes salvos com sucesso!');
+        // Recarregar lista de produtos
+      } else {
+        alert('Erro ao salvar ingredientes: ' + resultIngredientes.error);
+      }
+    } else {
+      alert('Erro ao salvar produto: ' + produto.error);
+    }
+  } catch (error) {
+    console.error('Erro:', error);
+    alert('Erro ao salvar: ' + error.message);
+  }
+};
+```
+
+#### Modificar função de carregar ingredientes:
+
+```javascript
+const carregarIngredientes = async () => {
+  try {
+    const response = await fetch('/api/ingredientes');
+    const result = await response.json();
+    
+    if (result.success) {
+      setIngredientes(result.data);
+    } else {
+      console.error('Erro ao carregar ingredientes:', result.error);
+    }
+  } catch (error) {
+    console.error('Erro:', error);
+  }
+};
+
+// Carregar quando o componente montar
+useEffect(() => {
+  carregarIngredientes();
+}, []);
+```
+
+### 4. PONTOS IMPORTANTES
+
+1. **Execute o SQL primeiro** no Supabase Dashboard → SQL Editor
+2. **Teste as APIs** uma por uma no Postman ou similar
+3. **Modifique o frontend** para fazer as chamadas corretas
+4. **Verifique se o Supabase Client** está configurado corretamente
+5. **Confira as permissões RLS** (Row Level Security) no Supabase se necessário
+
+### 5. RESULTADO ESPERADO
+
+Após implementar:
+- ✅ Ingredientes salvos permanentemente no banco
+- ✅ Cada produto mantém seus ingredientes específicos
+- ✅ Dados persistem mesmo fechando o navegador
+- ✅ Sistema de precificação dinâmica funcionando
+- ✅ Possibilidade de reutilizar ingredientes em vários produtos
+
+## Ordem de Execução:
+1. SQL no Supabase
+2. APIs no backend
+3. Frontend para chamadas
+4. Testes completos
