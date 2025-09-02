@@ -336,14 +336,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Atualizar preço no banco
       if (totalPrice > 0) {
         await storage.updateProduct(productId, { price: totalPrice.toString() } as any);
+        console.log('💾 Preço atualizado no banco:', totalPrice);
       }
       
-      res.json({ 
+      const response = { 
         totalPrice: totalPrice,
         formattedPrice: `R$ ${totalPrice.toFixed(2)}`,
         ingredientsCount: ingredients?.length || 0,
         message: "Price recalculated successfully"
-      });
+      };
+      
+      console.log('📤 RESPONSE ENVIADO:', response);
+      res.json(response);
       
     } catch (error) {
       console.error('Erro no recálculo:', error);

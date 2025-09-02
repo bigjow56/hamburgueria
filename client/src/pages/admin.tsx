@@ -242,12 +242,19 @@ export default function Admin() {
     },
     onSuccess: async (response, productId) => {
       const data = await response.json();
+      console.log('📥 RESPONSE RECEBIDO NO FRONTEND:', data);
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       const product = products.find(p => p.id === productId);
-      const newPrice = data.newPrice || data.product?.price || "0.00";
+      
+      // Corrigido: usar campos corretos do response
+      const newPrice = data.totalPrice || 0;
+      const formattedPrice = data.formattedPrice || `R$ ${newPrice.toFixed(2)}`;
+      
+      console.log('💰 Preço calculado:', newPrice, '| Formatado:', formattedPrice);
+      
       toast({
         title: "Preço recalculado!",
-        description: `${product?.name}: R$ ${parseFloat(newPrice).toFixed(2)}`,
+        description: `${product?.name}: ${formattedPrice}`,
       });
     },
     onError: () => {
