@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Upload, Edit3, Trash2, Plus, Save, X, ToggleLeft, ToggleRight, Image, MapPin, Settings, Tags, ShoppingBag, BarChart3, ChefHat, Calculator } from "lucide-react";
 import { AdminDeliveryZones } from "@/components/admin-delivery-zones";
-import type { Product, Category, DeliveryZone, StoreSettings, Order, OrderItem, Ingredient } from "@shared/schema";
+import type { Product, Category, DeliveryZone, StoreSettings, Order, OrderItem, Ingredient, BannerTheme } from "@shared/schema";
 
 interface EditingProduct {
   id?: string;
@@ -1634,38 +1634,47 @@ function ProductForm({ product, setProduct, categories, onSave, onCancel, isCrea
 function BannerManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<Partial<StoreSettings>>({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<BannerTheme | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
-  const { data: storeSettings } = useQuery<StoreSettings>({
-    queryKey: ["/api/store/settings"],
+  // Fetch all banners
+  const { data: banners = [] } = useQuery<BannerTheme[]>({
+    queryKey: ["/api/banners"],
+    queryFn: () => fetch("/api/banners").then(res => res.json()),
   });
 
-  // Inicializar formData quando os dados chegarem
-  useEffect(() => {
-    if (storeSettings && !hasChanges) {
-      setFormData({
-        bannerTitle: storeSettings.bannerTitle,
-        bannerDescription: storeSettings.bannerDescription,
-        bannerPrice: storeSettings.bannerPrice,
-        bannerImageUrl: storeSettings.bannerImageUrl,
-        bannerColor1: storeSettings.bannerColor1,
-        bannerColor2: storeSettings.bannerColor2,
-        bannerColor3: storeSettings.bannerColor3,
-        bannerColor4: storeSettings.bannerColor4,
-        bannerBackgroundImage: storeSettings.bannerBackgroundImage,
-        bannerUseImageBackground: storeSettings.bannerUseImageBackground,
-      });
-    }
-  }, [storeSettings, hasChanges]);
-
-  const updateStoreSettingsMutation = useMutation({
-    mutationFn: async (data: Partial<StoreSettings>) => {
-      return await apiRequest("PUT", "/api/store/settings", data);
+  // Banner mutations
+  const createBannerMutation = useMutation({
+    mutationFn: async (bannerData: any) => {
+      return await apiRequest("POST", "/api/banners", bannerData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/store/settings"] });
-      setHasChanges(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/banners"] });
+      setIsModalOpen(false);
+      setEditingBanner(null);
+      toast({
+        title: "Banner criado!",
+        description: "Novo banner foi adicionado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao criar banner",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateBannerMutation = useMutation({
+    mutationFn: async (bannerData: any) => {
+      return await apiRequest("PUT", `/api/banners/${bannerData.id}`, bannerData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/banners"] });
+      setIsModalOpen(false);
+      setEditingBanner(null);
       toast({
         title: "Banner atualizado!",
         description: "As alterações foram salvas com sucesso.",
@@ -1680,214 +1689,376 @@ function BannerManagement() {
     },
   });
 
-  const handleInputChange = (field: keyof StoreSettings, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setHasChanges(true);
+  const activateBannerMutation = useMutation({
+    mutationFn: async (bannerId: string) => {
+      return await apiRequest("PUT", `/api/banners/${bannerId}/activate`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/banners"] });
+      toast({
+        title: "Banner ativado!",
+        description: "Banner está agora ativo no site.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao ativar banner",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteBannerMutation = useMutation({
+    mutationFn: async (bannerId: string) => {
+      return await apiRequest("DELETE", `/api/banners/${bannerId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/banners"] });
+      toast({
+        title: "Banner removido!",
+        description: "Banner foi removido com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao remover banner",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreate = () => {
+    setEditingBanner({
+      id: "",
+      name: "",
+      isCustomizable: true,
+      htmlContent: "",
+      title: "",
+      description: "",
+      price: "18.90",
+      imageUrl: "",
+      gradientColor1: "#ff6b35",
+      gradientColor2: "#f7931e", 
+      gradientColor3: "#ffd23f",
+      gradientColor4: "#ff8c42",
+      useBackgroundImage: false,
+      isActive: false,
+      createdAt: new Date()
+    });
+    setIsCreating(true);
+    setIsModalOpen(true);
   };
 
-  const handleSaveBanner = () => {
-    updateStoreSettingsMutation.mutate(formData);
+  const handleEdit = (banner: BannerTheme) => {
+    setEditingBanner(banner);
+    setIsCreating(false);
+    setIsModalOpen(true);
   };
 
-  if (!storeSettings) return <div>Carregando...</div>;
+  const handleActivate = (bannerId: string) => {
+    activateBannerMutation.mutate(bannerId);
+  };
+
+  const handleDelete = (bannerId: string, bannerName: string) => {
+    if (confirm(`Tem certeza que deseja remover o banner "${bannerName}"?`)) {
+      deleteBannerMutation.mutate(bannerId);
+    }
+  };
+
+  const handleSave = () => {
+    if (!editingBanner) return;
+
+    const bannerData = {
+      ...editingBanner,
+      price: editingBanner.price?.toString() || "0.00",
+    };
+
+    if (isCreating) {
+      createBannerMutation.mutate(bannerData);
+    } else {
+      updateBannerMutation.mutate(bannerData);
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Image className="mr-2 h-5 w-5" />
-          Gerenciar Banner Principal
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Configure o banner que aparece no topo do site
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="banner-title">Título do Banner</Label>
-            <Input
-              id="banner-title"
-              value={formData.bannerTitle || ""}
-              onChange={(e) => handleInputChange('bannerTitle', e.target.value)}
-              placeholder="Ex: Hambúrguers"
-              data-testid="input-banner-title"
-            />
-          </div>
-          <div>
-            <Label htmlFor="banner-price">Preço</Label>
-            <Input
-              id="banner-price"
-              value={formData.bannerPrice || ""}
-              onChange={(e) => handleInputChange('bannerPrice', e.target.value)}
-              placeholder="Ex: 18.90"
-              data-testid="input-banner-price"
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="banner-description">Descrição</Label>
-          <Textarea
-            id="banner-description"
-            value={formData.bannerDescription || ""}
-            onChange={(e) => handleInputChange('bannerDescription', e.target.value)}
-            placeholder="Ex: Ingredientes frescos, sabor incomparável."
-            rows={3}
-            data-testid="textarea-banner-description"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="banner-image">URL da Imagem</Label>
-          <Input
-            id="banner-image"
-            value={formData.bannerImageUrl || ""}
-            onChange={(e) => handleInputChange('bannerImageUrl', e.target.value)}
-            placeholder="https://exemplo.com/imagem-banner.jpg"
-            data-testid="input-banner-image"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Cole aqui a URL de uma imagem (recomendado: 600x400px)
-          </p>
-        </div>
-
-        {formData.bannerImageUrl && (
-          <div>
-            <Label>Preview da Imagem</Label>
-            <div className="border rounded-lg p-4 bg-muted">
-              <img
-                src={formData.bannerImageUrl}
-                alt="Preview banner"
-                className="max-w-full h-48 object-cover rounded-lg mx-auto"
-              />
+    <div className="space-y-6">
+      {/* Header with New Banner Button */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center">
+                <Image className="mr-2 h-5 w-5" />
+                Gerenciar Banners ({banners.length})
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Configure os banners temáticos do seu site
+              </p>
             </div>
+            <Button onClick={handleCreate} className="bg-accent hover:bg-accent/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Banner
+            </Button>
           </div>
-        )}
+        </CardHeader>
+      </Card>
 
-        {/* Personalização Visual */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">🎨 Aparência do Banner</h3>
-          
-          {/* Opção de usar imagem de fundo */}
+      {/* Banners List */}
+      <Card>
+        <CardContent className="pt-6">
+          {banners.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Image className="mx-auto h-12 w-12 mb-4 opacity-50" />
+              <p>Nenhum banner encontrado</p>
+              <p className="text-sm">Clique em "Novo Banner" para criar o primeiro</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {banners.map((banner) => (
+                <div key={banner.id} className="border border-border rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold">{banner.name}</h3>
+                        {banner.isActive && (
+                          <Badge className="bg-green-100 text-green-800 border-green-200">
+                            Ativo
+                          </Badge>
+                        )}
+                        <Badge variant={banner.isCustomizable ? "default" : "secondary"}>
+                          {banner.isCustomizable ? "Customizável" : "HTML"}
+                        </Badge>
+                      </div>
+                      {banner.isCustomizable && banner.title && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {banner.title} - {banner.description}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant={banner.isActive ? "secondary" : "default"}
+                        onClick={() => handleActivate(banner.id)}
+                        disabled={banner.isActive || activateBannerMutation.isPending}
+                      >
+                        {banner.isActive ? "Ativo" : "Ativar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEdit(banner)}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDelete(banner.id, banner.name)}
+                        disabled={banner.isActive}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Banner Modal */}
+      <BannerModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingBanner(null);
+        }}
+        banner={editingBanner}
+        setBanner={setEditingBanner}
+        onSave={handleSave}
+        isCreating={isCreating}
+        isLoading={createBannerMutation.isPending || updateBannerMutation.isPending}
+      />
+    </div>
+  );
+}
+
+// Banner Modal Component
+interface BannerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  banner: BannerTheme | null;
+  setBanner: (banner: BannerTheme | null) => void;
+  onSave: () => void;
+  isCreating: boolean;
+  isLoading: boolean;
+}
+
+function BannerModal({ isOpen, onClose, banner, setBanner, onSave, isCreating, isLoading }: BannerModalProps) {
+  if (!banner) return null;
+
+  const handleFieldChange = (field: keyof BannerTheme, value: any) => {
+    setBanner({ ...banner, [field]: value });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {isCreating ? "Criar Novo Banner" : "Editar Banner"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Banner Name */}
+          <div>
+            <Label htmlFor="banner-name">Nome do Banner *</Label>
+            <Input
+              id="banner-name"
+              value={banner.name}
+              onChange={(e) => handleFieldChange('name', e.target.value)}
+              placeholder="Ex: Banner Verão 2024"
+            />
+          </div>
+
+          {/* Is Customizable */}
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
-              id="use-image-background"
-              checked={formData.bannerUseImageBackground || false}
-              onChange={(e) => handleInputChange('bannerUseImageBackground', e.target.checked)}
+              id="is-customizable"
+              checked={banner.isCustomizable}
+              onChange={(e) => handleFieldChange('isCustomizable', e.target.checked)}
               className="rounded"
-              data-testid="checkbox-use-image-background"
             />
-            <Label htmlFor="use-image-background">Usar imagem de fundo (em vez de gradiente)</Label>
+            <Label htmlFor="is-customizable">Banner Customizável</Label>
+            <p className="text-xs text-muted-foreground">
+              (Se desmarcado, use apenas HTML)
+            </p>
           </div>
 
-          {/* URL da imagem de fundo */}
-          {formData.bannerUseImageBackground && (
-            <div>
-              <Label htmlFor="banner-background-image">URL da Imagem de Fundo</Label>
-              <Input
-                id="banner-background-image"
-                value={formData.bannerBackgroundImage || ""}
-                onChange={(e) => handleInputChange('bannerBackgroundImage', e.target.value)}
-                placeholder="https://exemplo.com/imagem-fundo.jpg"
-                data-testid="input-banner-background-image"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Imagem que cobrirá todo o fundo do banner (recomendado: 1920x1080px)
-              </p>
-            </div>
-          )}
-
-          {/* Cores do gradiente */}
-          {!formData.bannerUseImageBackground && (
-            <div>
-              <Label>Cores do Gradiente</Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+          {/* Conditional Fields */}
+          {banner.isCustomizable ? (
+            // Customizable Banner Fields
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="banner-color-1" className="text-sm">Cor 1</Label>
+                  <Label>Título</Label>
                   <Input
-                    type="color"
-                    id="banner-color-1"
-                    value={formData.bannerColor1 || "#ff6b35"}
-                    onChange={(e) => handleInputChange('bannerColor1', e.target.value)}
-                    className="h-12 w-full"
-                    data-testid="input-banner-color-1"
+                    value={banner.title || ""}
+                    onChange={(e) => handleFieldChange('title', e.target.value)}
+                    placeholder="Ex: Hambúrguers Artesanais"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="banner-color-2" className="text-sm">Cor 2</Label>
+                  <Label>Preço</Label>
                   <Input
-                    type="color"
-                    id="banner-color-2"
-                    value={formData.bannerColor2 || "#f7931e"}
-                    onChange={(e) => handleInputChange('bannerColor2', e.target.value)}
-                    className="h-12 w-full"
-                    data-testid="input-banner-color-2"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="banner-color-3" className="text-sm">Cor 3</Label>
-                  <Input
-                    type="color"
-                    id="banner-color-3"
-                    value={formData.bannerColor3 || "#ffd23f"}
-                    onChange={(e) => handleInputChange('bannerColor3', e.target.value)}
-                    className="h-12 w-full"
-                    data-testid="input-banner-color-3"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="banner-color-4" className="text-sm">Cor 4</Label>
-                  <Input
-                    type="color"
-                    id="banner-color-4"
-                    value={formData.bannerColor4 || "#ff8c42"}
-                    onChange={(e) => handleInputChange('bannerColor4', e.target.value)}
-                    className="h-12 w-full"
-                    data-testid="input-banner-color-4"
+                    value={banner.price?.toString() || ""}
+                    onChange={(e) => handleFieldChange('price', e.target.value)}
+                    placeholder="18.90"
                   />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                O gradiente vai da Cor 1 → Cor 2 → Cor 3 → Cor 4
+
+              <div>
+                <Label>Descrição</Label>
+                <Textarea
+                  value={banner.description || ""}
+                  onChange={(e) => handleFieldChange('description', e.target.value)}
+                  placeholder="Ex: Ingredientes frescos, sabor incomparável"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label>URL da Imagem</Label>
+                <Input
+                  value={banner.imageUrl || ""}
+                  onChange={(e) => handleFieldChange('imageUrl', e.target.value)}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                />
+              </div>
+
+              {/* Colors */}
+              <div>
+                <Label>Cores do Gradiente</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                  <div>
+                    <Label className="text-sm">Cor 1</Label>
+                    <Input
+                      type="color"
+                      value={banner.gradientColor1 || "#ff6b35"}
+                      onChange={(e) => handleFieldChange('gradientColor1', e.target.value)}
+                      className="h-12 w-full"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Cor 2</Label>
+                    <Input
+                      type="color"
+                      value={banner.gradientColor2 || "#f7931e"}
+                      onChange={(e) => handleFieldChange('gradientColor2', e.target.value)}
+                      className="h-12 w-full"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Cor 3</Label>
+                    <Input
+                      type="color"
+                      value={banner.gradientColor3 || "#ffd23f"}
+                      onChange={(e) => handleFieldChange('gradientColor3', e.target.value)}
+                      className="h-12 w-full"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Cor 4</Label>
+                    <Input
+                      type="color"
+                      value={banner.gradientColor4 || "#ff8c42"}
+                      onChange={(e) => handleFieldChange('gradientColor4', e.target.value)}
+                      className="h-12 w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // HTML Content Field
+            <div>
+              <Label>Conteúdo HTML</Label>
+              <Textarea
+                value={banner.htmlContent || ""}
+                onChange={(e) => handleFieldChange('htmlContent', e.target.value)}
+                placeholder="Cole aqui o código HTML completo do banner..."
+                rows={10}
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                HTML será inserido diretamente no site. Certifique-se de que o código está correto.
               </p>
             </div>
           )}
-        </div>
 
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setFormData({
-                bannerTitle: storeSettings?.bannerTitle,
-                bannerDescription: storeSettings?.bannerDescription,
-                bannerPrice: storeSettings?.bannerPrice,
-                bannerImageUrl: storeSettings?.bannerImageUrl,
-                bannerColor1: storeSettings?.bannerColor1,
-                bannerColor2: storeSettings?.bannerColor2,
-                bannerColor3: storeSettings?.bannerColor3,
-                bannerColor4: storeSettings?.bannerColor4,
-                bannerBackgroundImage: storeSettings?.bannerBackgroundImage,
-                bannerUseImageBackground: storeSettings?.bannerUseImageBackground,
-              });
-              setHasChanges(false);
-            }}
-            disabled={!hasChanges}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSaveBanner}
-            disabled={updateStoreSettingsMutation.isPending || !hasChanges}
-          >
-            {updateStoreSettingsMutation.isPending ? "Salvando..." : "Salvar Banner"}
-          </Button>
+          {/* Actions */}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={onSave}
+              disabled={isLoading || !banner.name}
+            >
+              {isLoading ? "Salvando..." : (isCreating ? "Criar Banner" : "Salvar Alterações")}
+            </Button>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
 

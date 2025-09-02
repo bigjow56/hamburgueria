@@ -877,6 +877,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DELETE /api/banners/:id - Admin route to delete banner
+  app.delete("/api/banners/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteBannerTheme(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Banner not found" });
+      }
+      res.json({ message: "Banner deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting banner:", error);
+      res.status(500).json({ message: "Failed to delete banner" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

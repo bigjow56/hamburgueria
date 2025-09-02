@@ -116,6 +116,7 @@ export interface IStorage {
   createBannerTheme(banner: InsertBannerTheme): Promise<BannerTheme>;
   updateBannerTheme(id: string, banner: Partial<InsertBannerTheme>): Promise<BannerTheme | undefined>;
   activateBanner(id: string): Promise<BannerTheme | undefined>;
+  deleteBannerTheme(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -594,6 +595,13 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return banner;
+  }
+
+  async deleteBannerTheme(id: string): Promise<boolean> {
+    const result = await db
+      .delete(bannerThemes)
+      .where(eq(bannerThemes.id, id));
+    return (result.rowCount || 0) > 0;
   }
 }
 

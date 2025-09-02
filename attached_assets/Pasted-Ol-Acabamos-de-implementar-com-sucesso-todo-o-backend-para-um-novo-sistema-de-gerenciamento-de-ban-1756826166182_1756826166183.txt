@@ -1,0 +1,61 @@
+Olá! Acabamos de implementar com sucesso todo o backend para um novo sistema de gerenciamento de banners temáticos. A API e o banco de dados estão prontos e funcionando.
+
+Contexto (O que já foi feito no backend):
+
+Foi criada uma tabela banner_themes no banco de dados.
+
+Foram criados os seguintes endpoints na API:
+
+GET /api/banners: Lista todos os temas de banner.
+
+GET /api/active-banner: Retorna o banner ativo.
+
+POST /api/banners: Cria um novo banner.
+
+PUT /api/banners/:id: Atualiza um banner existente.
+
+PUT /api/banners/:id/activate: Ativa um banner específico.
+
+DELETE /api/banners/:id: Exclui um banner.
+
+Sua tarefa agora é construir a interface (frontend) no Painel Administrativo para que eu possa gerenciar esses banners.
+
+Por favor, modifique a página "Banner" do meu painel administrativo para implementar as seguintes funcionalidades:
+
+1. Transforme a Página em uma Lista de Banners:
+
+A página não deve mais ser um formulário estático. Em vez disso, ao carregar, ela deve fazer uma chamada GET para /api/banners e exibir uma lista de todos os banners salvos.
+
+Para cada item na lista, mostre:
+
+O nome do banner (name).
+
+Uma "tag" ou "badge" indicando se ele está ativo (isActive: true).
+
+Botões de ação: "Ativar", "Editar" e "Excluir".
+
+2. Implemente as Ações dos Botões:
+
+Botão 'Ativar': Ao ser clicado, deve fazer uma chamada PUT para /api/banners/:id/activate. Se o banner já estiver ativo, este botão pode aparecer desabilitado ou com um estilo diferente. Após a ativação, a lista deve ser atualizada.
+
+Botão 'Excluir': Deve fazer uma chamada DELETE para /api/banners/:id e remover o item da lista após a exclusão.
+
+3. Crie um Modal para Adicionar/Editar Banners:
+
+Adicione um botão "Novo Banner" no topo da página.
+
+Clicar em "Novo Banner" ou no botão "Editar" de um item da lista deve abrir um formulário em um modal.
+
+Lógica do Formulário (Crucial): O formulário dentro do modal precisa ser dinâmico:
+
+Deve haver um seletor (checkbox ou radio button) para "Banner Customizável" (isCustomizable).
+
+Se "Banner Customizável" estiver marcado, mostre os campos que eu já tinha: Título, Descrição, Preço, URL da Imagem, Cores do Gradiente, etc.
+
+Se estiver desmarcado, esconda esses campos e mostre apenas uma grande área de texto (<textarea>) para o htmlContent.
+
+O botão "Salvar" do modal deve fazer a chamada POST (para criar) ou PUT (para editar) para a API, enviando os dados corretos. Após salvar, o modal deve fechar e a lista de banners na página principal deve ser atualizada.
+
+Estilo e Componentes:
+
+Por favor, utilize os componentes de UI e o estilo visual que já existem no meu painel para que a nova interface fique consistente.
