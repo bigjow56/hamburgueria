@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema } from "@shared/schema";
+import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema } from "@shared/schema";
 import { z } from "zod";
 
 const createOrderRequestSchema = z.object({
@@ -796,6 +796,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: "Failed to add product additional" });
       }
+    }
+  });
+
+  // Banner themes routes
+  // GET /api/active-banner - Public route to get active banner
+  app.get("/api/active-banner", async (req, res) => {
+    try {
+      const banner = await storage.getActiveBanner();
+      if (!banner) {
+        return res.json(null); // No active banner
+      }
+      res.json(banner);
+    } catch (error) {
+      console.error("Error fetching active banner:", error);
+      res.status(500).json({ message: "Failed to fetch active banner" });
+    }
+  });
+
+  // GET /api/banners - Admin route to list all banners
+  app.get("/api/banners", async (req, res) => {
+    try {
+      const banners = await storage.getBannerThemes();
+      res.json(banners);
+    } catch (error) {
+      console.error("Error fetching banners:", error);
+      res.status(500).json({ message: "Failed to fetch banners" });
+    }
+  });
+
+  // POST /api/banners - Admin route to create new banner
+  app.post("/api/banners", async (req, res) => {
+    try {
+      const data = insertBannerThemeSchema.parse(req.body);
+      const banner = await storage.createBannerTheme(data);
+      res.status(201).json(banner);
+    } catch (error) {
+      console.error("Error creating banner:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid banner data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create banner" });
+      }
+    }
+  });
+
+  // PUT /api/banners/:id - Admin route to update banner
+  app.put("/api/banners/:id", async (req, res) => {
+    try {
+      const data = insertBannerThemeSchema.partial().parse(req.body);
+      const banner = await storage.updateBannerTheme(req.params.id, data);
+      if (!banner) {
+        return res.status(404).json({ message: "Banner not found" });
+      }
+      res.json(banner);
+    } catch (error) {
+      console.error("Error updating banner:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid banner data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update banner" });
+      }
+    }
+  });
+
+  // PUT /api/banners/:id/activate - Admin route to activate banner (deactivates all others)
+  app.put("/api/banners/:id/activate", async (req, res) => {
+    try {
+      const banner = await storage.activateBanner(req.params.id);
+      if (!banner) {
+        return res.status(404).json({ message: "Banner not found" });
+      }
+      res.json({ 
+        message: "Banner activated successfully", 
+        banner: banner 
+      });
+    } catch (error) {
+      console.error("Error activating banner:", error);
+      res.status(500).json({ message: "Failed to activate banner" });
     }
   });
 

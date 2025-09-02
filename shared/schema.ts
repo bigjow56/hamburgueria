@@ -177,6 +177,25 @@ export const orderItemModifications = pgTable("order_item_modifications", {
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
 });
 
+// Banner themes table
+export const bannerThemes = pgTable("banner_themes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  isCustomizable: boolean("is_customizable").default(false),
+  htmlContent: text("html_content"),
+  title: varchar("title", { length: 255 }),
+  description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }),
+  imageUrl: text("image_url"),
+  gradientColor1: varchar("gradient_color_1", { length: 7 }),
+  gradientColor2: varchar("gradient_color_2", { length: 7 }),
+  gradientColor3: varchar("gradient_color_3", { length: 7 }),
+  gradientColor4: varchar("gradient_color_4", { length: 7 }),
+  useBackgroundImage: boolean("use_background_image").default(false),
+  isActive: boolean("is_active").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -237,6 +256,11 @@ export const insertOrderItemModificationSchema = createInsertSchema(orderItemMod
   id: true,
 });
 
+export const insertBannerThemeSchema = createInsertSchema(bannerThemes).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -270,5 +294,8 @@ export type InsertProductAdditional = z.infer<typeof insertProductAdditionalSche
 
 export type OrderItemModification = typeof orderItemModifications.$inferSelect;
 export type InsertOrderItemModification = z.infer<typeof insertOrderItemModificationSchema>;
+
+export type BannerTheme = typeof bannerThemes.$inferSelect;
+export type InsertBannerTheme = z.infer<typeof insertBannerThemeSchema>;
 
 export type StoreSettings = typeof storeSettings.$inferSelect;

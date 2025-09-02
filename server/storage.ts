@@ -11,6 +11,7 @@ import {
   productIngredients,
   productAdditionals,
   orderItemModifications,
+  bannerThemes,
   type User,
   type InsertUser,
   type Category,
@@ -34,6 +35,8 @@ import {
   type InsertProductAdditional,
   type OrderItemModification,
   type InsertOrderItemModification,
+  type BannerTheme,
+  type InsertBannerTheme,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -105,6 +108,14 @@ export interface IStorage {
   removeProductAdditional(productId: string, ingredientId: string): Promise<boolean>;
   updateProductIngredients(productId: string, ingredientConfigs: any[]): Promise<void>;
   recalculateProductPrice(productId: string): Promise<Product | undefined>;
+  
+  // Banner themes
+  getBannerThemes(): Promise<BannerTheme[]>;
+  getActiveBanner(): Promise<BannerTheme | undefined>;
+  getBannerTheme(id: string): Promise<BannerTheme | undefined>;
+  createBannerTheme(banner: InsertBannerTheme): Promise<BannerTheme>;
+  updateBannerTheme(id: string, banner: Partial<InsertBannerTheme>): Promise<BannerTheme | undefined>;
+  activateBanner(id: string): Promise<BannerTheme | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -538,6 +549,51 @@ export class DatabaseStorage implements IStorage {
       .where(eq(products.id, productId))
       .returning();
     return product;
+  }
+
+  // Banner themes operations
+  async getBannerThemes(): Promise<BannerTheme[]> {
+    return await db.select().from(bannerThemes).orderBy(desc(bannerThemes.createdAt));
+  }
+
+  async getActiveBanner(): Promise<BannerTheme | undefined> {
+    const [banner] = await db.select().from(bannerThemes).where(eq(bannerThemes.isActive, true));
+    return banner;
+  }
+
+  async getBannerTheme(id: string): Promise<BannerTheme | undefined> {
+    const [banner] = await db.select().from(bannerThemes).where(eq(bannerThemes.id, id));
+    return banner;
+  }
+
+  async createBannerTheme(bannerData: InsertBannerTheme): Promise<BannerTheme> {
+    const [banner] = await db.insert(bannerThemes).values(bannerData).returning();
+    return banner;
+  }
+
+  async updateBannerTheme(id: string, bannerData: Partial<InsertBannerTheme>): Promise<BannerTheme | undefined> {
+    const [banner] = await db
+      .update(bannerThemes)
+      .set(bannerData)
+      .where(eq(bannerThemes.id, id))
+      .returning();
+    return banner;
+  }
+
+  async activateBanner(id: string): Promise<BannerTheme | undefined> {
+    // First, deactivate all banners
+    await db
+      .update(bannerThemes)
+      .set({ isActive: false });
+    
+    // Then, activate the selected banner
+    const [banner] = await db
+      .update(bannerThemes)
+      .set({ isActive: true })
+      .where(eq(bannerThemes.id, id))
+      .returning();
+    
+    return banner;
   }
 }
 

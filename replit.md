@@ -8,6 +8,26 @@ This is a hamburger delivery website built with React, Express, and PostgreSQL. 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### 2025-01-04: Sistema de Banners Temáticos Implementado
+
+**Funcionalidades Adicionadas:**
+- **Tabela `banner_themes`**: Armazena banners personalizáveis e com HTML completo
+- **5 Endpoints da API**: GET /api/active-banner, GET/POST/PUT /api/banners, PUT /api/banners/:id/activate
+- **Script de Seed**: Ferramenta para adicionar banners no banco (`scripts/seed-banners.ts`)
+- **Banner Black Friday**: Primeira implementação com HTML animado completo
+
+**Arquitetura do Sistema:**
+- **Banners Customizáveis**: Suportam campos individuais (título, preço, cores de gradiente)
+- **Banners HTML**: Permitem código HTML completo para designs complexos
+- **Ativação Exclusiva**: Apenas um banner pode estar ativo por vez
+- **Script de Migração**: Usa `npm run db:push` para aplicar mudanças no schema
+
+**Campos da Tabela banner_themes:**
+- `name, isCustomizable, htmlContent, title, description, price, imageUrl`
+- `gradientColor1-4, useBackgroundImage, isActive, createdAt`
+
 ## System Architecture
 
 ### Frontend Architecture
