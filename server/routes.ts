@@ -261,16 +261,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { ingredients, ...productData } = req.body;
       const validatedProductData = insertProductSchema.parse(productData);
       
+      console.log('Ingredientes recebidos:', ingredients);
+      console.log('Produto ID:', req.params.id);
+      
       const product = await storage.updateProduct(req.params.id, validatedProductData);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      // NOTE: Ingredients are managed separately through dedicated endpoints
-      // This prevents accidental deletion of ingredients during product edits
-      // To update ingredients, use the dedicated ingredient management interface
+      // Process ingredients if provided
+      if (ingredients && Array.isArray(ingredients)) {
+        console.log('Processando ingredientes...', ingredients.length);
+        await storage.updateProductIngredients(req.params.id, ingredients);
+      }
+
+      // Return updated product with ingredients
+      const updatedProductWithIngredients = await storage.getProductIngredients(req.params.id);
       
-      res.json(product);
+      res.json({
+        ...product,
+        ingredients: updatedProductWithIngredients
+      });
     } catch (error) {
       console.error("Error updating product:", error);
       if (error instanceof z.ZodError) {
