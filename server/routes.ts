@@ -295,19 +295,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recalculate product price based on ingredients
   app.post("/api/products/:id/recalculate-price", async (req, res) => {
     try {
-      const product = await storage.recalculateProductPrice(req.params.id);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
+      const productId = req.params.id;
+      
+      // Buscar ingredientes
+      const ingredients = await storage.getProductIngredients(productId);
+      
+      // DEBUG COMPLETO
+      console.log('=== RECÁLCULO PREÇO DEBUG ===');
+      console.log('Product ID:', productId);
+      console.log('Ingredientes encontrados:', ingredients?.length || 0);
+      
+      let totalPrice = 0;
+      
+      if (ingredients && ingredients.length > 0) {
+        ingredients.forEach((ingredient, index) => {
+          // Tentar diferentes campos possíveis
+          const priceValue = ingredient.customPrice || ingredient.custom_price || ingredient.price || 0;
+          const quantityValue = ingredient.quantity || 1;
+          
+          console.log(`Ingrediente ${index + 1}:`, {
+            name: ingredient.ingredient?.name || 'Nome não encontrado',
+            priceOriginal: priceValue,
+            priceConverted: parseFloat(priceValue || '0'),
+            quantity: quantityValue,
+            subtotal: parseFloat(priceValue || '0') * quantityValue
+          });
+          
+          const price = parseFloat(priceValue || '0');
+          const qty = parseInt(quantityValue.toString());
+          
+          if (!isNaN(price) && !isNaN(qty)) {
+            totalPrice += price * qty;
+          }
+        });
+      }
+      
+      console.log('TOTAL FINAL:', totalPrice);
+      console.log('=== FIM RECÁLCULO ===\n');
+      
+      // Atualizar preço no banco
+      if (totalPrice > 0) {
+        await storage.updateProduct(productId, { price: totalPrice.toString() } as any);
       }
       
       res.json({ 
-        message: "Price recalculated successfully", 
-        product: product,
-        newPrice: product.price 
+        totalPrice: totalPrice,
+        formattedPrice: `R$ ${totalPrice.toFixed(2)}`,
+        ingredientsCount: ingredients?.length || 0,
+        message: "Price recalculated successfully"
       });
+      
     } catch (error) {
-      console.error("Error recalculating product price:", error);
-      res.status(500).json({ message: "Failed to recalculate product price" });
+      console.error('Erro no recálculo:', error);
+      res.status(500).json({ error: 'Erro interno do servidor' });
     }
   });
 

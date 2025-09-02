@@ -435,10 +435,15 @@ export class DatabaseStorage implements IStorage {
         ingredientId: productIngredients.ingredientId,
         isIncludedByDefault: productIngredients.isIncludedByDefault,
         quantity: productIngredients.quantity,
+        customPrice: productAdditionals.customPrice, // Buscar customPrice dos additionals
         ingredient: ingredients
       })
       .from(productIngredients)
       .leftJoin(ingredients, eq(productIngredients.ingredientId, ingredients.id))
+      .leftJoin(productAdditionals, and(
+        eq(productIngredients.productId, productAdditionals.productId),
+        eq(productIngredients.ingredientId, productAdditionals.ingredientId)
+      ))
       .where(eq(productIngredients.productId, productId));
   }
 
