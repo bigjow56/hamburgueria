@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { StoreSettings } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import type { StoreSettings, BannerTheme } from "@shared/schema";
 
 interface HeroSectionProps {
   storeSettings: StoreSettings | null;
@@ -8,21 +9,29 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ storeSettings, onScrollToMenu }: HeroSectionProps) {
+  // Buscar banner ativo do novo sistema
+  const { data: activeBanner } = useQuery<BannerTheme | null>({
+    queryKey: ["/api/active-banner"],
+    queryFn: () => fetch("/api/active-banner").then(res => res.json()),
+  });
+
   const isOpen = storeSettings?.isOpen ?? true;
   const closingTime = storeSettings?.closingTime ?? "23:00";
   const minimumOrder = storeSettings?.minimumOrderAmount ?? "25.00";
-  const bannerTitle = storeSettings?.bannerTitle ?? "Hambúrguers";
-  const bannerDescription = storeSettings?.bannerDescription ?? "Ingredientes frescos, sabor incomparável.";
-  const bannerPrice = storeSettings?.bannerPrice ?? "18.90";
-  const bannerImageUrl = storeSettings?.bannerImageUrl ?? "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600";
+
+  // Use banner ativo se existir, senão use configurações antigas
+  const bannerTitle = activeBanner?.title || storeSettings?.bannerTitle || "Hambúrguers";
+  const bannerDescription = activeBanner?.description || storeSettings?.bannerDescription || "Ingredientes frescos, sabor incomparável.";
+  const bannerPrice = activeBanner?.price || storeSettings?.bannerPrice || "18.90";
+  const bannerImageUrl = activeBanner?.imageUrl || storeSettings?.bannerImageUrl || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600";
   
-  // Configurações de aparência do banner
-  const bannerColor1 = storeSettings?.bannerColor1 ?? "#ff6b35";
-  const bannerColor2 = storeSettings?.bannerColor2 ?? "#f7931e";
-  const bannerColor3 = storeSettings?.bannerColor3 ?? "#ffd23f";
-  const bannerColor4 = storeSettings?.bannerColor4 ?? "#ff8c42";
-  const bannerBackgroundImage = storeSettings?.bannerBackgroundImage;
-  const useImageBackground = storeSettings?.bannerUseImageBackground ?? false;
+  // Configurações de aparência do banner - usar banner ativo se disponível
+  const bannerColor1 = activeBanner?.gradientColor1 || storeSettings?.bannerColor1 || "#ff6b35";
+  const bannerColor2 = activeBanner?.gradientColor2 || storeSettings?.bannerColor2 || "#f7931e";
+  const bannerColor3 = activeBanner?.gradientColor3 || storeSettings?.bannerColor3 || "#ffd23f";
+  const bannerColor4 = activeBanner?.gradientColor4 || storeSettings?.bannerColor4 || "#ff8c42";
+  const bannerBackgroundImage = storeSettings?.bannerBackgroundImage; // Mantém do sistema antigo por enquanto
+  const useImageBackground = activeBanner?.useBackgroundImage || storeSettings?.bannerUseImageBackground || false;
   
   const openWhatsApp = () => {
     const message = "Olá! Gostaria de fazer um pedido na Burger House.";
@@ -43,6 +52,17 @@ export default function HeroSection({ storeSettings, onScrollToMenu }: HeroSecti
         boxShadow: `0 8px 32px ${bannerColor1}30`
       };
 
+  // Se o banner ativo é HTML customizado, renderizar HTML
+  if (activeBanner && !activeBanner.isCustomizable && activeBanner.htmlContent) {
+    return (
+      <section 
+        className="relative overflow-hidden"
+        dangerouslySetInnerHTML={{ __html: activeBanner.htmlContent }}
+      />
+    );
+  }
+
+  // Renderizar banner customizável padrão
   return (
     <section 
       className="relative overflow-hidden"
