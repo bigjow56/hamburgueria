@@ -239,6 +239,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cliente: {
             nome: order.customerName,
             telefone: order.customerPhone,
+            telefone_internacional: requestData.customerPhoneInternational || order.customerPhone,
+            ddi: requestData.customerPhoneInternational ? requestData.customerPhoneInternational.substring(0, 2) : "55",
             email: order.customerEmail
           },
           entrega: {
