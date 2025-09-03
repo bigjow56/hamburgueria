@@ -226,6 +226,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.addOrderItems(orderItemsForDb);
 
+      // Send order data to n8n webhook
+      try {
+        const webhookData = {
+          pedido: {
+            id: order.id,
+            numero: order.orderNumber,
+            status: "pending",
+            data_criacao: order.createdAt,
+            tempo_estimado: order.estimatedDeliveryTime
+          },
+          cliente: {
+            nome: order.customerName,
+            telefone: order.customerPhone,
+            email: order.customerEmail
+          },
+          entrega: {
+            tipo: order.deliveryType,
+            endereco: {
+              rua: order.streetName,
+              numero: order.houseNumber,
+              bairro: order.neighborhood,
+              ponto_referencia: order.referencePoint
+            }
+          },
+          pagamento: {
+            metodo: order.paymentMethod,
+            status: "pending"
+          },
+          valores: {
+            subtotal: parseFloat(order.subtotal),
+            taxa_entrega: parseFloat(order.deliveryFee),
+            total: parseFloat(order.total)
+          },
+          itens: orderItems.map(item => ({
+            produto_id: item.productId,
+            produto_nome: item.productName,
+            quantidade: item.quantity,
+            preco_unitario: parseFloat(item.unitPrice),
+            preco_total: parseFloat(item.totalPrice)
+          })),
+          observacoes: order.specialInstructions
+        };
+
+        const webhookResponse = await fetch('https://n8n-curso-n8n.yao8ay.easypanel.host/webhook/hamburgueria', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookData)
+        });
+
+        if (webhookResponse.ok) {
+          console.log(`✅ Pedido #${order.orderNumber} enviado para n8n com sucesso`);
+        } else {
+          console.error(`❌ Erro ao enviar pedido #${order.orderNumber} para n8n:`, webhookResponse.status);
+        }
+      } catch (webhookError) {
+        console.error(`❌ Erro no webhook n8n para pedido #${order.orderNumber}:`, webhookError);
+        // Não interrompe o processo se o webhook falhar
+      }
+
       res.status(201).json({ 
         success: true, 
         orderId: order.id,
