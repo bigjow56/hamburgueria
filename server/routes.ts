@@ -269,7 +269,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           observacoes: order.specialInstructions
         };
 
-        const webhookResponse = await fetch('https://n8n-curso-n8n.yao8ay.easypanel.host/webhook/hamburgueria', {
+        // Configuração do webhook - pode ser alterada via variável de ambiente
+        const webhookUrl = process.env.N8N_WEBHOOK_URL || 'https://n8n-curso-n8n.yao8ay.easypanel.host/webhook/hamburgueria';
+        console.log(`🔗 Enviando para webhook: ${webhookUrl}`);
+
+        const webhookResponse = await fetch(webhookUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
