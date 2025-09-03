@@ -39,36 +39,68 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage on mount and validate products
   useEffect(() => {
     const savedCart = localStorage.getItem("burger-house-cart");
     if (savedCart) {
       try {
         const parsedItems = JSON.parse(savedCart);
-        // Convert old cart format to new format if needed
-        const convertedItems = parsedItems.map((item: any) => {
-          if (!item.id) {
-            // Old format, convert to new
-            return {
-              id: generateCartItemId(),
-              product: item.product,
-              quantity: item.quantity,
-              modifications: [],
-              customPrice: parseFloat(item.product.price)
-            };
-          }
-          // New format, ensure all fields exist
-          return {
-            id: item.id,
-            product: item.product,
-            quantity: item.quantity,
-            modifications: item.modifications || [],
-            customPrice: item.customPrice || parseFloat(item.product.price)
-          };
-        });
-        setItems(convertedItems);
+        
+        // Validate products exist by checking against API
+        fetch('/api/products')
+          .then(response => response.json())
+          .then(products => {
+            const validProductIds = new Set(products.map((p: Product) => p.id));
+            
+            // Filter out cart items with invalid product IDs
+            const validItems = parsedItems.filter((item: any) => {
+              const productId = item.product?.id;
+              if (!productId || !validProductIds.has(productId)) {
+                console.warn(`Removendo produto inválido do carrinho: ${productId}`);
+                return false;
+              }
+              return true;
+            });
+            
+            // Convert valid items to new format if needed
+            const convertedItems = validItems.map((item: any) => {
+              if (!item.id) {
+                // Old format, convert to new
+                return {
+                  id: generateCartItemId(),
+                  product: item.product,
+                  quantity: item.quantity,
+                  modifications: [],
+                  customPrice: parseFloat(item.product.price)
+                };
+              }
+              // New format, ensure all fields exist
+              return {
+                id: item.id,
+                product: item.product,
+                quantity: item.quantity,
+                modifications: item.modifications || [],
+                customPrice: item.customPrice || parseFloat(item.product.price)
+              };
+            });
+            
+            setItems(convertedItems);
+            
+            // If we removed invalid items, show a message
+            if (validItems.length < parsedItems.length) {
+              console.log(`Carrinho atualizado: ${parsedItems.length - validItems.length} produto(s) inválido(s) removido(s)`);
+            }
+          })
+          .catch(error => {
+            console.error("Erro ao validar produtos do carrinho:", error);
+            // Se não conseguir validar, limpa o carrinho por segurança
+            setItems([]);
+            localStorage.removeItem("burger-house-cart");
+          });
       } catch (error) {
         console.error("Error loading cart from localStorage:", error);
+        // Se o localStorage estiver corrompido, limpa
+        localStorage.removeItem("burger-house-cart");
       }
     }
   }, []);
