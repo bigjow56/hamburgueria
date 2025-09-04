@@ -115,6 +115,13 @@ export default function Checkout() {
       })),
     };
 
+    // Debug: Log dados antes de enviar
+    console.log("🚀 ENVIANDO PEDIDO - DADOS COMPLETOS:");
+    orderData.items.forEach((item, index) => {
+      console.log(`ITEM ${index + 1}:`, item.productId);
+      console.log(`MODIFICAÇÕES ENVIADAS:`, item.modifications);
+    });
+
     createOrderMutation.mutate(orderData);
   };
 
