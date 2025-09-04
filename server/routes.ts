@@ -22,6 +22,13 @@ const createOrderRequestSchema = z.object({
     productId: z.string(),
     quantity: z.number().min(1),
     unitPrice: z.string(),
+    modifications: z.array(z.object({
+      ingredientId: z.string(),
+      ingredientName: z.string(),
+      modificationType: z.enum(['add', 'remove', 'extra']),
+      quantity: z.number().default(1),
+      unitPrice: z.number(),
+    })).optional().default([]),
   })),
 }).refine((data) => {
   // If delivery type is "delivery", address fields are required
@@ -224,7 +231,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderId: order.id,
       }));
       
-      await storage.addOrderItems(orderItemsForDb);
+      const createdOrderItems = await storage.addOrderItems(orderItemsForDb);
+      
+      // Save modifications for each order item
+      for (let i = 0; i < requestData.items.length; i++) {
+        const requestItem = requestData.items[i];
+        const orderItem = createdOrderItems[i];
+        
+        if (requestItem.modifications && requestItem.modifications.length > 0) {
+          const modifications = requestItem.modifications.map(mod => {
+            const totalPrice = mod.unitPrice * mod.quantity;
+            return {
+              orderItemId: orderItem.id,
+              ingredientId: mod.ingredientId,
+              modificationType: mod.modificationType,
+              quantity: mod.quantity,
+              unitPrice: mod.unitPrice.toString(),
+              totalPrice: totalPrice.toString(),
+            };
+          });
+          
+          await storage.addOrderItemModifications(modifications);
+        }
+      }
 
       // Send order data to n8n webhook
       try {
@@ -261,12 +290,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             taxa_entrega: parseFloat(order.deliveryFee),
             total: parseFloat(order.total)
           },
-          itens: orderItems.map(item => ({
-            produto_id: item.productId,
-            produto_nome: item.productName,
-            quantidade: item.quantity,
-            preco_unitario: parseFloat(item.unitPrice),
-            preco_total: parseFloat(item.totalPrice)
+          itens: await Promise.all(requestData.items.map(async (requestItem, index) => {
+            const orderItem = orderItems[index];
+            return {
+              produto_id: orderItem.productId,
+              produto_nome: orderItem.productName,
+              quantidade: orderItem.quantity,
+              preco_unitario: parseFloat(orderItem.unitPrice),
+              preco_total: parseFloat(orderItem.totalPrice),
+              personalizacoes: requestItem.modifications.map(mod => ({
+                acao: mod.modificationType === 'remove' ? 'remover' : 'adicionar',
+                ingrediente: mod.ingredientName,
+                preco: mod.modificationType === 'remove' ? 0 : mod.unitPrice,
+                quantidade: mod.quantity
+              }))
+            };
           })),
           observacoes: order.specialInstructions
         };

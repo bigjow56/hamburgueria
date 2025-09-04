@@ -104,7 +104,14 @@ export default function Checkout() {
       items: items.map(item => ({
         productId: item.product.id,
         quantity: item.quantity,
-        unitPrice: item.product.price,
+        unitPrice: item.customPrice.toFixed(2), // Use customPrice with modifications
+        modifications: item.modifications.map(mod => ({
+          ingredientId: mod.ingredientId,
+          ingredientName: mod.ingredient.name,
+          modificationType: mod.modificationType,
+          quantity: mod.quantity,
+          unitPrice: mod.unitPrice,
+        })),
       })),
     };
 

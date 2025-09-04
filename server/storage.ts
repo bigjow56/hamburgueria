@@ -65,6 +65,7 @@ export interface IStorage {
   // Order operations
   createOrder(order: InsertOrder): Promise<Order>;
   addOrderItems(items: InsertOrderItem[]): Promise<OrderItem[]>;
+  addOrderItemModifications(modifications: InsertOrderItemModification[]): Promise<OrderItemModification[]>;
   getOrder(id: string): Promise<Order | undefined>;
   getUserOrders(userId: string): Promise<Order[]>;
   getAllOrders(): Promise<Order[]>;
@@ -261,6 +262,10 @@ export class DatabaseStorage implements IStorage {
 
   async addOrderItems(items: InsertOrderItem[]): Promise<OrderItem[]> {
     return await db.insert(orderItems).values(items).returning();
+  }
+
+  async addOrderItemModifications(modifications: InsertOrderItemModification[]): Promise<OrderItemModification[]> {
+    return await db.insert(orderItemModifications).values(modifications).returning();
   }
 
   async getOrder(id: string): Promise<Order | undefined> {
