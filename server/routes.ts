@@ -169,9 +169,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Orders
   app.post("/api/orders", async (req, res) => {
     try {
-      console.log("📥 PEDIDO RECEBIDO - DADOS BRUTOS:", JSON.stringify(req.body, null, 2));
+      console.log("=".repeat(50));
+      console.log("📥 NOVO PEDIDO RECEBIDO!");
+      req.body.items?.forEach((item: any, index: number) => {
+        console.log(`ITEM ${index + 1}:`, item.productId);
+        console.log(`MODIFICAÇÕES:`, item.modifications || []);
+      });
+      
       const requestData = createOrderRequestSchema.parse(req.body);
-      console.log("✅ DADOS VALIDADOS:", JSON.stringify(requestData, null, 2));
+      
+      requestData.items.forEach((item: any, index: number) => {
+        console.log(`VALIDADO ${index + 1}:`, item.productId);
+        console.log(`MODIFICAÇÕES VALIDADAS:`, item.modifications || []);
+      });
+      console.log("=".repeat(50));
       
       // Calculate totals and get product names
       let subtotal = 0;
