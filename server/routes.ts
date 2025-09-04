@@ -274,6 +274,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // 🚨 DEBUG: Log antes da criação do webhook
+      console.log("🚨🚨🚨 CRIANDO WEBHOOK DATA 🚨🚨🚨");
+      console.log("RequestData items:", requestData.items.map(item => ({ 
+        productId: item.productId, 
+        modifications: item.modifications?.length || 0 
+      })));
+
       // Send order data to n8n webhook
       try {
         const webhookData = {
