@@ -169,20 +169,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Orders
   app.post("/api/orders", async (req, res) => {
     try {
-      console.log("=".repeat(50));
-      console.log("📥 NOVO PEDIDO RECEBIDO!");
+      console.log("🔥🔥🔥 BACKEND RECEBEU PEDIDO! 🔥🔥🔥");
+      
+      // Log dados brutos antes da validação
+      console.log("DADOS BRUTOS - ITEMS:");
       req.body.items?.forEach((item: any, index: number) => {
-        console.log(`ITEM ${index + 1}:`, item.productId);
-        console.log(`MODIFICAÇÕES:`, item.modifications || []);
+        console.log(`BRUTO ${index + 1}:`, item.productId);
+        console.log(`BRUTO MODIFICAÇÕES:`, item.modifications?.length || 0, item.modifications);
       });
       
+      console.log("🚨 INICIANDO VALIDAÇÃO DO SCHEMA...");
       const requestData = createOrderRequestSchema.parse(req.body);
+      console.log("✅ SCHEMA VALIDADO COM SUCESSO!");
       
+      // Log dados após validação
+      console.log("DADOS VALIDADOS - ITEMS:");
       requestData.items.forEach((item: any, index: number) => {
         console.log(`VALIDADO ${index + 1}:`, item.productId);
-        console.log(`MODIFICAÇÕES VALIDADAS:`, item.modifications || []);
+        console.log(`VALIDADO MODIFICAÇÕES:`, item.modifications?.length || 0, item.modifications);
       });
-      console.log("=".repeat(50));
+      console.log("🔥🔥🔥 FIM DOS LOGS DE DEBUG 🔥🔥🔥");
       
       // Calculate totals and get product names
       let subtotal = 0;
