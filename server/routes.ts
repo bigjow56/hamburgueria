@@ -169,7 +169,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Orders
   app.post("/api/orders", async (req, res) => {
     try {
+      console.log("📥 PEDIDO RECEBIDO - DADOS BRUTOS:", JSON.stringify(req.body, null, 2));
       const requestData = createOrderRequestSchema.parse(req.body);
+      console.log("✅ DADOS VALIDADOS:", JSON.stringify(requestData, null, 2));
       
       // Calculate totals and get product names
       let subtotal = 0;
@@ -292,6 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           itens: await Promise.all(requestData.items.map(async (requestItem, index) => {
             const orderItem = orderItems[index];
+            console.log(`🔍 ITEM ${index + 1} - MODIFICAÇÕES:`, requestItem.modifications);
             return {
               produto_id: orderItem.productId,
               produto_nome: orderItem.productName,
@@ -308,6 +311,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })),
           observacoes: order.specialInstructions
         };
+        
+        console.log("📤 WEBHOOK DATA:", JSON.stringify(webhookData, null, 2));
 
         // Configuração do webhook - pode ser alterada via variável de ambiente
         const webhookUrl = process.env.N8N_WEBHOOK_URL || 'https://n8n-curso-n8n.yao8ay.easypanel.host/webhook/hamburgueria';
