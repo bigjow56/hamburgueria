@@ -2646,10 +2646,26 @@ function ProductIngredientsSection({ product, setProduct, ingredients, isCreatin
     product.ingredients || []
   );
 
-  // Atualizar o produto quando os ingredientes mudarem
+  // Sincronizar selectedIngredients quando product.ingredients mudar (apenas quando realmente diferente)
   useEffect(() => {
-    console.log('[DEBUG] Sincronizando selectedIngredients com product:', selectedIngredients);
-    setProduct(prev => ({ ...prev, ingredients: selectedIngredients }));
+    const currentIngredients = JSON.stringify(selectedIngredients);
+    const productIngredients = JSON.stringify(product.ingredients || []);
+    
+    if (currentIngredients !== productIngredients) {
+      console.log('[DEBUG] Product.ingredients mudou, atualizando selectedIngredients:', product.ingredients);
+      setSelectedIngredients(product.ingredients || []);
+    }
+  }, [product.ingredients]);
+
+  // Atualizar o produto quando os ingredientes mudarem (apenas quando realmente diferente)
+  useEffect(() => {
+    const currentIngredients = JSON.stringify(selectedIngredients);
+    const productIngredients = JSON.stringify(product.ingredients || []);
+    
+    if (currentIngredients !== productIngredients) {
+      console.log('[DEBUG] Sincronizando selectedIngredients com product:', selectedIngredients);
+      setProduct(prev => ({ ...prev, ingredients: selectedIngredients }));
+    }
   }, [selectedIngredients, setProduct]);
 
   const addIngredient = (ingredientId: string) => {
