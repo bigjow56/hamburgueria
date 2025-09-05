@@ -363,6 +363,7 @@ export default function Admin() {
       ingredients: editingProduct.ingredients || [],
     };
 
+    console.log('[DEBUG] Salvando produto com ingredientes:', productData.ingredients);
     updateProductMutation.mutate(productData);
   };
 
@@ -2647,8 +2648,9 @@ function ProductIngredientsSection({ product, setProduct, ingredients, isCreatin
 
   // Atualizar o produto quando os ingredientes mudarem
   useEffect(() => {
-    setProduct({ ...product, ingredients: selectedIngredients });
-  }, [selectedIngredients]);
+    console.log('[DEBUG] Sincronizando selectedIngredients com product:', selectedIngredients);
+    setProduct(prev => ({ ...prev, ingredients: selectedIngredients }));
+  }, [selectedIngredients, setProduct]);
 
   const addIngredient = (ingredientId: string) => {
     const ingredient = ingredients.find(i => i.id === ingredientId);
@@ -2675,6 +2677,7 @@ function ProductIngredientsSection({ product, setProduct, ingredients, isCreatin
   };
 
   const updateIngredient = (ingredientId: string, updates: Partial<ProductIngredientConfig>) => {
+    console.log('[DEBUG] Atualizando ingrediente:', ingredientId, 'com:', updates);
     setSelectedIngredients(prev =>
       prev.map(ing => 
         ing.ingredientId === ingredientId ? { ...ing, ...updates } : ing
