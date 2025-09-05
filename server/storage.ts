@@ -155,19 +155,30 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(products).where(eq(products.isAvailable, true));
   }
 
-  // Calculate product price based on its ingredients
+  // Calculate product price based on its ingredients (using custom prices when available)
   async calculateProductPrice(productId: string): Promise<number> {
     const productIngredientsData = await db
       .select({
         ingredientPrice: ingredients.price,
-        quantity: productIngredients.quantity
+        customPrice: productAdditionals.customPrice,
+        quantity: productIngredients.quantity,
+        isActive: productAdditionals.isActive
       })
       .from(productIngredients)
       .leftJoin(ingredients, eq(productIngredients.ingredientId, ingredients.id))
+      .leftJoin(productAdditionals, and(
+        eq(productIngredients.productId, productAdditionals.productId),
+        eq(productIngredients.ingredientId, productAdditionals.ingredientId)
+      ))
       .where(eq(productIngredients.productId, productId));
     
     const totalPrice = productIngredientsData.reduce((sum, item) => {
-      const price = parseFloat(item.ingredientPrice || '0');
+      // Use custom price if available and active, otherwise use ingredient price
+      const priceToUse = (item.isActive !== false && item.customPrice) 
+        ? item.customPrice 
+        : item.ingredientPrice;
+      
+      const price = parseFloat(priceToUse || '0');
       const quantity = item.quantity || 1;
       return sum + (price * quantity);
     }, 0);
@@ -559,11 +570,11 @@ export class DatabaseStorage implements IStorage {
 
     // Add new product ingredients and additionals
     for (const config of ingredientConfigs) {
-      // Always add as product ingredient (base ingredient) - these are core ingredients for price calculation
+      // Add as product ingredient - usar configuração real do frontend
       await db.insert(productIngredients).values({
         productId,
         ingredientId: config.ingredientId,
-        isIncludedByDefault: true, // Force to true - these are base ingredients
+        isIncludedByDefault: config.isIncludedByDefault !== undefined ? config.isIncludedByDefault : true,
         quantity: config.quantity || 1,
       });
 
@@ -572,7 +583,7 @@ export class DatabaseStorage implements IStorage {
         productId,
         ingredientId: config.ingredientId,
         customPrice: config.customPrice || null,
-        isActive: config.isActive,
+        isActive: config.isActive !== undefined ? config.isActive : true,
       });
     }
     

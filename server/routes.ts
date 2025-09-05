@@ -445,56 +445,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const productId = req.params.id;
       
-      // Buscar ingredientes
-      const ingredients = await storage.getProductIngredients(productId);
-      
-      // DEBUG COMPLETO
-      console.log('=== RECÁLCULO PREÇO DEBUG ===');
-      console.log('Product ID:', productId);
-      console.log('Ingredientes encontrados:', ingredients?.length || 0);
-      
-      let totalPrice = 0;
-      
-      if (ingredients && ingredients.length > 0) {
-        ingredients.forEach((ingredient, index) => {
-          // Tentar diferentes campos possíveis
-          const priceValue = ingredient.customPrice || ingredient.custom_price || ingredient.price || 0;
-          const quantityValue = ingredient.quantity || 1;
-          
-          console.log(`Ingrediente ${index + 1}:`, {
-            name: ingredient.ingredient?.name || 'Nome não encontrado',
-            priceOriginal: priceValue,
-            priceConverted: parseFloat(priceValue || '0'),
-            quantity: quantityValue,
-            subtotal: parseFloat(priceValue || '0') * quantityValue
-          });
-          
-          const price = parseFloat(priceValue || '0');
-          const qty = parseInt(quantityValue.toString());
-          
-          if (!isNaN(price) && !isNaN(qty)) {
-            totalPrice += price * qty;
-          }
-        });
-      }
-      
-      console.log('TOTAL FINAL:', totalPrice);
-      console.log('=== FIM RECÁLCULO ===\n');
+      // Usar a função de cálculo corrigida do storage
+      const calculatedPrice = await storage.calculateProductPrice(productId);
       
       // Atualizar preço no banco
-      if (totalPrice > 0) {
-        await storage.updateProduct(productId, { price: totalPrice.toString() } as any);
-        console.log('💾 Preço atualizado no banco:', totalPrice);
+      if (calculatedPrice > 0) {
+        await storage.updateProduct(productId, { price: calculatedPrice.toString() } as any);
       }
       
       const response = { 
-        totalPrice: totalPrice,
-        formattedPrice: `R$ ${totalPrice.toFixed(2)}`,
-        ingredientsCount: ingredients?.length || 0,
+        totalPrice: calculatedPrice,
+        formattedPrice: `R$ ${calculatedPrice.toFixed(2)}`,
         message: "Price recalculated successfully"
       };
       
-      console.log('📤 RESPONSE ENVIADO:', response);
       res.json(response);
       
     } catch (error) {
@@ -885,13 +849,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const additionals = await storage.getProductAdditionals(req.params.id);
       
-      // Override customPrice with real ingredient price to ensure consistency
+      // Return additionals as they are (ingredient property may not be present)
       const correctedAdditionals = additionals.map(additional => {
-        const realPrice = additional.ingredient?.price || additional.customPrice;
         return {
           ...additional,
-          customPrice: realPrice, // Force customPrice to use real ingredient price
-          ingredient: additional.ingredient
+          customPrice: additional.customPrice || '0'
         };
       });
       
