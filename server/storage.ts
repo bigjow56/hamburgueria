@@ -71,6 +71,7 @@ export interface IStorage {
   getAllOrders(): Promise<Order[]>;
   updateOrderStatus(id: string, status: string): Promise<boolean>;
   updateOrderPaymentStatus(id: string, paymentStatus: string): Promise<boolean>;
+  deleteOrder(id: string): Promise<boolean>;
   
   // Store settings
   getStoreSettings(): Promise<StoreSettings | undefined>;
@@ -302,6 +303,38 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orders)
       .orderBy(desc(orders.createdAt));
+  }
+
+  async deleteOrder(id: string): Promise<boolean> {
+    try {
+      // First get all order items for this order
+      const orderItemsResult = await db
+        .select()
+        .from(orderItems)
+        .where(eq(orderItems.orderId, id));
+
+      // Delete order item modifications for each order item
+      for (const orderItem of orderItemsResult) {
+        await db
+          .delete(orderItemModifications)
+          .where(eq(orderItemModifications.orderItemId, orderItem.id));
+      }
+
+      // Delete order items
+      await db
+        .delete(orderItems)
+        .where(eq(orderItems.orderId, id));
+
+      // Finally delete the order itself
+      const result = await db
+        .delete(orders)
+        .where(eq(orders.id, id));
+
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      return false;
+    }
   }
 
   // Store settings

@@ -2367,12 +2367,38 @@ function OrderManagement() {
     },
   });
 
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      return await apiRequest("DELETE", `/api/orders/${orderId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({
+        title: "Pedido excluído!",
+        description: "O pedido foi excluído com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao excluir pedido",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleStatusUpdate = (orderId: string, newStatus: string) => {
     updateOrderStatusMutation.mutate({ orderId, status: newStatus });
   };
 
   const handlePaymentStatusUpdate = (orderId: string, paymentStatus: string) => {
     updateOrderPaymentStatusMutation.mutate({ orderId, paymentStatus });
+  };
+
+  const handleDeleteOrder = (orderId: string, orderNumber: string) => {
+    if (confirm(`Tem certeza que deseja excluir o pedido #${orderNumber}? Esta ação não pode ser desfeita.`)) {
+      deleteOrderMutation.mutate(orderId);
+    }
   };
 
   const handleWhatsApp = (phone: string, orderNumber: string) => {
@@ -2583,6 +2609,16 @@ function OrderManagement() {
                       data-testid={`whatsapp-${order.orderNumber}`}
                     >
                       💬 WhatsApp
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteOrder(order.id, order.orderNumber)}
+                      className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                      disabled={deleteOrderMutation.isPending}
+                      data-testid={`delete-${order.orderNumber}`}
+                    >
+                      🗑️ Excluir
                     </Button>
                   </div>
                 </div>
