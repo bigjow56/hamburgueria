@@ -844,20 +844,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Product Ingredients Routes - Returns additionals with REAL ingredient prices (not custom prices)
+  // Product Ingredients Routes - Returns base ingredients included with the product
   app.get("/api/products/:id/ingredients", async (req, res) => {
     try {
-      const additionals = await storage.getProductAdditionals(req.params.id);
-      
-      // Return additionals as they are (ingredient property may not be present)
-      const correctedAdditionals = additionals.map(additional => {
-        return {
-          ...additional,
-          customPrice: additional.customPrice || '0'
-        };
-      });
-      
-      res.json(correctedAdditionals);
+      const ingredients = await storage.getProductIngredients(req.params.id);
+      res.json(ingredients);
     } catch (error) {
       console.error("Error fetching product ingredients:", error);
       res.status(500).json({ message: "Failed to fetch product ingredients" });
