@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema } from "@shared/schema";
 import { z } from "zod";
+import { notifyProductChange } from "./webhook";
 
 const createOrderRequestSchema = z.object({
   customerName: z.string().min(1),
@@ -426,10 +427,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return updated product with ingredients
       const updatedProductWithIngredients = await storage.getProductIngredients(req.params.id);
       
-      res.json({
+      const responseData = {
         ...product,
         ingredients: updatedProductWithIngredients
-      });
+      };
+      
+      // Notify n8n about product update
+      await notifyProductChange('update', req.params.id, responseData);
+      
+      res.json(responseData);
     } catch (error) {
       console.error("Error updating product:", error);
       if (error instanceof z.ZodError) {
@@ -530,6 +536,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateProductIngredients(product.id, ingredients);
       }
       
+      // Notify n8n about product creation
+      await notifyProductChange('create', product.id, product);
+      
       res.status(201).json(product);
     } catch (error) {
       console.error("Error creating product:", error);
@@ -543,10 +552,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/products/:id", async (req, res) => {
     try {
+      // Get product data before deletion for webhook
+      const productToDelete = await storage.getProduct(req.params.id);
+      
       const success = await storage.deleteProduct(req.params.id);
       if (!success) {
         return res.status(404).json({ message: "Product not found" });
       }
+      
+      // Notify n8n about product deletion
+      await notifyProductChange('delete', req.params.id, productToDelete);
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting product:", error);
