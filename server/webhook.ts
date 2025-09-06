@@ -6,7 +6,7 @@ interface WebhookPayload {
 }
 
 export async function notifyProductChange(action: 'create' | 'update' | 'delete', productId: string, productData?: any) {
-  const webhookUrl = 'https://n8n-curso-n8n.yao8ay.easypanel.host/webhook-test/products';
+  const webhookUrl = process.env.N8N_WEBHOOK_URL;
   
   const payload: WebhookPayload = {
     action,
@@ -14,6 +14,12 @@ export async function notifyProductChange(action: 'create' | 'update' | 'delete'
     productData,
     timestamp: new Date().toISOString()
   };
+
+  // Skip webhook if URL is not configured
+  if (!webhookUrl) {
+    console.log(`⚠️ Webhook skipped for product ${action}: N8N_WEBHOOK_URL not configured`);
+    return;
+  }
 
   try {
     const response = await fetch(webhookUrl, {
