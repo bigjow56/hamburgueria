@@ -22,6 +22,9 @@ export async function notifyProductChange(action: 'create' | 'update' | 'delete'
   }
 
   try {
+    console.log(`🚀 Sending webhook for product ${action} to:`, webhookUrl);
+    console.log(`📦 Payload:`, JSON.stringify(payload, null, 2));
+    
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
@@ -30,12 +33,16 @@ export async function notifyProductChange(action: 'create' | 'update' | 'delete'
       body: JSON.stringify(payload),
     });
 
+    const responseText = await response.text();
+    
     if (!response.ok) {
-      console.error(`Failed to notify webhook for product ${action}:`, response.status, response.statusText);
+      console.error(`❌ Failed to notify webhook for product ${action}:`, response.status, response.statusText);
+      console.error(`Response body:`, responseText);
     } else {
       console.log(`✅ Webhook notified successfully for product ${action}:`, productId);
+      console.log(`Response:`, responseText);
     }
   } catch (error) {
-    console.error(`Error sending webhook for product ${action}:`, error);
+    console.error(`💥 Error sending webhook for product ${action}:`, error);
   }
 }
