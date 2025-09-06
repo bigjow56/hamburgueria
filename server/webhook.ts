@@ -6,7 +6,7 @@ interface WebhookPayload {
 }
 
 export async function notifyProductChange(action: 'create' | 'update' | 'delete', productId: string, productData?: any) {
-  const webhookUrl = process.env.N8N_WEBHOOK_URL;
+  const webhookUrl = process.env.N8N_MENU_URL;
   
   const payload: WebhookPayload = {
     action,
@@ -17,7 +17,7 @@ export async function notifyProductChange(action: 'create' | 'update' | 'delete'
 
   // Skip webhook if URL is not configured
   if (!webhookUrl) {
-    console.log(`⚠️ Webhook skipped for product ${action}: N8N_WEBHOOK_URL not configured`);
+    console.log(`⚠️ Webhook skipped for product ${action}: N8N_MENU_URL not configured`);
     return;
   }
 
