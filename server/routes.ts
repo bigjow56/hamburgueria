@@ -1164,6 +1164,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/loyalty/rewards - Get all available rewards (movido antes do :phone)
+  app.get("/api/loyalty/rewards", async (req, res) => {
+    try {
+      const userTier = req.query.userTier as string || 'bronze';
+      const rewards = await storage.getLoyaltyRewards(userTier);
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error fetching loyalty rewards:", error);
+      res.status(500).json({ message: "Failed to fetch loyalty rewards" });
+    }
+  });
+
   // GET /api/loyalty/:phone - Get user loyalty data by phone number
   app.get("/api/loyalty/:phone", async (req, res) => {
     try {
@@ -1246,17 +1258,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/loyalty/rewards - Get all available rewards
-  app.get("/api/loyalty/rewards", async (req, res) => {
-    try {
-      const userTier = req.query.userTier as string || 'bronze';
-      const rewards = await storage.getLoyaltyRewards(userTier);
-      res.json(rewards);
-    } catch (error) {
-      console.error("Error fetching loyalty rewards:", error);
-      res.status(500).json({ message: "Failed to fetch loyalty rewards" });
-    }
-  });
 
   // POST /api/loyalty/rewards - Create new reward (admin only)
   app.post("/api/loyalty/rewards", async (req, res) => {
