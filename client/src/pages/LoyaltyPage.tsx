@@ -75,6 +75,7 @@ export default function LoyaltyPage() {
     name: "",
     phone: "",
     email: "",
+    password: "",
     address: ""
   });
 
@@ -117,10 +118,10 @@ export default function LoyaltyPage() {
   };
 
   const registerUser = async () => {
-    if (!registerForm.name.trim() || !registerForm.phone.trim() || !registerForm.email.trim()) {
+    if (!registerForm.name.trim() || !registerForm.phone.trim() || !registerForm.email.trim() || !registerForm.password.trim()) {
       toast({
         title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
+        description: "Por favor, preencha todos os campos obrigatórios (nome, telefone, email e senha).",
         variant: "destructive",
       });
       return;
@@ -156,7 +157,7 @@ export default function LoyaltyPage() {
 
       // Clear form and show user data
       const phoneToSearch = registerForm.phone;
-      setRegisterForm({ name: "", phone: "", email: "", address: "" });
+      setRegisterForm({ name: "", phone: "", email: "", password: "", address: "" });
       setPhone(phoneToSearch);
       
       // Automatically switch to login tab and fetch data
@@ -330,6 +331,20 @@ export default function LoyaltyPage() {
                 </div>
                 
                 <div className="space-y-2">
+                  <label htmlFor="registerPassword" className="text-sm font-medium">
+                    Senha *
+                  </label>
+                  <Input
+                    id="registerPassword"
+                    type="password"
+                    placeholder="Digite sua senha"
+                    value={registerForm.password}
+                    onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
+                    data-testid="input-register-password"
+                  />
+                </div>
+                
+                <div className="space-y-2">
                   <label htmlFor="registerAddress" className="text-sm font-medium">
                     Endereço (Opcional)
                   </label>
@@ -371,11 +386,11 @@ export default function LoyaltyPage() {
               <CardTitle className="flex items-center justify-between">
                 <span>Olá, {loyaltyData.user.name}! 👋</span>
                 <Badge 
-                  className={tierColors[loyaltyData.user.loyaltyTier as keyof typeof tierColors]}
-                  data-testid={`tier-${loyaltyData.user.loyaltyTier}`}
+                  className={tierColors[(loyaltyData.user.loyaltyTier || 'bronze') as keyof typeof tierColors]}
+                  data-testid={`tier-${loyaltyData.user.loyaltyTier || 'bronze'}`}
                 >
-                  {getTierIcon(loyaltyData.user.loyaltyTier)}
-                  {loyaltyData.user.loyaltyTier.toUpperCase()}
+                  {getTierIcon(loyaltyData.user.loyaltyTier || 'bronze')}
+                  {(loyaltyData.user.loyaltyTier || 'bronze').toUpperCase()}
                 </Badge>
               </CardTitle>
             </CardHeader>
@@ -399,7 +414,7 @@ export default function LoyaltyPage() {
                 </div>
                 <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600 dark:text-purple-400" data-testid="tier-display">
-                    {loyaltyData.user.loyaltyTier.toUpperCase()}
+                    {(loyaltyData.user.loyaltyTier || 'bronze').toUpperCase()}
                   </div>
                   <div className="text-sm text-purple-700 dark:text-purple-300">
                     Seu Nível
