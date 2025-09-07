@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
@@ -65,7 +66,8 @@ const tierColors = {
 };
 
 export default function LoyaltyPage() {
-  const [phone, setPhone] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [loyaltyData, setLoyaltyData] = useState<LoyaltyData | null>(null);
   const [loading, setLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
@@ -74,16 +76,17 @@ export default function LoyaltyPage() {
   const [registerForm, setRegisterForm] = useState({
     name: "",
     phone: "",
+    phoneInternational: "",
     email: "",
     password: "",
     address: ""
   });
 
   const fetchLoyaltyData = async () => {
-    if (!phone.trim()) {
+    if (!emailOrPhone.trim() || !password.trim()) {
       toast({
         title: "Erro",
-        description: "Por favor, insira seu telefone.",
+        description: "Por favor, insira seu email ou telefone e sua senha.",
         variant: "destructive",
       });
       return;
@@ -91,9 +94,23 @@ export default function LoyaltyPage() {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/loyalty/${encodeURIComponent(phone)}`);
+      const response = await fetch("/api/loyalty/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emailOrPhone: emailOrPhone,
+          password: password,
+        }),
+      });
+      
       if (!response.ok) {
-        if (response.status === 404) {
+        if (response.status === 401) {
+          toast({
+            title: "Credenciais inválidas",
+            description: "Email/telefone ou senha incorretos. Verifique seus dados e tente novamente.",
+            variant: "destructive",
+          });
+        } else if (response.status === 404) {
           toast({
             title: "Usuário não encontrado",
             description: "Não encontramos sua conta. Que tal se cadastrar no programa de fidelidade?",
@@ -118,7 +135,7 @@ export default function LoyaltyPage() {
   };
 
   const registerUser = async () => {
-    if (!registerForm.name.trim() || !registerForm.phone.trim() || !registerForm.email.trim() || !registerForm.password.trim()) {
+    if (!registerForm.name.trim() || !registerForm.phoneInternational.trim() || !registerForm.email.trim() || !registerForm.password.trim()) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios (nome, telefone, email e senha).",
@@ -129,10 +146,16 @@ export default function LoyaltyPage() {
 
     setRegisterLoading(true);
     try {
+      // Send phoneInternational as the main phone field
+      const dataToSend = {
+        ...registerForm,
+        phone: registerForm.phoneInternational,
+      };
+      
       const response = await fetch("/api/loyalty/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registerForm),
+        body: JSON.stringify(dataToSend),
       });
 
       const result = await response.json();
@@ -141,7 +164,7 @@ export default function LoyaltyPage() {
         if (result.error === "USER_EXISTS") {
           toast({
             title: "Usuário já existe",
-            description: "Já existe uma conta com este telefone. Use a aba 'Consultar' para acessar seus pontos.",
+            description: "Já existe uma conta com este telefone ou email. Use a aba 'Consultar' para acessar seus pontos.",
             variant: "destructive",
           });
         } else {
@@ -152,19 +175,16 @@ export default function LoyaltyPage() {
 
       toast({
         title: "Cadastro realizado com sucesso!",
-        description: result.message || "Você foi cadastrado no programa de fidelidade!",
+        description: result.message || "Você foi cadastrado no programa de fidelidade! Use seus dados para consultar seus pontos.",
       });
 
-      // Clear form and show user data
-      const phoneToSearch = registerForm.phone;
-      setRegisterForm({ name: "", phone: "", email: "", password: "", address: "" });
-      setPhone(phoneToSearch);
+      // Clear form
+      setRegisterForm({ name: "", phone: "", phoneInternational: "", email: "", password: "", address: "" });
       
-      // Automatically switch to login tab and fetch data
+      // Automatically switch to login tab
       setTimeout(() => {
         const loginTab = document.querySelector('[value="login"]') as HTMLElement;
         loginTab?.click();
-        fetchLoyaltyData();
       }, 1000);
     } catch (error) {
       toast({
@@ -262,16 +282,29 @@ export default function LoyaltyPage() {
             <TabsContent value="login" className="space-y-4 mt-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="loginPhone" className="text-sm font-medium">
-                    Telefone
+                  <label htmlFor="loginEmailOrPhone" className="text-sm font-medium">
+                    Email ou Telefone *
                   </label>
                   <Input
-                    id="loginPhone"
-                    type="tel"
-                    placeholder="(11) 99999-9999"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    data-testid="input-login-phone"
+                    id="loginEmailOrPhone"
+                    type="text"
+                    placeholder="seu@email.com ou (11) 99999-9999"
+                    value={emailOrPhone}
+                    onChange={(e) => setEmailOrPhone(e.target.value)}
+                    data-testid="input-login-email-phone"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="loginPassword" className="text-sm font-medium">
+                    Senha *
+                  </label>
+                  <Input
+                    id="loginPassword"
+                    type="password"
+                    placeholder="Digite sua senha"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    data-testid="input-login-password"
                   />
                 </div>
                 <Button 
@@ -280,7 +313,7 @@ export default function LoyaltyPage() {
                   className="w-full"
                   data-testid="button-login"
                 >
-                  {loading ? "Consultando..." : "Consultar Pontos"}
+                  {loading ? "Consultando..." : "Acessar Conta"}
                 </Button>
               </div>
             </TabsContent>
@@ -302,15 +335,18 @@ export default function LoyaltyPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="registerPhone" className="text-sm font-medium">
-                      Telefone *
-                    </label>
-                    <Input
+                    <PhoneInput
                       id="registerPhone"
-                      type="tel"
-                      placeholder="(11) 99999-9999"
                       value={registerForm.phone}
-                      onChange={(e) => setRegisterForm(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(formatted, international) => 
+                        setRegisterForm(prev => ({ 
+                          ...prev, 
+                          phone: formatted, 
+                          phoneInternational: international 
+                        }))
+                      }
+                      placeholder="(11) 99999-9999"
+                      required
                       data-testid="input-register-phone"
                     />
                   </div>
