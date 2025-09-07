@@ -386,6 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: order.customerName,
             email: order.customerEmail || '',
             phone: order.customerPhone,
+            password: '123456', // Default password for auto-created users
             address: order.deliveryType === 'delivery' ? 
               `${order.streetName}, ${order.houseNumber}, ${order.neighborhood}` : undefined
           });
@@ -1097,6 +1098,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: "INTERNAL_ERROR" 
         });
       }
+    }
+  });
+
+  // POST /api/loyalty/login - Login with email or phone + password
+  app.post("/api/loyalty/login", async (req, res) => {
+    try {
+      const { emailOrPhone, password } = req.body;
+      
+      if (!emailOrPhone || !password) {
+        return res.status(400).json({ 
+          message: "Email/telefone e senha são obrigatórios",
+          error: "MISSING_CREDENTIALS" 
+        });
+      }
+
+      // Try to find user by email or phone
+      let user;
+      // Check if it's an email (contains @)
+      if (emailOrPhone.includes('@')) {
+        user = await storage.getUserByEmail(emailOrPhone);
+      } else {
+        user = await storage.getUserByPhone(emailOrPhone);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ 
+          message: "Usuário não encontrado",
+          error: "USER_NOT_FOUND" 
+        });
+      }
+
+      // Verify password (in production, use bcrypt)
+      if (user.password !== password) {
+        return res.status(401).json({ 
+          message: "Senha incorreta",
+          error: "INVALID_PASSWORD" 
+        });
+      }
+
+      // Get user balance and tier
+      const userBalance = await storage.getUserLoyaltyBalance(user.id);
+      
+      // Get transactions
+      const transactions = await storage.getUserLoyaltyTransactions(user.id);
+      
+      // Get available rewards
+      const availableRewards = await storage.getLoyaltyRewards();
+      
+      // Get user redemptions
+      const redemptions = await storage.getUserLoyaltyRedemptions(user.id);
+
+      res.json({
+        user: userBalance || user,
+        transactions: transactions || [],
+        availableRewards: availableRewards.filter(r => r.isActive) || [],
+        redemptions: redemptions || []
+      });
+    } catch (error) {
+      console.error("Error during loyalty login:", error);
+      res.status(500).json({ 
+        message: "Erro interno do servidor",
+        error: "INTERNAL_ERROR" 
+      });
     }
   });
 
