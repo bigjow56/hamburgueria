@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Gerenciar Recompensas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+        }
+
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content h1 {
+            font-size: 1.8em;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid;
+        }
+
+        .stat-card.total { border-left-color: #667eea; }
+        .stat-card.active { border-left-color: #28a745; }
+        .stat-card.redeemed { border-left-color: #ffc107; }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 25px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .content-header h2 {
+            font-size: 1.5em;
+            color: #333;
+        }
+
+        .add-reward-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-reward-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .rewards-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .rewards-table th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .rewards-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+
+        .rewards-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .reward-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .reward-description {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 2px;
+        }
+
+        .points-badge {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .category-badge {
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .category-desconto { background: #e3f2fd; color: #1976d2; }
+        .category-frete { background: #f3e5f5; color: #7b1fa2; }
+        .category-produto { background: #e8f5e8; color: #388e3c; }
+        .category-cashback { background: #fff3e0; color: #f57c00; }
+
+        .status-toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 25px;
+        }
+
+        .status-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 25px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 19px;
+            width: 19px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #28a745;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(25px);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-edit, .btn-delete {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { 
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-cancel, .btn-save {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: #5a6268;
+        }
+
+        .btn-save {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .content-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .rewards-table {
+                font-size: 0.9em;
+            }
+
+            .rewards-table th,
+            .rewards-table td {
+                padding: 10px 8px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .modal-content {
+                margin: 10% auto;
+                width: 95%;
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <header class="admin-header">
+        <div class="header-content">
+            <h1>🎁 Painel Admin - Recompensas</h1>
+            <button class="logout-btn" onclick="logout()">Sair</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Estatísticas -->
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-number" id="totalRewards">12</div>
+                <div class="stat-label">Total de Recompensas</div>
+            </div>
+            <div class="stat-card active">
+                <div class="stat-number" id="activeRewards">9</div>
+                <div class="stat-label">Ativas</div>
+            </div>
+            <div class="stat-card redeemed">
+                <div class="stat-number" id="redeemedCount">45</div>
+                <div class="stat-label">Resgates no Mês</div>
+            </div>
+        </div>
+
+        <!-- Conteúdo Principal -->
+        <div class="main-content">
+            <div class="content-header">
+                <h2>Gerenciar Recompensas</h2>
+                <button class="add-reward-btn" onclick="openModal()">
+                    ➕ Nova Recompensa
+                </button>
+            </div>
+
+            <!-- Filtros -->
+            <div style="padding: 0 25px;">
+                <div class="filters">
+                    <select class="filter-select" id="categoryFilter" onchange="applyFilters()">
+                        <option value="">Todas as Categorias</option>
+                        <option value="desconto">Desconto</option>
+                        <option value="frete">Frete</option>
+                        <option value="produto">Produto</option>
+                        <option value="cashback">Cashback</option>
+                    </select>
+                    <select class="filter-select" id="statusFilter" onchange="applyFilters()">
+                        <option value="">Todos os Status</option>
+                        <option value="active">Ativas</option>
+                        <option value="inactive">Inativas</option>
+                    </select>
+                    <select class="filter-select" id="sortBy" onchange="applyFilters()">
+                        <option value="name">Ordenar por Nome</option>
+                        <option value="points">Ordenar por Pontos</option>
+                        <option value="date">Ordenar por Data</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Carregando recompensas...</p>
+            </div>
+
+            <!-- Tabela de Recompensas -->
+            <div id="rewardsContainer">
+                <table class="rewards-table">
+                    <thead>
+                        <tr>
+                            <th>Recompensa</th>
+                            <th>Pontos</th>
+                            <th>Categoria</th>
+                            <th>Estoque</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rewardsTableBody">
+                        <!-- Dados serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Estado Vazio -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-state-icon">🎁</div>
+                <h3>Nenhuma recompensa encontrada</h3>
+                <p>Comece criando sua primeira recompensa para o programa de fidelidade!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Criar/Editar Recompensa -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nova Recompensa</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="alert" id="modalAlert"></div>
+                <form id="rewardForm">
+                    <div class="form-group">
+                        <label for="rewardName">Nome da Recompensa *</label>
+                        <input type="text" id="rewardName" name="name" placeholder="Ex: Desconto 10%" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rewardDescription">Descrição</label>
+                        <textarea id="rewardDescription" name="description" placeholder="Descreva a recompensa..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pointsRequired">Pontos Necessários *</label>
+                        <input type="number" id="pointsRequired" name="points" placeholder="Ex: 500" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Categoria *</label>
+                        <select id="category" name="category" required>
+                            <option value="">Selecione uma categoria</option>
+                            <option value="desconto">Desconto</option>
+                            <option value="frete">Frete</option>
+                            <option value="produto">Produto</option>
+                            <option value="cashback">Cashback</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stock">Estoque</label>
+                        <input type="number" id="stock" name="stock" placeholder="Ex: 100 (deixe vazio para ilimitado)" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="isActive" name="active" checked>
+                            Recompensa ativa
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button type="button" class="btn-save" onclick="saveReward()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rewards = [
+            {
+                id: 1,
+                name: "Desconto 10%",
+                description: "10% de desconto na próxima compra",
+                points: 500,
+                category: "desconto",
+                stock: 50,
+                active: true,
+                created_at: "2024-01-15"
+            },
+            {
+                id: 2,
+                name: "Frete Grátis",
+                description: "Frete grátis na próxima compra",
+                points: 300,
+                category: "frete",
+                stock: null,
+                active: true,
+                created_at: "2024-01-20"
+            },
+            {
+                id: 3,
+                name: "Produto Premium",
+                description: "Produto exclusivo para membros",
+                points: 2000,
+                category: "produto",
+                stock: 10,
+                active: false,
+                created_at: "2024-01-25"
+            },
+            {
+                id: 4,
+                name: "Cashback R$ 50",
+                description: "R$ 50 de volta na conta",
+                points: 2500,
+                category: "cashback",
+                stock: 20,
+                active: true,
+                created_at: "2024-02-01"
+            },
+            {
+                id: 5,
+                name: "Desconto 25%",
+                description: "25% de desconto na próxima compra",
+                points: 1200,
+                category: "desconto",
+                stock: 30,
+                active: true,
+                created_at: "2024-02-05"
+            }
+        ];
+
+        let filteredRewards = [...rewards];
+        let editingRewardId = null;
+
+        // Renderizar tabela de recompensas
+        function renderRewards() {
+            const tbody = document.getElementById('rewardsTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const rewardsContainer = document.getElementById('rewardsContainer');
+
+            if (filteredRewards.length === 0) {
+                rewardsContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            rewardsContainer.style.display = 'block';
+            emptyState.style.display = 'none';
+
+            tbody.innerHTML = filteredRewards.map(reward => `
+                <tr>
+                    <td>
+                        <div class="reward-name">${reward.name}</div>
+                        <div class="reward-description">${reward.description || '-'}</div>
+                    </td>
+                    <td>
+                        <span class="points-badge">${reward.points} pts</span>
+                    </td>
+                    <td>
+                        <span class="category-badge category-${reward.category}">
+                            ${getCategoryLabel(reward.category)}
+                        </span>
+                    </td>
+                    <td>${reward.stock !== null ? reward.stock : 'Ilimitado'}</td>
+                    <td>
+                        <label class="status-toggle">
+                            <input type="checkbox" ${reward.active ? 'checked' : ''} 
+                                   onchange="toggleStatus(${reward.id})">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editReward(${reward.id})">✏️ Editar</button>
+                            <button class="btn-delete" onclick="deleteReward(${reward.id})">🗑️ Excluir</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            updateStats();
+        }
+
+        // Atualizar estatísticas
+        function updateStats() {
+            const totalRewards = rewards.length;
+            const activeRewards = rewards.filter(r => r.active).length;
+            const redeemedCount = 45; // Simulado
+
+            document.getElementById('totalRewards').textContent = totalRewards;
+            document.getElementById('activeRewards').textContent = activeRewards;
+            document.getElementById('redeemedCount').textContent = redeemedCount;
+        }
+
+        // Obter label da categoria
+        function getCategoryLabel(category) {
+            const labels = {
+                desconto: 'Desconto',
+                frete: 'Frete',
+                produto: 'Produto',
+                cashback: 'Cashback'
+            };
+            return labels[category] || category;
+        }
+
+        // Aplicar filtros
+        function applyFilters() {
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            filteredRewards = rewards.filter(reward => {
+                const categoryMatch = !categoryFilter || reward.category === categoryFilter;
+                const statusMatch = !statusFilter || 
+                    (statusFilter === 'active' && reward.active) ||
+                    (statusFilter === 'inactive' && !reward.active);
+                
+                return categoryMatch && statusMatch;
+            });
+
+            // Ordenar
+            filteredRewards.sort((a, b) => {
+                switch (sortBy) {
+                    case 'name':
+                        return a.name.localeCompare(b.name);
+                    case 'points':
+                        return b.points - a.points;
+                    case 'date':
+                        return new Date(b.created_at) - new Date(a.created_at);
+                    default:
+                        return 0;
+                }
+            });
+
+            renderRewards();
+        }
+
+        // Toggle status da recompensa
+        function toggleStatus(id) {
+            const reward = rewards.find(r => r.id === id);
+            if (reward) {
+                reward.active = !reward.active;
+                showAlert('Status atualizado com sucesso!', 'success', 'modalAlert');
+                
+                // Simular chamada da API
+                setTimeout(() => {
+                    renderRewards();
+                }, 500);
+            }
+        }
+
+        // Abrir modal
+        function openModal(isEdit = false) {
+            const modal = document.getElementById('rewardModal');
+            const modalTitle = document.getElementById('modalTitle');
+            
+            modalTitle.textContent = isEdit ? 'Editar Recompensa' : 'Nova Recompensa';
+            modal.style.display = 'block';
+            hideAlert('modalAlert');
+
+            if (!isEdit) {
+                document.getElementById('rewardForm').reset();
+                document.getElementById('isActive').checked = true;
+                editingRewardId = null;
+            }
+        }
+
+        // Fechar modal
+        function closeModal() {
+            document.getElementById('rewardModal').style.display = 'none';
+            editingRewardId = null;
+        }
+
+        // Editar recompensa
+        function editReward(id) {
+            const reward = rewards.find(r => r.id === id);
+            if (!reward) return;
+
+            editingRewardId = id;
+            
+            document.getElementById('rewardName').value = reward.name;
+            document.getElementById('rewardDescription').value = reward.description || '';
+            document.getElementById('pointsRequired').value = reward.points;
+            document.getElementById('category').value = reward.category;
+            document.getElementById('stock').value = reward.stock || '';
+            document.getElementById('isActive').checked = reward.active;
+
+            openModal(true);
+        }
+
+        // Salvar recompensa
+        async function saveReward() {
+            const form = document.getElementById('rewardForm');
+            const formData = new FormData(form);
+            
+            const name = formData.get('name').trim();
+            const description = formData.get('description').trim();
+            const points = parseInt(formData.get('points'));
+            const category = formData.get('category');
+            const stock = formData.get('stock') ? parseInt(formData.get('stock')) : null;
+            const active = document.getElementById('isActive').checked;
+
+            // Validações
+            if (!name) {
+                showAlert('Nome é obrigatório!', 'error', 'modalAlert');
+                return;
+            }
+
+            if (!points || points < 1) {
+                showAlert('Pontos deve ser um número maior que 0!', 'error', 'modalAlert');
+                return;
+            }
+
+            if (!category) {
+                showAlert('Categoria é obrigatória!', 'error', 'modalAlert');
+                return;
+            }
+
+            // Criar objeto da recompensa
+            const rewardData = {
+                name,
+                description,
+                points,
+                category,
+                stock,
+                active,
+                created_at: new Date().toISOString().split('T')[0]
+            };
+
+            try {
+                // Simular loading
+                const saveBtn = document.querySelector('.btn-save');
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = 'Salvando...';
+                saveBtn.disabled = true;
+
+                // Simular chamada da API
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                if (editingRewardId) {
+                    // Editar existente
+                    const index = rewards.findIndex(r => r.id === editingRewardId);
+                    rewards[index] = { ...rewardData, id: editingRewardId };
+                    showAlert('Recompensa atualizada com sucesso!', 'success', 'modalAlert');
+                } else {
+                    // Criar nova
+                    const newId = Math.max(...rewards.map(r => r.id)) + 1;
+                    rewards.push({ ...rewardData, id: newId });
+                    showAlert('Recompensa criada com sucesso!', 'success', 'modalAlert');
+                }
+
+                // Fechar modal após 1 segundo
+                setTimeout(() => {
+                    closeModal();
+                    applyFilters();
+                }, 1000);
+
+            } catch (error) {
+                showAlert('Erro ao salvar recompensa. Tente novamente.', 'error', 'modalAlert');
+            } finally {
+                const saveBtn = document.querySelector('.btn-save');
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+            }
+        }
+
+        // Deletar recompensa
+        function deleteReward(id) {
+            const reward = rewards.find(r => r.id === id);
+            if (!reward) return;
+
+            if (confirm(`Tem certeza que deseja excluir "${reward.
