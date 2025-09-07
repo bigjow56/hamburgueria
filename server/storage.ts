@@ -843,7 +843,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getLoyaltyRewards(userTier: string = 'bronze'): Promise<LoyaltyReward[]> {
+  async getLoyaltyRewards(userTier: string = 'bronze'): Promise<any[]> {
     // Define tier hierarchy
     const tierHierarchy = { bronze: 0, silver: 1, gold: 2 };
     const userTierLevel = tierHierarchy[userTier as keyof typeof tierHierarchy] || 0;
@@ -854,11 +854,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(loyaltyRewards.isActive, true))
       .orderBy(loyaltyRewards.pointsRequired);
 
-    // Filter rewards based on user tier
-    return allRewards.filter(reward => {
-      const rewardTierLevel = tierHierarchy[reward.minTier as keyof typeof tierHierarchy] || 0;
-      return rewardTierLevel <= userTierLevel;
-    });
+    // Filter rewards based on user tier and map pointsRequired to pointsCost
+    return allRewards
+      .filter(reward => {
+        const rewardTierLevel = tierHierarchy[reward.minTier as keyof typeof tierHierarchy] || 0;
+        return rewardTierLevel <= userTierLevel;
+      })
+      .map(reward => ({
+        ...reward,
+        pointsCost: reward.pointsRequired // Map pointsRequired to pointsCost for frontend
+      }));
   }
 
   async getAllLoyaltyRewardsAdmin(): Promise<LoyaltyReward[]> {
