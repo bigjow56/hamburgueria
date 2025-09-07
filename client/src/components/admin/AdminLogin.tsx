@@ -35,8 +35,10 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
         body: { username, password },
       });
 
-      if (response.success) {
-        onLogin(response.admin);
+      const data = await response.json();
+
+      if (data.success) {
+        onLogin(data.admin);
       } else {
         setError("Credenciais inválidas");
       }
