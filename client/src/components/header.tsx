@@ -47,6 +47,13 @@ export default function Header() {
                 LOJA
               </button>
               <button
+                onClick={() => setLocation('/fidelidade')}
+                className="text-muted-foreground hover:text-primary transition-colors px-3 py-2 font-medium"
+                data-testid="nav-loyalty"
+              >
+                FIDELIDADE
+              </button>
+              <button
                 onClick={() => scrollToSection('store-info')}
                 className="text-muted-foreground hover:text-primary transition-colors px-3 py-2 font-medium"
                 data-testid="nav-info"
@@ -87,6 +94,17 @@ export default function Header() {
                     data-testid="mobile-nav-menu"
                   >
                     LOJA
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => { 
+                      setLocation('/fidelidade'); 
+                      setMobileMenuOpen(false); 
+                    }}
+                    className="justify-start"
+                    data-testid="mobile-nav-loyalty"
+                  >
+                    FIDELIDADE
                   </Button>
                   <Button
                     variant="ghost"

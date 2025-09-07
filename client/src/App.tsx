@@ -11,6 +11,7 @@ import { OrderReview } from "@/pages/order-review";
 import Admin from "@/pages/admin";
 import AdminLogin from "@/pages/admin-login";
 import Analytics from "@/pages/analytics";
+import LoyaltyPage from "@/pages/LoyaltyPage";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/order-review" component={OrderReview} />
       <Route path="/checkout" component={Checkout} />
+      <Route path="/fidelidade" component={LoyaltyPage} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/analytics" component={Analytics} />
