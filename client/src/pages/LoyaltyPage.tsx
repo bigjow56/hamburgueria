@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Star, Gift, Trophy, Crown, Award, Phone } from "lucide-react";
+import { Star, Gift, Trophy, Crown, Award, Phone, UserPlus, LogIn } from "lucide-react";
 
 interface User {
   id: string;
@@ -67,6 +68,15 @@ export default function LoyaltyPage() {
   const [phone, setPhone] = useState("");
   const [loyaltyData, setLoyaltyData] = useState<LoyaltyData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+  
+  // Registration form state
+  const [registerForm, setRegisterForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: ""
+  });
 
   const fetchLoyaltyData = async () => {
     if (!phone.trim()) {
@@ -82,7 +92,16 @@ export default function LoyaltyPage() {
     try {
       const response = await fetch(`/api/loyalty/${encodeURIComponent(phone)}`);
       if (!response.ok) {
-        throw new Error("Usuário não encontrado ou erro no servidor");
+        if (response.status === 404) {
+          toast({
+            title: "Usuário não encontrado",
+            description: "Não encontramos sua conta. Que tal se cadastrar no programa de fidelidade?",
+            variant: "destructive",
+          });
+        } else {
+          throw new Error("Erro no servidor");
+        }
+        return;
       }
       const data = await response.json();
       setLoyaltyData(data);
@@ -94,6 +113,59 @@ export default function LoyaltyPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const registerUser = async () => {
+    if (!registerForm.name.trim() || !registerForm.phone.trim() || !registerForm.email.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRegisterLoading(true);
+    try {
+      const response = await fetch("/api/loyalty/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(registerForm),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        if (result.error === "USER_EXISTS") {
+          toast({
+            title: "Usuário já existe",
+            description: "Já existe uma conta com este telefone. Use a aba 'Consultar' para acessar seus pontos.",
+            variant: "destructive",
+          });
+        } else {
+          throw new Error(result.message || "Erro ao cadastrar usuário");
+        }
+        return;
+      }
+
+      toast({
+        title: "Cadastro realizado com sucesso!",
+        description: result.message || "Você foi cadastrado no programa de fidelidade!",
+      });
+
+      // Clear form and show user data
+      setRegisterForm({ name: "", phone: "", email: "", address: "" });
+      setPhone(registerForm.phone);
+      fetchLoyaltyData();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao cadastrar usuário",
+        variant: "destructive",
+      });
+    } finally {
+      setRegisterLoading(false);
     }
   };
 
@@ -158,35 +230,129 @@ export default function LoyaltyPage() {
         </p>
       </div>
 
-      {/* Phone Input */}
-      <Card className="mb-6" data-testid="loyalty-search-card">
+      {/* Login/Register Tabs */}
+      <Card className="mb-6" data-testid="loyalty-access-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="w-5 h-5" />
-            Consultar Fidelidade
-          </CardTitle>
-          <CardDescription>
-            Digite seu telefone para ver seus pontos e recompensas disponíveis
+          <CardTitle className="text-center">Acesse seu Programa de Fidelidade</CardTitle>
+          <CardDescription className="text-center">
+            Consulte seus pontos ou cadastre-se para começar a ganhar recompensas
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-3">
-            <Input
-              type="tel"
-              placeholder="(11) 99999-9999"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="flex-1"
-              data-testid="input-phone"
-            />
-            <Button 
-              onClick={fetchLoyaltyData} 
-              disabled={loading}
-              data-testid="button-search-loyalty"
-            >
-              {loading ? "Carregando..." : "Consultar"}
-            </Button>
-          </div>
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login" className="flex items-center gap-2" data-testid="tab-login">
+                <LogIn className="w-4 h-4" />
+                Consultar
+              </TabsTrigger>
+              <TabsTrigger value="register" className="flex items-center gap-2" data-testid="tab-register">
+                <UserPlus className="w-4 h-4" />
+                Cadastrar
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login" className="space-y-4 mt-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="loginPhone" className="text-sm font-medium">
+                    Telefone
+                  </label>
+                  <Input
+                    id="loginPhone"
+                    type="tel"
+                    placeholder="(11) 99999-9999"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    data-testid="input-login-phone"
+                  />
+                </div>
+                <Button 
+                  onClick={fetchLoyaltyData} 
+                  disabled={loading}
+                  className="w-full"
+                  data-testid="button-login"
+                >
+                  {loading ? "Consultando..." : "Consultar Pontos"}
+                </Button>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="register" className="space-y-4 mt-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="registerName" className="text-sm font-medium">
+                      Nome Completo *
+                    </label>
+                    <Input
+                      id="registerName"
+                      type="text"
+                      placeholder="Seu nome completo"
+                      value={registerForm.name}
+                      onChange={(e) => setRegisterForm(prev => ({ ...prev, name: e.target.value }))}
+                      data-testid="input-register-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="registerPhone" className="text-sm font-medium">
+                      Telefone *
+                    </label>
+                    <Input
+                      id="registerPhone"
+                      type="tel"
+                      placeholder="(11) 99999-9999"
+                      value={registerForm.phone}
+                      onChange={(e) => setRegisterForm(prev => ({ ...prev, phone: e.target.value }))}
+                      data-testid="input-register-phone"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="registerEmail" className="text-sm font-medium">
+                    Email *
+                  </label>
+                  <Input
+                    id="registerEmail"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={registerForm.email}
+                    onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
+                    data-testid="input-register-email"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="registerAddress" className="text-sm font-medium">
+                    Endereço (Opcional)
+                  </label>
+                  <Input
+                    id="registerAddress"
+                    type="text"
+                    placeholder="Rua, número, bairro"
+                    value={registerForm.address}
+                    onChange={(e) => setRegisterForm(prev => ({ ...prev, address: e.target.value }))}
+                    data-testid="input-register-address"
+                  />
+                </div>
+                
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300 text-center">
+                    🎉 <strong>Bônus de Boas-vindas:</strong> Ganhe 100 pontos ao se cadastrar!
+                  </p>
+                </div>
+                
+                <Button 
+                  onClick={registerUser} 
+                  disabled={registerLoading}
+                  className="w-full"
+                  data-testid="button-register"
+                >
+                  {registerLoading ? "Cadastrando..." : "Cadastrar e Ganhar Pontos"}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
