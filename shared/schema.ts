@@ -244,6 +244,105 @@ export const loyaltyRedemptions = pgTable("loyalty_redemptions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// === SISTEMA ADMIN DE FIDELIDADE ===
+
+// Admin users table (usuários administradores)
+export const adminUsers = pgTable("admin_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(), // hash bcrypt
+  role: text("role").default("admin"), // admin, super_admin
+  isActive: boolean("is_active").default(true),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Points rules table (regras de pontuação)
+export const pointsRules = pgTable("points_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  ruleType: text("rule_type").notNull(), // base, category_multiplier, tier_multiplier, action_bonus
+  isActive: boolean("is_active").default(true),
+  // Regra base: 1 real = X pontos
+  basePointsPerReal: decimal("base_points_per_real", { precision: 5, scale: 2 }).default("1.00"),
+  // Multiplicador por categoria
+  categoryId: varchar("category_id").references(() => categories.id),
+  categoryMultiplier: decimal("category_multiplier", { precision: 5, scale: 2 }).default("1.00"),
+  // Multiplicador por tier
+  tierName: text("tier_name"), // bronze, silver, gold
+  tierMultiplier: decimal("tier_multiplier", { precision: 5, scale: 2 }).default("1.00"),
+  // Bônus por ações
+  actionType: text("action_type"), // signup, first_purchase, referral, review, birthday
+  actionPoints: integer("action_points").default(0),
+  // Configurações gerais
+  validFrom: timestamp("valid_from").defaultNow(),
+  validUntil: timestamp("valid_until"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Loyalty tiers configuration (configuração dos tiers)
+export const loyaltyTiersConfig = pgTable("loyalty_tiers_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // bronze, silver, gold, diamond
+  displayName: text("display_name").notNull(), // Bronze, Prata, Ouro, Diamante
+  color: text("color").default("#8B5A2B"), // cor hex para UI
+  icon: text("icon").default("medal"), // nome do ícone
+  // Requisitos para atingir este tier
+  minPointsRequired: integer("min_points_required").default(0),
+  minTotalSpent: decimal("min_total_spent", { precision: 10, scale: 2 }).default("0.00"),
+  minOrdersCount: integer("min_orders_count").default(0),
+  // Benefícios do tier
+  pointsMultiplier: decimal("points_multiplier", { precision: 5, scale: 2 }).default("1.00"),
+  freeShippingEnabled: boolean("free_shipping_enabled").default(false),
+  exclusiveDiscounts: boolean("exclusive_discounts").default(false),
+  prioritySupport: boolean("priority_support").default(false),
+  birthdayBonus: integer("birthday_bonus").default(0),
+  // Descrição dos benefícios
+  benefits: text("benefits").array().default(sql`'{}'`), // lista de benefícios em texto
+  description: text("description"),
+  // Ordem de exibição
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Campaigns table (campanhas especiais)
+export const campaigns = pgTable("campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  campaignType: text("campaign_type").notNull(), // double_points, seasonal, group_goal, tier_bonus
+  isActive: boolean("is_active").default(false),
+  // Configurações da campanha
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  // Multiplicador de pontos (para campanhas de pontos duplos/triplos)
+  pointsMultiplier: decimal("points_multiplier", { precision: 5, scale: 2 }).default("2.00"),
+  // Meta de grupo (se aplicável)
+  groupGoalTarget: integer("group_goal_target"), // ex: vender 100 produtos
+  groupGoalCurrent: integer("group_goal_current").default(0),
+  groupGoalReward: integer("group_goal_reward"), // pontos que todos ganham se atingir a meta
+  // Filtros da campanha
+  applicableCategories: text("applicable_categories").array().default(sql`'{}'`), // IDs das categorias
+  applicableTiers: text("applicable_tiers").array().default(sql`'{}'`), // bronze, silver, gold
+  minOrderAmount: decimal("min_order_amount", { precision: 10, scale: 2 }),
+  // Limites
+  maxRedemptionsPerUser: integer("max_redemptions_per_user").default(-1), // -1 = ilimitado
+  totalBudget: decimal("total_budget", { precision: 10, scale: 2 }), // orçamento total em pontos
+  usedBudget: decimal("used_budget", { precision: 10, scale: 2 }).default("0.00"),
+  // Configurações visuais
+  bannerImageUrl: text("banner_image_url"),
+  backgroundColor: text("background_color").default("#ff6b35"),
+  textColor: text("text_color").default("#ffffff"),
+  // Termos e condições
+  termsAndConditions: text("terms_and_conditions"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -326,6 +425,32 @@ export const insertLoyaltyRedemptionSchema = createInsertSchema(loyaltyRedemptio
   createdAt: true,
 });
 
+// === ADMIN SYSTEM SCHEMAS ===
+
+export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
+  id: true,
+  createdAt: true,
+  lastLogin: true,
+});
+
+export const insertPointsRuleSchema = createInsertSchema(pointsRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLoyaltyTiersConfigSchema = createInsertSchema(loyaltyTiersConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCampaignSchema = createInsertSchema(campaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -375,3 +500,17 @@ export type LoyaltyRedemption = typeof loyaltyRedemptions.$inferSelect;
 export type InsertLoyaltyRedemption = z.infer<typeof insertLoyaltyRedemptionSchema>;
 
 export type StoreSettings = typeof storeSettings.$inferSelect;
+
+// === ADMIN SYSTEM TYPES ===
+
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+
+export type PointsRule = typeof pointsRules.$inferSelect;
+export type InsertPointsRule = z.infer<typeof insertPointsRuleSchema>;
+
+export type LoyaltyTiersConfig = typeof loyaltyTiersConfig.$inferSelect;
+export type InsertLoyaltyTiersConfig = z.infer<typeof insertLoyaltyTiersConfigSchema>;
+
+export type Campaign = typeof campaigns.$inferSelect;
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
