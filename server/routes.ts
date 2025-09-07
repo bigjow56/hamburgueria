@@ -1590,6 +1590,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin rewards management routes (alias para /api/loyalty/rewards com formatação admin)
+  app.get("/api/admin/rewards", async (req, res) => {
+    try {
+      const rewards = await storage.getLoyaltyRewards();
+      res.json(rewards);
+    } catch (error) {
+      console.error("Get admin rewards error:", error);
+      res.status(500).json({ message: "Failed to fetch rewards" });
+    }
+  });
+
+  app.post("/api/admin/rewards", async (req, res) => {
+    try {
+      const result = insertLoyaltyRewardSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid reward data", errors: result.error.errors });
+      }
+      const reward = await storage.createLoyaltyReward(result.data);
+      res.status(201).json(reward);
+    } catch (error) {
+      console.error("Create admin reward error:", error);
+      res.status(500).json({ message: "Failed to create reward" });
+    }
+  });
+
+  app.put("/api/admin/rewards/:id", async (req, res) => {
+    try {
+      const result = insertLoyaltyRewardSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid reward data", errors: result.error.errors });
+      }
+      const reward = await storage.updateLoyaltyReward(req.params.id, result.data);
+      if (!reward) {
+        return res.status(404).json({ message: "Reward not found" });
+      }
+      res.json(reward);
+    } catch (error) {
+      console.error("Update admin reward error:", error);
+      res.status(500).json({ message: "Failed to update reward" });
+    }
+  });
+
+  app.delete("/api/admin/rewards/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteLoyaltyReward(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Reward not found" });
+      }
+      res.json({ message: "Reward deleted successfully" });
+    } catch (error) {
+      console.error("Delete admin reward error:", error);
+      res.status(500).json({ message: "Failed to delete reward" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

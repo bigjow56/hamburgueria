@@ -9,6 +9,7 @@ import Home from "@/pages/home";
 import Checkout from "@/pages/checkout";
 import { OrderReview } from "@/pages/order-review";
 import AdminPage from "@/pages/AdminPage";
+import AdminLogin from "@/pages/admin-login";
 import Analytics from "@/pages/analytics";
 import LoyaltyPage from "@/pages/LoyaltyPage";
 
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/fidelidade" component={LoyaltyPage} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/admin-login" component={AdminLogin} />
       <Route path="/admin/analytics" component={Analytics} />
       <Route path="/analytics" component={Analytics} />
       <Route component={NotFound} />

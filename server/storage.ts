@@ -151,6 +151,7 @@ export interface IStorage {
   getLoyaltyRewards(userTier?: string): Promise<LoyaltyReward[]>;
   createLoyaltyReward(reward: InsertLoyaltyReward): Promise<LoyaltyReward>;
   updateLoyaltyReward(id: string, reward: Partial<InsertLoyaltyReward>): Promise<LoyaltyReward | undefined>;
+  deleteLoyaltyReward(id: string): Promise<boolean>;
   redeemLoyaltyReward(userId: string, rewardId: string): Promise<{ redemption: LoyaltyRedemption; newBalance: number }>;
   getUserLoyaltyRedemptions(userId: string): Promise<LoyaltyRedemption[]>;
   getAllLoyaltyRedemptions(): Promise<LoyaltyRedemption[]>;
@@ -874,6 +875,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(loyaltyRewards.id, id))
       .returning();
     return reward;
+  }
+
+  async deleteLoyaltyReward(id: string): Promise<boolean> {
+    const result = await db
+      .delete(loyaltyRewards)
+      .where(eq(loyaltyRewards.id, id));
+    return (result.rowCount || 0) > 0;
   }
 
   async redeemLoyaltyReward(userId: string, rewardId: string): Promise<{ redemption: LoyaltyRedemption; newBalance: number }> {
