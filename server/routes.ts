@@ -1143,19 +1143,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get transactions
       const transactions = await storage.getUserLoyaltyTransactions(user.id);
       
-      // Get available rewards
-      const availableRewards = await storage.getLoyaltyRewards();
+      // Extract user data from userBalance structure
+      const userData = userBalance ? userBalance.user : user;
+      
+      // Get available rewards based on user's tier
+      const availableRewards = await storage.getLoyaltyRewards(userData.loyaltyTier || 'bronze');
       
       // Get user redemptions
       const redemptions = await storage.getUserLoyaltyRedemptions(user.id);
-
-      // Extract user data from userBalance structure
-      const userData = userBalance ? userBalance.user : user;
       
       res.json({
         user: userData,
         transactions: transactions || [],
-        availableRewards: availableRewards.filter(r => r.isActive) || [],
+        availableRewards: availableRewards || [],
         redemptions: redemptions || []
       });
     } catch (error) {
