@@ -59,6 +59,13 @@ export function AdminRewards() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/admin/rewards/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/rewards'] });
+    },
+  });
+
   const categories = [
     { value: 'discount', label: 'Desconto', color: 'bg-blue-100 text-blue-800' },
     { value: 'freebie', label: 'Brinde', color: 'bg-green-100 text-green-800' },
@@ -364,6 +371,18 @@ export function AdminRewards() {
                       data-testid={`edit-reward-${reward.id}`}
                     >
                       <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (window.confirm('Tem certeza que deseja excluir esta recompensa?')) {
+                          deleteMutation.mutate(reward.id);
+                        }
+                      }}
+                      data-testid={`delete-reward-${reward.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
                 </div>
