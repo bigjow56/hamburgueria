@@ -155,9 +155,16 @@ export default function LoyaltyPage() {
       });
 
       // Clear form and show user data
+      const phoneToSearch = registerForm.phone;
       setRegisterForm({ name: "", phone: "", email: "", address: "" });
-      setPhone(registerForm.phone);
-      fetchLoyaltyData();
+      setPhone(phoneToSearch);
+      
+      // Automatically switch to login tab and fetch data
+      setTimeout(() => {
+        const loginTab = document.querySelector('[value="login"]') as HTMLElement;
+        loginTab?.click();
+        fetchLoyaltyData();
+      }, 1000);
     } catch (error) {
       toast({
         title: "Erro",
