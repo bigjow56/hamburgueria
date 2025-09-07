@@ -10,6 +10,10 @@ export const users = pgTable("users", {
   email: text("email").unique(),
   phone: text("phone").notNull(),
   address: text("address"),
+  // Sistema de fidelidade
+  pointsBalance: integer("points_balance").default(0),
+  loyaltyTier: text("loyalty_tier").default("bronze"), // bronze, silver, gold
+  totalPointsEarned: integer("total_points_earned").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -196,6 +200,49 @@ export const bannerThemes = pgTable("banner_themes", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// === SISTEMA DE FIDELIDADE ===
+
+// Loyalty transactions table (pontos ganhos/gastos)
+export const loyaltyTransactions = pgTable("loyalty_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  orderId: varchar("order_id").references(() => orders.id), // Opcional, para compras
+  type: text("type").notNull(), // 'purchase', 'reward_redemption', 'bonus', 'welcome'
+  pointsChange: integer("points_change").notNull(), // Positivo para ganhar, negativo para gastar
+  description: text("description").notNull(),
+  multiplier: decimal("multiplier", { precision: 3, scale: 2 }).default("1.00"), // Para multiplicadores de tier
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Loyalty rewards table (produtos/descontos que podem ser resgatados)
+export const loyaltyRewards = pgTable("loyalty_rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  pointsRequired: integer("points_required").notNull(),
+  category: text("category").notNull(), // 'discount', 'freebie', 'cashback', 'product'
+  value: decimal("value", { precision: 10, scale: 2 }), // Valor em R$ para descontos/cashback
+  discountPercentage: integer("discount_percentage"), // Para descontos percentuais
+  imageUrl: text("image_url"),
+  stock: integer("stock").default(-1), // -1 = ilimitado
+  isActive: boolean("is_active").default(true),
+  minTier: text("min_tier").default("bronze"), // Tier mínimo para resgatar
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Loyalty redemptions table (histórico de resgates)
+export const loyaltyRedemptions = pgTable("loyalty_redemptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  rewardId: varchar("reward_id").references(() => loyaltyRewards.id).notNull(),
+  pointsUsed: integer("points_used").notNull(),
+  status: text("status").default("pending"), // 'pending', 'approved', 'delivered', 'cancelled'
+  redemptionCode: text("redemption_code").unique(), // Código único para usar o benefício
+  expiresAt: timestamp("expires_at"), // Data de expiração do benefício
+  usedAt: timestamp("used_at"), // Quando foi utilizado
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -261,6 +308,23 @@ export const insertBannerThemeSchema = createInsertSchema(bannerThemes).omit({
   createdAt: true,
 });
 
+// === LOYALTY SYSTEM SCHEMAS ===
+
+export const insertLoyaltyTransactionSchema = createInsertSchema(loyaltyTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLoyaltyRewardSchema = createInsertSchema(loyaltyRewards).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLoyaltyRedemptionSchema = createInsertSchema(loyaltyRedemptions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -297,5 +361,16 @@ export type InsertOrderItemModification = z.infer<typeof insertOrderItemModifica
 
 export type BannerTheme = typeof bannerThemes.$inferSelect;
 export type InsertBannerTheme = z.infer<typeof insertBannerThemeSchema>;
+
+// === LOYALTY SYSTEM TYPES ===
+
+export type LoyaltyTransaction = typeof loyaltyTransactions.$inferSelect;
+export type InsertLoyaltyTransaction = z.infer<typeof insertLoyaltyTransactionSchema>;
+
+export type LoyaltyReward = typeof loyaltyRewards.$inferSelect;
+export type InsertLoyaltyReward = z.infer<typeof insertLoyaltyRewardSchema>;
+
+export type LoyaltyRedemption = typeof loyaltyRedemptions.$inferSelect;
+export type InsertLoyaltyRedemption = z.infer<typeof insertLoyaltyRedemptionSchema>;
 
 export type StoreSettings = typeof storeSettings.$inferSelect;
