@@ -61,7 +61,7 @@ import {
   type InsertCampaign,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, count } from "drizzle-orm";
+import { eq, desc, and, sql, count, or, gt } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -1196,6 +1196,54 @@ export class DatabaseStorage implements IStorage {
       activePointsRules: activeRules?.count || 0,
       activeCampaigns: activeCampaignsCount?.count || 0,
     };
+  }
+
+  // === ADMIN USERS METHODS ===
+
+  async getAllUsersWithLoyaltyData(): Promise<any[]> {
+    const allUsers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        phone: users.phone,
+        pointsBalance: users.pointsBalance,
+        totalPointsEarned: users.totalPointsEarned,
+        loyaltyTier: users.loyaltyTier,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(
+        or(
+          gt(users.pointsBalance, 0),
+          gt(users.totalPointsEarned, 0)
+        )
+      )
+      .orderBy(desc(users.totalPointsEarned));
+
+    return allUsers;
+  }
+
+  async getAllRedemptionsWithUserData(): Promise<any[]> {
+    const allRedemptions = await db
+      .select({
+        id: loyaltyRedemptions.id,
+        userId: loyaltyRedemptions.userId,
+        userName: users.name,
+        userEmail: users.email,
+        userPhone: users.phone,
+        rewardName: loyaltyRewards.name,
+        pointsUsed: loyaltyRedemptions.pointsUsed,
+        status: loyaltyRedemptions.status,
+        redemptionCode: loyaltyRedemptions.redemptionCode,
+        createdAt: loyaltyRedemptions.createdAt,
+      })
+      .from(loyaltyRedemptions)
+      .leftJoin(users, eq(loyaltyRedemptions.userId, users.id))
+      .leftJoin(loyaltyRewards, eq(loyaltyRedemptions.rewardId, loyaltyRewards.id))
+      .orderBy(desc(loyaltyRedemptions.createdAt));
+
+    return allRedemptions;
   }
 }
 

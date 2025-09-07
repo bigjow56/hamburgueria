@@ -1653,6 +1653,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === ADMIN USERS ROUTES ===
+
+  // GET /api/admin/users - Get all users with loyalty data
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUsersWithLoyaltyData();
+      res.json(users);
+    } catch (error) {
+      console.error("Get admin users error:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // GET /api/admin/redemptions - Get all redemptions with user data
+  app.get("/api/admin/redemptions", async (req, res) => {
+    try {
+      const redemptions = await storage.getAllRedemptionsWithUserData();
+      res.json(redemptions);
+    } catch (error) {
+      console.error("Get admin redemptions error:", error);
+      res.status(500).json({ message: "Failed to fetch redemptions" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
