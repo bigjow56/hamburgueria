@@ -7,6 +7,7 @@ interface WebhookPayload {
 
 export async function notifyProductChange(action: 'create' | 'update' | 'delete', productId: string, productData?: any) {
   const webhookUrl = process.env.N8N_URL_MENU;
+  console.log(`🔍 DEBUG: N8N_URL_MENU value:`, webhookUrl ? `${webhookUrl.substring(0, 30)}...` : 'undefined');
   
   const payload: WebhookPayload = {
     action,
