@@ -7,7 +7,8 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Star, Gift, Trophy, Crown, Award, Phone, UserPlus, LogIn } from "lucide-react";
+import { Star, Gift, Trophy, Crown, Award, Phone, UserPlus, LogIn, ArrowLeft } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface User {
   id: string;
@@ -66,6 +67,7 @@ const tierColors = {
 };
 
 export default function LoyaltyPage() {
+  const [, setLocation] = useLocation();
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loyaltyData, setLoyaltyData] = useState<LoyaltyData | null>(null);
@@ -246,6 +248,16 @@ export default function LoyaltyPage() {
     });
   };
 
+  const handleBackToHome = () => {
+    setLocation("/");
+  };
+
+  const handleLogout = () => {
+    setLoyaltyData(null);
+    setEmailOrPhone("");
+    setPassword("");
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8 text-center">
@@ -258,26 +270,27 @@ export default function LoyaltyPage() {
         </p>
       </div>
 
-      {/* Login/Register Tabs */}
-      <Card className="mb-6" data-testid="loyalty-access-card">
-        <CardHeader>
-          <CardTitle className="text-center">Acesse seu Programa de Fidelidade</CardTitle>
-          <CardDescription className="text-center">
-            Consulte seus pontos ou cadastre-se para começar a ganhar recompensas
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login" className="flex items-center gap-2" data-testid="tab-login">
-                <LogIn className="w-4 h-4" />
-                Consultar
-              </TabsTrigger>
-              <TabsTrigger value="register" className="flex items-center gap-2" data-testid="tab-register">
-                <UserPlus className="w-4 h-4" />
-                Cadastrar
-              </TabsTrigger>
-            </TabsList>
+      {/* Navigation/Access - Show different content based on login status */}
+      {!loyaltyData ? (
+        <Card className="mb-6" data-testid="loyalty-access-card">
+          <CardHeader>
+            <CardTitle className="text-center">Acesse seu Programa de Fidelidade</CardTitle>
+            <CardDescription className="text-center">
+              Consulte seus pontos ou cadastre-se para começar a ganhar recompensas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login" className="flex items-center gap-2" data-testid="tab-login">
+                  <LogIn className="w-4 h-4" />
+                  Consultar
+                </TabsTrigger>
+                <TabsTrigger value="register" className="flex items-center gap-2" data-testid="tab-register">
+                  <UserPlus className="w-4 h-4" />
+                  Cadastrar
+                </TabsTrigger>
+              </TabsList>
             
             <TabsContent value="login" className="space-y-4 mt-6">
               <div className="space-y-4">
@@ -413,6 +426,28 @@ export default function LoyaltyPage() {
           </Tabs>
         </CardContent>
       </Card>
+      ) : (
+        // When user is logged in, show navigation header
+        <div className="mb-6 flex items-center justify-between">
+          <Button
+            onClick={handleBackToHome}
+            variant="outline"
+            className="flex items-center gap-2"
+            data-testid="button-back-home"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar ao Menu
+          </Button>
+          <Button
+            onClick={handleLogout}
+            variant="ghost"
+            className="text-gray-500"
+            data-testid="button-logout"
+          >
+            Sair
+          </Button>
+        </div>
+      )}
 
       {loyaltyData && (
         <>
