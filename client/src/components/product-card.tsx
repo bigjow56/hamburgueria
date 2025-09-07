@@ -47,14 +47,14 @@ export default function ProductCard({ product, onAddToCart, showBadge = false }:
         
         {showBadge && (
           <div className="absolute top-2 right-2 z-10">
-            <div className="relative">
-              <div className="bg-gradient-to-r from-red-500 via-orange-500 to-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse">
+            <div className="relative animate-float">
+              <div className="bg-gradient-to-r from-red-500 via-orange-500 to-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-glow">
                 <div className="flex items-center space-x-1">
                   <span className="text-yellow-300">⭐</span>
                   <span>MAIS VENDIDO</span>
                 </div>
               </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-orange-500 to-red-600 rounded-full blur opacity-75 animate-pulse"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-orange-500 to-red-600 rounded-full blur opacity-75"></div>
             </div>
           </div>
         )}
@@ -95,7 +95,7 @@ export default function ProductCard({ product, onAddToCart, showBadge = false }:
         {/* Badge de urgência para produtos em promoção */}
         {(hasDiscount || product.isPromotion) && isAvailable && (
           <div className="absolute bottom-2 left-2 z-10">
-            <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold shadow-lg animate-pulse">
+            <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold shadow-lg animate-shake">
               <span>⚡ Últimas unidades</span>
             </div>
           </div>
