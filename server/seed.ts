@@ -1,6 +1,7 @@
 import { db } from './db';
 import { categories, products, storeSettings } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
+import { seedLoyaltyRewards } from '../scripts/seed-loyalty';
 
 export async function seedDatabase() {
   try {
@@ -196,6 +197,9 @@ export async function seedDatabase() {
     console.log('📦 Criadas 4 categorias');
     console.log('🍔 Criados 12 produtos');
     console.log('⚙️ Configurações da loja inicializadas');
+
+    // Populate loyalty rewards
+    await seedLoyaltyRewards();
     
   } catch (error) {
     console.error('❌ Erro ao popular banco de dados:', error);

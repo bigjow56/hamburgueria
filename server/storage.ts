@@ -12,6 +12,9 @@ import {
   productAdditionals,
   orderItemModifications,
   bannerThemes,
+  loyaltyTransactions,
+  loyaltyRewards,
+  loyaltyRedemptions,
   type User,
   type InsertUser,
   type Category,
@@ -37,6 +40,12 @@ import {
   type InsertOrderItemModification,
   type BannerTheme,
   type InsertBannerTheme,
+  type LoyaltyTransaction,
+  type InsertLoyaltyTransaction,
+  type LoyaltyReward,
+  type InsertLoyaltyReward,
+  type LoyaltyRedemption,
+  type InsertLoyaltyRedemption,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -44,6 +53,7 @@ import { eq, desc, and } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserByPhone(phone: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
   // Category operations
@@ -119,6 +129,18 @@ export interface IStorage {
   updateBannerTheme(id: string, banner: Partial<InsertBannerTheme>): Promise<BannerTheme | undefined>;
   activateBanner(id: string): Promise<BannerTheme | undefined>;
   deleteBannerTheme(id: string): Promise<boolean>;
+  
+  // Loyalty system
+  getUserLoyaltyBalance(userId: string): Promise<{ user: User; nextTier: { tier: string; pointsNeeded: number } } | undefined>;
+  getUserLoyaltyTransactions(userId: string): Promise<LoyaltyTransaction[]>;
+  addLoyaltyPoints(userId: string, data: { orderId?: string; amount: number; type: string; description: string }): Promise<{ transaction: LoyaltyTransaction; newBalance: number; newTier: string }>;
+  getLoyaltyRewards(userTier?: string): Promise<LoyaltyReward[]>;
+  createLoyaltyReward(reward: InsertLoyaltyReward): Promise<LoyaltyReward>;
+  updateLoyaltyReward(id: string, reward: Partial<InsertLoyaltyReward>): Promise<LoyaltyReward | undefined>;
+  redeemLoyaltyReward(userId: string, rewardId: string): Promise<{ redemption: LoyaltyRedemption; newBalance: number }>;
+  getUserLoyaltyRedemptions(userId: string): Promise<LoyaltyRedemption[]>;
+  getAllLoyaltyRedemptions(): Promise<LoyaltyRedemption[]>;
+  updateRedemptionStatus(id: string, status: string): Promise<LoyaltyRedemption | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -128,8 +150,18 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.phone, phone));
+    return user;
+  }
+
   async createUser(userData: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(userData).returning();
+    // Give welcome bonus points to new users
+    const [user] = await db.insert(users).values({
+      ...userData,
+      pointsBalance: 100, // Welcome bonus
+      totalPointsEarned: 100
+    }).returning();
     return user;
   }
 
@@ -651,6 +683,239 @@ export class DatabaseStorage implements IStorage {
       .delete(bannerThemes)
       .where(eq(bannerThemes.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  // === LOYALTY SYSTEM METHODS ===
+
+  private getTierMultiplier(tier: string): number {
+    switch (tier) {
+      case 'silver': return 1.2;
+      case 'gold': return 1.5;
+      default: return 1.0; // bronze
+    }
+  }
+
+  private calculateTier(totalPoints: number): string {
+    if (totalPoints >= 5000) return 'gold';
+    if (totalPoints >= 1000) return 'silver';
+    return 'bronze';
+  }
+
+  private getNextTierInfo(currentTier: string, totalPoints: number): { tier: string; pointsNeeded: number } {
+    switch (currentTier) {
+      case 'bronze':
+        return { tier: 'silver', pointsNeeded: 1000 - totalPoints };
+      case 'silver':
+        return { tier: 'gold', pointsNeeded: 5000 - totalPoints };
+      case 'gold':
+        return { tier: 'gold', pointsNeeded: 0 }; // Already at max tier
+      default:
+        return { tier: 'silver', pointsNeeded: 1000 - totalPoints };
+    }
+  }
+
+  async getUserLoyaltyBalance(userId: string): Promise<{ user: User; nextTier: { tier: string; pointsNeeded: number } } | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+
+    const nextTier = this.getNextTierInfo(user.loyaltyTier || 'bronze', user.totalPointsEarned || 0);
+    
+    return {
+      user,
+      nextTier
+    };
+  }
+
+  async getUserLoyaltyTransactions(userId: string): Promise<LoyaltyTransaction[]> {
+    return await db
+      .select()
+      .from(loyaltyTransactions)
+      .where(eq(loyaltyTransactions.userId, userId))
+      .orderBy(desc(loyaltyTransactions.createdAt));
+  }
+
+  async addLoyaltyPoints(userId: string, data: { orderId?: string; amount: number; type: string; description: string }): Promise<{ transaction: LoyaltyTransaction; newBalance: number; newTier: string }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Calculate points based on amount and tier multiplier
+    const multiplier = this.getTierMultiplier(user.loyaltyTier || 'bronze');
+    const pointsEarned = data.type === 'welcome' ? 100 : Math.floor(data.amount * multiplier);
+
+    // Create transaction
+    const [transaction] = await db
+      .insert(loyaltyTransactions)
+      .values({
+        userId,
+        orderId: data.orderId,
+        type: data.type,
+        pointsChange: pointsEarned,
+        description: data.description,
+        multiplier: multiplier.toString()
+      })
+      .returning();
+
+    // Update user balance and tier
+    const newBalance = (user.pointsBalance || 0) + pointsEarned;
+    const newTotalPoints = (user.totalPointsEarned || 0) + pointsEarned;
+    const newTier = this.calculateTier(newTotalPoints);
+
+    await db
+      .update(users)
+      .set({
+        pointsBalance: newBalance,
+        totalPointsEarned: newTotalPoints,
+        loyaltyTier: newTier
+      })
+      .where(eq(users.id, userId));
+
+    return {
+      transaction,
+      newBalance,
+      newTier
+    };
+  }
+
+  async getLoyaltyRewards(userTier: string = 'bronze'): Promise<LoyaltyReward[]> {
+    // Define tier hierarchy
+    const tierHierarchy = { bronze: 0, silver: 1, gold: 2 };
+    const userTierLevel = tierHierarchy[userTier as keyof typeof tierHierarchy] || 0;
+
+    const allRewards = await db
+      .select()
+      .from(loyaltyRewards)
+      .where(eq(loyaltyRewards.isActive, true))
+      .orderBy(loyaltyRewards.pointsRequired);
+
+    // Filter rewards based on user tier
+    return allRewards.filter(reward => {
+      const rewardTierLevel = tierHierarchy[reward.minTier as keyof typeof tierHierarchy] || 0;
+      return rewardTierLevel <= userTierLevel;
+    });
+  }
+
+  async createLoyaltyReward(rewardData: InsertLoyaltyReward): Promise<LoyaltyReward> {
+    const [reward] = await db
+      .insert(loyaltyRewards)
+      .values(rewardData)
+      .returning();
+    return reward;
+  }
+
+  async updateLoyaltyReward(id: string, rewardData: Partial<InsertLoyaltyReward>): Promise<LoyaltyReward | undefined> {
+    const [reward] = await db
+      .update(loyaltyRewards)
+      .set(rewardData)
+      .where(eq(loyaltyRewards.id, id))
+      .returning();
+    return reward;
+  }
+
+  async redeemLoyaltyReward(userId: string, rewardId: string): Promise<{ redemption: LoyaltyRedemption; newBalance: number }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const [reward] = await db
+      .select()
+      .from(loyaltyRewards)
+      .where(eq(loyaltyRewards.id, rewardId));
+
+    if (!reward) {
+      throw new Error("Reward not found");
+    }
+
+    if (!reward.isActive) {
+      throw new Error("Reward is not available");
+    }
+
+    if ((user.pointsBalance || 0) < reward.pointsRequired) {
+      throw new Error("Insufficient points");
+    }
+
+    // Check stock if applicable
+    if (reward.stock !== null && reward.stock !== -1 && reward.stock <= 0) {
+      throw new Error("Reward out of stock");
+    }
+
+    // Generate unique redemption code
+    const redemptionCode = `${reward.category.toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+
+    // Create redemption
+    const [redemption] = await db
+      .insert(loyaltyRedemptions)
+      .values({
+        userId,
+        rewardId,
+        pointsUsed: reward.pointsRequired,
+        redemptionCode,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+      })
+      .returning();
+
+    // Create negative points transaction
+    await db
+      .insert(loyaltyTransactions)
+      .values({
+        userId,
+        type: 'reward_redemption',
+        pointsChange: -reward.pointsRequired,
+        description: `Resgate: ${reward.name}`
+      });
+
+    // Update user balance
+    const newBalance = (user.pointsBalance || 0) - reward.pointsRequired;
+    await db
+      .update(users)
+      .set({ pointsBalance: newBalance })
+      .where(eq(users.id, userId));
+
+    // Update stock if applicable
+    if (reward.stock !== null && reward.stock !== -1) {
+      await db
+        .update(loyaltyRewards)
+        .set({ stock: reward.stock - 1 })
+        .where(eq(loyaltyRewards.id, rewardId));
+    }
+
+    return {
+      redemption,
+      newBalance
+    };
+  }
+
+  async getUserLoyaltyRedemptions(userId: string): Promise<LoyaltyRedemption[]> {
+    return await db
+      .select()
+      .from(loyaltyRedemptions)
+      .where(eq(loyaltyRedemptions.userId, userId))
+      .orderBy(desc(loyaltyRedemptions.createdAt));
+  }
+
+  async getAllLoyaltyRedemptions(): Promise<LoyaltyRedemption[]> {
+    return await db
+      .select()
+      .from(loyaltyRedemptions)
+      .orderBy(desc(loyaltyRedemptions.createdAt));
+  }
+
+  async updateRedemptionStatus(id: string, status: string): Promise<LoyaltyRedemption | undefined> {
+    const updateData: any = { status };
+    
+    if (status === 'delivered') {
+      updateData.usedAt = new Date();
+    }
+
+    const [redemption] = await db
+      .update(loyaltyRedemptions)
+      .set(updateData)
+      .where(eq(loyaltyRedemptions.id, id))
+      .returning();
+    
+    return redemption;
   }
 }
 

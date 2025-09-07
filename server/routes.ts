@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema } from "@shared/schema";
+import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema, insertLoyaltyRewardSchema, insertLoyaltyRedemptionSchema } from "@shared/schema";
 import { z } from "zod";
 import { notifyProductChange } from "./webhook";
 
@@ -373,6 +373,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (webhookError) {
         console.error(`❌ Erro no webhook n8n para pedido #${order.orderNumber}:`, webhookError);
         // Não interrompe o processo se o webhook falhar
+      }
+
+      // Add loyalty points if user exists (try to find by phone)
+      try {
+        // First, try to find or create user based on phone
+        let user = await storage.getUserByPhone(order.customerPhone);
+        
+        if (!user) {
+          // Create new user for loyalty program (already includes welcome bonus in createUser method)
+          user = await storage.createUser({
+            name: order.customerName,
+            email: order.customerEmail || '',
+            phone: order.customerPhone,
+            address: order.deliveryType === 'delivery' ? 
+              `${order.streetName}, ${order.houseNumber}, ${order.neighborhood}` : undefined
+          });
+          
+          // Create welcome bonus transaction record
+          await storage.addLoyaltyPoints(user.id, {
+            amount: 0, // No purchase amount for welcome bonus
+            type: 'welcome',
+            description: 'Bônus de boas-vindas - 100 pontos!'
+          });
+          
+          console.log(`🎉 Novo usuário criado e recebeu bônus de boas-vindas: ${user.name}`);
+        }
+
+        // Add points for this purchase (1 point per R$1.00)
+        const loyaltyResult = await storage.addLoyaltyPoints(user.id, {
+          orderId: order.id,
+          amount: parseFloat(order.total),
+          type: 'purchase',
+          description: `Compra - Pedido #${order.orderNumber}`
+        });
+
+        console.log(`💎 Pontos adicionados para ${user.name}: ${loyaltyResult.transaction.pointsChange} pontos (Tier: ${loyaltyResult.newTier})`);
+        
+      } catch (loyaltyError) {
+        console.error(`⚠️ Erro ao processar pontos de fidelidade para pedido #${order.orderNumber}:`, loyaltyError);
+        // Não interrompe o processo se a fidelidade falhar
       }
 
       res.status(201).json({ 
@@ -1006,6 +1046,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting banner:", error);
       res.status(500).json({ message: "Failed to delete banner" });
+    }
+  });
+
+  // === LOYALTY SYSTEM ROUTES ===
+
+  // GET /api/loyalty/user/:userId/balance - Get user points balance and tier
+  app.get("/api/loyalty/user/:userId/balance", async (req, res) => {
+    try {
+      const userBalance = await storage.getUserLoyaltyBalance(req.params.userId);
+      if (!userBalance) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(userBalance);
+    } catch (error) {
+      console.error("Error fetching user loyalty balance:", error);
+      res.status(500).json({ message: "Failed to fetch loyalty balance" });
+    }
+  });
+
+  // GET /api/loyalty/user/:userId/transactions - Get user loyalty transaction history
+  app.get("/api/loyalty/user/:userId/transactions", async (req, res) => {
+    try {
+      const transactions = await storage.getUserLoyaltyTransactions(req.params.userId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching user loyalty transactions:", error);
+      res.status(500).json({ message: "Failed to fetch loyalty transactions" });
+    }
+  });
+
+  // POST /api/loyalty/user/:userId/points - Add points for purchase (automatic when order is completed)
+  app.post("/api/loyalty/user/:userId/points", async (req, res) => {
+    try {
+      const { orderId, amount, type = "purchase", description } = req.body;
+      const result = await storage.addLoyaltyPoints(req.params.userId, {
+        orderId,
+        amount: parseFloat(amount),
+        type,
+        description: description || `Pontos ganhos em compra`
+      });
+      res.json(result);
+    } catch (error) {
+      console.error("Error adding loyalty points:", error);
+      res.status(500).json({ message: "Failed to add loyalty points" });
+    }
+  });
+
+  // GET /api/loyalty/rewards - Get all available rewards
+  app.get("/api/loyalty/rewards", async (req, res) => {
+    try {
+      const userTier = req.query.userTier as string || 'bronze';
+      const rewards = await storage.getLoyaltyRewards(userTier);
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error fetching loyalty rewards:", error);
+      res.status(500).json({ message: "Failed to fetch loyalty rewards" });
+    }
+  });
+
+  // POST /api/loyalty/rewards - Create new reward (admin only)
+  app.post("/api/loyalty/rewards", async (req, res) => {
+    try {
+      const result = insertLoyaltyRewardSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid reward data", errors: result.error.errors });
+      }
+      const reward = await storage.createLoyaltyReward(result.data);
+      res.status(201).json(reward);
+    } catch (error) {
+      console.error("Error creating loyalty reward:", error);
+      res.status(500).json({ message: "Failed to create loyalty reward" });
+    }
+  });
+
+  // PUT /api/loyalty/rewards/:id - Update reward (admin only)
+  app.put("/api/loyalty/rewards/:id", async (req, res) => {
+    try {
+      const result = insertLoyaltyRewardSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid reward data", errors: result.error.errors });
+      }
+      const reward = await storage.updateLoyaltyReward(req.params.id, result.data);
+      if (!reward) {
+        return res.status(404).json({ message: "Reward not found" });
+      }
+      res.json(reward);
+    } catch (error) {
+      console.error("Error updating loyalty reward:", error);
+      res.status(500).json({ message: "Failed to update loyalty reward" });
+    }
+  });
+
+  // POST /api/loyalty/user/:userId/redeem/:rewardId - Redeem a reward
+  app.post("/api/loyalty/user/:userId/redeem/:rewardId", async (req, res) => {
+    try {
+      const result = await storage.redeemLoyaltyReward(req.params.userId, req.params.rewardId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error redeeming loyalty reward:", error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to redeem reward"
+      });
+    }
+  });
+
+  // GET /api/loyalty/user/:userId/redemptions - Get user redemption history
+  app.get("/api/loyalty/user/:userId/redemptions", async (req, res) => {
+    try {
+      const redemptions = await storage.getUserLoyaltyRedemptions(req.params.userId);
+      res.json(redemptions);
+    } catch (error) {
+      console.error("Error fetching user redemptions:", error);
+      res.status(500).json({ message: "Failed to fetch redemptions" });
+    }
+  });
+
+  // GET /api/loyalty/admin/redemptions - Get all redemptions for admin
+  app.get("/api/loyalty/admin/redemptions", async (req, res) => {
+    try {
+      const redemptions = await storage.getAllLoyaltyRedemptions();
+      res.json(redemptions);
+    } catch (error) {
+      console.error("Error fetching all redemptions:", error);
+      res.status(500).json({ message: "Failed to fetch redemptions" });
+    }
+  });
+
+  // PUT /api/loyalty/admin/redemptions/:id/status - Update redemption status (admin only)
+  app.put("/api/loyalty/admin/redemptions/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!['pending', 'approved', 'delivered', 'cancelled'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      const redemption = await storage.updateRedemptionStatus(req.params.id, status);
+      if (!redemption) {
+        return res.status(404).json({ message: "Redemption not found" });
+      }
+      res.json(redemption);
+    } catch (error) {
+      console.error("Error updating redemption status:", error);
+      res.status(500).json({ message: "Failed to update redemption status" });
     }
   });
 
