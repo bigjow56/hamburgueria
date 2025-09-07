@@ -1149,8 +1149,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user redemptions
       const redemptions = await storage.getUserLoyaltyRedemptions(user.id);
 
+      // Extract user data from userBalance structure
+      const userData = userBalance ? userBalance.user : user;
+      
       res.json({
-        user: userBalance || user,
+        user: userData,
         transactions: transactions || [],
         availableRewards: availableRewards.filter(r => r.isActive) || [],
         redemptions: redemptions || []
@@ -1201,8 +1204,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user redemptions
       const redemptions = await storage.getUserLoyaltyRedemptions(user.id);
 
+      // Extract user data from userBalance structure  
+      const userData = userBalance ? userBalance.user : user;
+      
       res.json({
-        user: userBalance || user,
+        user: userData,
         transactions: transactions || [],
         availableRewards: availableRewards.filter(r => r.isActive) || [],
         redemptions: redemptions || []
