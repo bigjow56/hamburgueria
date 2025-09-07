@@ -1051,6 +1051,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // === LOYALTY SYSTEM ROUTES ===
 
+  // POST /api/loyalty/register - Register new user for loyalty program
+  app.post("/api/loyalty/register", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if user already exists by phone
+      const existingUser = await storage.getUserByPhone(userData.phone);
+      if (existingUser) {
+        return res.status(409).json({ 
+          message: "User already exists with this phone number",
+          error: "USER_EXISTS" 
+        });
+      }
+
+      // Create new user (includes welcome bonus)
+      const newUser = await storage.createUser(userData);
+      
+      // Create welcome bonus transaction record
+      await storage.addLoyaltyPoints(newUser.id, {
+        amount: 0, // Welcome bonus already added in createUser
+        type: 'welcome',
+        description: 'Bônus de boas-vindas - 100 pontos!'
+      });
+
+      // Get the full user data with balance
+      const userBalance = await storage.getUserLoyaltyBalance(newUser.id);
+      
+      res.status(201).json({
+        success: true,
+        user: userBalance || newUser,
+        message: "Usuário cadastrado com sucesso! Você recebeu 100 pontos de bônus!"
+      });
+    } catch (error) {
+      console.error("Error registering user:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ 
+          message: "Invalid user data", 
+          errors: error.errors,
+          error: "VALIDATION_ERROR" 
+        });
+      } else {
+        res.status(500).json({ 
+          message: "Failed to register user",
+          error: "INTERNAL_ERROR" 
+        });
+      }
+    }
+  });
+
+  // GET /api/loyalty/:phone - Get user loyalty data by phone number
+  app.get("/api/loyalty/:phone", async (req, res) => {
+    try {
+      const phone = decodeURIComponent(req.params.phone);
+      const user = await storage.getUserByPhone(phone);
+      
+      if (!user) {
+        return res.status(404).json({ 
+          message: "User not found",
+          error: "NO_USER_FOUND" 
+        });
+      }
+
+      // Get user balance and tier
+      const userBalance = await storage.getUserLoyaltyBalance(user.id);
+      
+      // Get transactions
+      const transactions = await storage.getUserLoyaltyTransactions(user.id);
+      
+      // Get available rewards
+      const availableRewards = await storage.getLoyaltyRewards();
+      
+      // Get user redemptions
+      const redemptions = await storage.getUserLoyaltyRedemptions(user.id);
+
+      res.json({
+        user: userBalance || user,
+        transactions: transactions || [],
+        availableRewards: availableRewards.filter(r => r.isActive) || [],
+        redemptions: redemptions || []
+      });
+    } catch (error) {
+      console.error("Error fetching loyalty data by phone:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch loyalty data",
+        error: "INTERNAL_ERROR" 
+      });
+    }
+  });
+
   // GET /api/loyalty/user/:userId/balance - Get user points balance and tier
   app.get("/api/loyalty/user/:userId/balance", async (req, res) => {
     try {
@@ -1135,6 +1224,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating loyalty reward:", error);
       res.status(500).json({ message: "Failed to update loyalty reward" });
+    }
+  });
+
+  // POST /api/loyalty/redeem - Redeem a reward
+  app.post("/api/loyalty/redeem", async (req, res) => {
+    try {
+      const { userId, rewardId } = req.body;
+      
+      if (!userId || !rewardId) {
+        return res.status(400).json({ message: "userId and rewardId are required" });
+      }
+
+      const result = await storage.redeemLoyaltyReward(userId, rewardId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error redeeming loyalty reward:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Failed to redeem reward" });
+      }
     }
   });
 
