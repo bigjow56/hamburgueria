@@ -149,6 +149,7 @@ export interface IStorage {
   getUserLoyaltyTransactions(userId: string): Promise<LoyaltyTransaction[]>;
   addLoyaltyPoints(userId: string, data: { orderId?: string; amount: number; type: string; description: string }): Promise<{ transaction: LoyaltyTransaction; newBalance: number; newTier: string }>;
   getLoyaltyRewards(userTier?: string): Promise<LoyaltyReward[]>;
+  getAllLoyaltyRewardsAdmin(): Promise<LoyaltyReward[]>;
   createLoyaltyReward(reward: InsertLoyaltyReward): Promise<LoyaltyReward>;
   updateLoyaltyReward(id: string, reward: Partial<InsertLoyaltyReward>): Promise<LoyaltyReward | undefined>;
   deleteLoyaltyReward(id: string): Promise<boolean>;
@@ -858,6 +859,14 @@ export class DatabaseStorage implements IStorage {
       const rewardTierLevel = tierHierarchy[reward.minTier as keyof typeof tierHierarchy] || 0;
       return rewardTierLevel <= userTierLevel;
     });
+  }
+
+  async getAllLoyaltyRewardsAdmin(): Promise<LoyaltyReward[]> {
+    // Admin deve ver todas as recompensas, sem filtro de tier ou ativo
+    return await db
+      .select()
+      .from(loyaltyRewards)
+      .orderBy(loyaltyRewards.pointsRequired);
   }
 
   async createLoyaltyReward(rewardData: InsertLoyaltyReward): Promise<LoyaltyReward> {

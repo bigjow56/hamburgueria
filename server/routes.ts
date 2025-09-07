@@ -1593,7 +1593,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin rewards management routes (alias para /api/loyalty/rewards com formatação admin)
   app.get("/api/admin/rewards", async (req, res) => {
     try {
-      const rewards = await storage.getLoyaltyRewards();
+      // Admin deve ver todas as recompensas, sem filtro de tier - busca direto do storage sem filtro
+      const rewards = await storage.getAllLoyaltyRewardsAdmin();
       res.json(rewards);
     } catch (error) {
       console.error("Get admin rewards error:", error);
