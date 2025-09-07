@@ -1,0 +1,56 @@
+2. Badges "Mais Vendido" Melhorados:
+
+Design mais impactante: background gradiente (vermelho/laranja), bordas arredondadas
+Posicionamento estratégico (canto superior direito da imagem)
+Texto branco em negrito com sombra sutil
+Animação leve (pulse ou glow) para chamar atenção
+Ícone de fogo 🔥 ou estrela ⭐ junto ao texto
+
+3. Botões de Ação Otimizados:
+
+Substituir "+" por "Adicionar" ou "+" com texto "Add"
+Cor de fundo mais contrastante (verde vibrante)
+Hover/tap effects mais responsivos
+Feedback visual imediato quando clicado
+Considerar adicionar contador visual no botão após adição
+
+4. Micro-melhorias de Conversão:
+
+Destacar produtos em promoção com badge "OFERTA"
+Adicionar indicação de desconto percentual quando aplicável
+Melhorar contraste das descrições dos produtos
+Adicionar avaliações com estrelas (mesmo que fictícias: ⭐⭐⭐⭐⭐)
+Otimizar espaçamento para melhor hierarquia visual
+
+5. Psicologia de Vendas:
+
+Usar cores quentes (vermelhos, laranjas) para CTAs principais
+Criar sensação de urgência com "Últimas unidades" em produtos específicos
+Destacar economias: "Economize R$ X" em combos
+Usar palavras-chave de conversão: "Popular", "Favorito", "Recomendado"
+
+6. Melhorias Técnicas:
+
+Garantir que todas as animações sejam suaves (60fps)
+Otimizar carregamento de imagens
+Feedback tátil no mobile (vibração leve nos toques)
+Estados visuais claros (loading, sucesso, erro)
+
+Diretrizes Importantes:
+
+Manter layout responsivo atual (2 produtos/linha mobile)
+Focar em micro-interações que geram dopamina
+Usar cores que estimulam apetite (vermelhos, laranjas, amarelos)
+Priorizar clareza das informações essenciais (nome, preço, ação)
+Implementar princípios de UX para e-commerce mobile
+
+Resultado Esperado:
+Interface que mantém a usabilidade atual mas com elementos visuais que:
+
+Aumentam a taxa de conversão
+Reduzem fricção na decisão de compra
+Criam senso de urgência apropriado
+Destacam produtos estratégicos
+Melhoram a experiência geral do usuário
+
+Implemente essas melhorias de forma sutil mas efetiva, focando no impacto psicológico que leva a mais vendas.
