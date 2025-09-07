@@ -1365,6 +1365,231 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === ADMIN PANEL API ROUTES ===
+
+  // Admin login/authentication
+  app.post("/api/admin/login", async (req, res) => {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required" });
+    }
+
+    try {
+      const admin = await storage.authenticateAdmin(username, password);
+      if (!admin) {
+        return res.status(401).json({ message: "Invalid credentials or inactive account" });
+      }
+
+      res.json({ 
+        success: true, 
+        admin: { 
+          id: admin.id, 
+          username: admin.username, 
+          email: admin.email, 
+          role: admin.role 
+        } 
+      });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin dashboard stats
+  app.get("/api/admin/dashboard/stats", async (req, res) => {
+    try {
+      const stats = await storage.getAdminDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Dashboard stats error:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard statistics" });
+    }
+  });
+
+  // === POINTS RULES ROUTES ===
+  app.get("/api/admin/points-rules", async (req, res) => {
+    try {
+      const isActive = req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined;
+      const rules = await storage.getPointsRules(isActive);
+      res.json(rules);
+    } catch (error) {
+      console.error("Get points rules error:", error);
+      res.status(500).json({ message: "Failed to fetch points rules" });
+    }
+  });
+
+  app.post("/api/admin/points-rules", async (req, res) => {
+    try {
+      const rule = await storage.createPointsRule(req.body);
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Create points rule error:", error);
+      res.status(500).json({ message: "Failed to create points rule" });
+    }
+  });
+
+  app.get("/api/admin/points-rules/:id", async (req, res) => {
+    try {
+      const rule = await storage.getPointsRule(req.params.id);
+      if (!rule) {
+        return res.status(404).json({ message: "Points rule not found" });
+      }
+      res.json(rule);
+    } catch (error) {
+      console.error("Get points rule error:", error);
+      res.status(500).json({ message: "Failed to fetch points rule" });
+    }
+  });
+
+  app.put("/api/admin/points-rules/:id", async (req, res) => {
+    try {
+      const rule = await storage.updatePointsRule(req.params.id, req.body);
+      if (!rule) {
+        return res.status(404).json({ message: "Points rule not found" });
+      }
+      res.json(rule);
+    } catch (error) {
+      console.error("Update points rule error:", error);
+      res.status(500).json({ message: "Failed to update points rule" });
+    }
+  });
+
+  app.delete("/api/admin/points-rules/:id", async (req, res) => {
+    try {
+      const success = await storage.deletePointsRule(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Points rule not found" });
+      }
+      res.json({ message: "Points rule deleted successfully" });
+    } catch (error) {
+      console.error("Delete points rule error:", error);
+      res.status(500).json({ message: "Failed to delete points rule" });
+    }
+  });
+
+  // === LOYALTY TIERS CONFIG ROUTES ===
+  app.get("/api/admin/loyalty-tiers", async (req, res) => {
+    try {
+      const isActive = req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined;
+      const tiers = await storage.getLoyaltyTiersConfigs(isActive);
+      res.json(tiers);
+    } catch (error) {
+      console.error("Get loyalty tiers error:", error);
+      res.status(500).json({ message: "Failed to fetch loyalty tiers" });
+    }
+  });
+
+  app.post("/api/admin/loyalty-tiers", async (req, res) => {
+    try {
+      const tier = await storage.createLoyaltyTierConfig(req.body);
+      res.status(201).json(tier);
+    } catch (error) {
+      console.error("Create loyalty tier error:", error);
+      res.status(500).json({ message: "Failed to create loyalty tier" });
+    }
+  });
+
+  app.get("/api/admin/loyalty-tiers/:id", async (req, res) => {
+    try {
+      const tier = await storage.getLoyaltyTierConfig(req.params.id);
+      if (!tier) {
+        return res.status(404).json({ message: "Loyalty tier not found" });
+      }
+      res.json(tier);
+    } catch (error) {
+      console.error("Get loyalty tier error:", error);
+      res.status(500).json({ message: "Failed to fetch loyalty tier" });
+    }
+  });
+
+  app.put("/api/admin/loyalty-tiers/:id", async (req, res) => {
+    try {
+      const tier = await storage.updateLoyaltyTierConfig(req.params.id, req.body);
+      if (!tier) {
+        return res.status(404).json({ message: "Loyalty tier not found" });
+      }
+      res.json(tier);
+    } catch (error) {
+      console.error("Update loyalty tier error:", error);
+      res.status(500).json({ message: "Failed to update loyalty tier" });
+    }
+  });
+
+  app.delete("/api/admin/loyalty-tiers/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteLoyaltyTierConfig(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Loyalty tier not found" });
+      }
+      res.json({ message: "Loyalty tier deleted successfully" });
+    } catch (error) {
+      console.error("Delete loyalty tier error:", error);
+      res.status(500).json({ message: "Failed to delete loyalty tier" });
+    }
+  });
+
+  // === CAMPAIGNS ROUTES ===
+  app.get("/api/admin/campaigns", async (req, res) => {
+    try {
+      const isActive = req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined;
+      const campaigns = await storage.getCampaigns(isActive);
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Get campaigns error:", error);
+      res.status(500).json({ message: "Failed to fetch campaigns" });
+    }
+  });
+
+  app.post("/api/admin/campaigns", async (req, res) => {
+    try {
+      const campaign = await storage.createCampaign(req.body);
+      res.status(201).json(campaign);
+    } catch (error) {
+      console.error("Create campaign error:", error);
+      res.status(500).json({ message: "Failed to create campaign" });
+    }
+  });
+
+  app.get("/api/admin/campaigns/:id", async (req, res) => {
+    try {
+      const campaign = await storage.getCampaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error) {
+      console.error("Get campaign error:", error);
+      res.status(500).json({ message: "Failed to fetch campaign" });
+    }
+  });
+
+  app.put("/api/admin/campaigns/:id", async (req, res) => {
+    try {
+      const campaign = await storage.updateCampaign(req.params.id, req.body);
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error) {
+      console.error("Update campaign error:", error);
+      res.status(500).json({ message: "Failed to update campaign" });
+    }
+  });
+
+  app.delete("/api/admin/campaigns/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteCampaign(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      res.json({ message: "Campaign deleted successfully" });
+    } catch (error) {
+      console.error("Delete campaign error:", error);
+      res.status(500).json({ message: "Failed to delete campaign" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

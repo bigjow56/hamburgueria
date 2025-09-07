@@ -46,9 +46,22 @@ import {
   type InsertLoyaltyReward,
   type LoyaltyRedemption,
   type InsertLoyaltyRedemption,
+  // Admin system imports
+  adminUsers,
+  pointsRules,
+  loyaltyTiersConfig,
+  campaigns,
+  type AdminUser,
+  type InsertAdminUser,
+  type PointsRule,
+  type InsertPointsRule,
+  type LoyaltyTiersConfig,
+  type InsertLoyaltyTiersConfig,
+  type Campaign,
+  type InsertCampaign,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql, count } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -142,6 +155,50 @@ export interface IStorage {
   getUserLoyaltyRedemptions(userId: string): Promise<LoyaltyRedemption[]>;
   getAllLoyaltyRedemptions(): Promise<LoyaltyRedemption[]>;
   updateRedemptionStatus(id: string, status: string): Promise<LoyaltyRedemption | undefined>;
+
+  // === ADMIN SYSTEM OPERATIONS ===
+  
+  // Admin users operations
+  createAdminUser(admin: InsertAdminUser): Promise<AdminUser>;
+  getAdminUser(id: string): Promise<AdminUser | undefined>;
+  getAdminUserByUsername(username: string): Promise<AdminUser | undefined>;
+  getAdminUserByEmail(email: string): Promise<AdminUser | undefined>;
+  authenticateAdmin(username: string, password: string): Promise<AdminUser | undefined>;
+  updateAdminUser(id: string, updates: Partial<InsertAdminUser>): Promise<AdminUser | undefined>;
+
+  // Points rules operations
+  createPointsRule(rule: InsertPointsRule): Promise<PointsRule>;
+  getPointsRules(isActive?: boolean): Promise<PointsRule[]>;
+  getPointsRule(id: string): Promise<PointsRule | undefined>;
+  updatePointsRule(id: string, updates: Partial<InsertPointsRule>): Promise<PointsRule | undefined>;
+  deletePointsRule(id: string): Promise<boolean>;
+
+  // Loyalty tiers config operations
+  createLoyaltyTierConfig(config: InsertLoyaltyTiersConfig): Promise<LoyaltyTiersConfig>;
+  getLoyaltyTiersConfigs(isActive?: boolean): Promise<LoyaltyTiersConfig[]>;
+  getLoyaltyTierConfig(id: string): Promise<LoyaltyTiersConfig | undefined>;
+  getLoyaltyTierConfigByName(name: string): Promise<LoyaltyTiersConfig | undefined>;
+  updateLoyaltyTierConfig(id: string, updates: Partial<InsertLoyaltyTiersConfig>): Promise<LoyaltyTiersConfig | undefined>;
+  deleteLoyaltyTierConfig(id: string): Promise<boolean>;
+
+  // Campaigns operations
+  createCampaign(campaign: InsertCampaign): Promise<Campaign>;
+  getCampaigns(isActive?: boolean): Promise<Campaign[]>;
+  getCampaign(id: string): Promise<Campaign | undefined>;
+  updateCampaign(id: string, updates: Partial<InsertCampaign>): Promise<Campaign | undefined>;
+  deleteCampaign(id: string): Promise<boolean>;
+  getActiveCampaigns(): Promise<Campaign[]>;
+
+  // Admin dashboard statistics
+  getAdminDashboardStats(): Promise<{
+    totalRewards: number;
+    activeRewards: number;
+    totalRedemptions: number;
+    totalUsers: number;
+    totalPointsDistributed: number;
+    activePointsRules: number;
+    activeCampaigns: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -922,6 +979,201 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return redemption;
+  }
+
+  // === ADMIN SYSTEM IMPLEMENTATIONS ===
+
+  // Admin users operations
+  async createAdminUser(admin: InsertAdminUser): Promise<AdminUser> {
+    const [adminUser] = await db.insert(adminUsers).values(admin).returning();
+    return adminUser;
+  }
+
+  async getAdminUser(id: string): Promise<AdminUser | undefined> {
+    const [adminUser] = await db.select().from(adminUsers).where(eq(adminUsers.id, id));
+    return adminUser;
+  }
+
+  async getAdminUserByUsername(username: string): Promise<AdminUser | undefined> {
+    const [adminUser] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
+    return adminUser;
+  }
+
+  async getAdminUserByEmail(email: string): Promise<AdminUser | undefined> {
+    const [adminUser] = await db.select().from(adminUsers).where(eq(adminUsers.email, email));
+    return adminUser;
+  }
+
+  async authenticateAdmin(username: string, password: string): Promise<AdminUser | undefined> {
+    const admin = await this.getAdminUserByUsername(username);
+    if (!admin || !admin.isActive) return undefined;
+    
+    // In a real app, you would hash and compare passwords here
+    if (admin.password === password) {
+      // Update last login
+      await db
+        .update(adminUsers)
+        .set({ lastLogin: new Date() })
+        .where(eq(adminUsers.id, admin.id));
+      return admin;
+    }
+    return undefined;
+  }
+
+  async updateAdminUser(id: string, updates: Partial<InsertAdminUser>): Promise<AdminUser | undefined> {
+    const [adminUser] = await db
+      .update(adminUsers)
+      .set(updates)
+      .where(eq(adminUsers.id, id))
+      .returning();
+    return adminUser;
+  }
+
+  // Points rules operations
+  async createPointsRule(rule: InsertPointsRule): Promise<PointsRule> {
+    const [pointsRule] = await db.insert(pointsRules).values(rule).returning();
+    return pointsRule;
+  }
+
+  async getPointsRules(isActive?: boolean): Promise<PointsRule[]> {
+    const query = db.select().from(pointsRules);
+    if (isActive !== undefined) {
+      query.where(eq(pointsRules.isActive, isActive));
+    }
+    return query.orderBy(desc(pointsRules.createdAt));
+  }
+
+  async getPointsRule(id: string): Promise<PointsRule | undefined> {
+    const [rule] = await db.select().from(pointsRules).where(eq(pointsRules.id, id));
+    return rule;
+  }
+
+  async updatePointsRule(id: string, updates: Partial<InsertPointsRule>): Promise<PointsRule | undefined> {
+    const [rule] = await db
+      .update(pointsRules)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(pointsRules.id, id))
+      .returning();
+    return rule;
+  }
+
+  async deletePointsRule(id: string): Promise<boolean> {
+    const result = await db.delete(pointsRules).where(eq(pointsRules.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Loyalty tiers config operations
+  async createLoyaltyTierConfig(config: InsertLoyaltyTiersConfig): Promise<LoyaltyTiersConfig> {
+    const [tierConfig] = await db.insert(loyaltyTiersConfig).values(config).returning();
+    return tierConfig;
+  }
+
+  async getLoyaltyTiersConfigs(isActive?: boolean): Promise<LoyaltyTiersConfig[]> {
+    const query = db.select().from(loyaltyTiersConfig);
+    if (isActive !== undefined) {
+      query.where(eq(loyaltyTiersConfig.isActive, isActive));
+    }
+    return query.orderBy(loyaltyTiersConfig.sortOrder);
+  }
+
+  async getLoyaltyTierConfig(id: string): Promise<LoyaltyTiersConfig | undefined> {
+    const [config] = await db.select().from(loyaltyTiersConfig).where(eq(loyaltyTiersConfig.id, id));
+    return config;
+  }
+
+  async getLoyaltyTierConfigByName(name: string): Promise<LoyaltyTiersConfig | undefined> {
+    const [config] = await db.select().from(loyaltyTiersConfig).where(eq(loyaltyTiersConfig.name, name));
+    return config;
+  }
+
+  async updateLoyaltyTierConfig(id: string, updates: Partial<InsertLoyaltyTiersConfig>): Promise<LoyaltyTiersConfig | undefined> {
+    const [config] = await db
+      .update(loyaltyTiersConfig)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(loyaltyTiersConfig.id, id))
+      .returning();
+    return config;
+  }
+
+  async deleteLoyaltyTierConfig(id: string): Promise<boolean> {
+    const result = await db.delete(loyaltyTiersConfig).where(eq(loyaltyTiersConfig.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Campaigns operations
+  async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
+    const [newCampaign] = await db.insert(campaigns).values(campaign).returning();
+    return newCampaign;
+  }
+
+  async getCampaigns(isActive?: boolean): Promise<Campaign[]> {
+    const query = db.select().from(campaigns);
+    if (isActive !== undefined) {
+      query.where(eq(campaigns.isActive, isActive));
+    }
+    return query.orderBy(desc(campaigns.createdAt));
+  }
+
+  async getCampaign(id: string): Promise<Campaign | undefined> {
+    const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
+    return campaign;
+  }
+
+  async updateCampaign(id: string, updates: Partial<InsertCampaign>): Promise<Campaign | undefined> {
+    const [campaign] = await db
+      .update(campaigns)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(campaigns.id, id))
+      .returning();
+    return campaign;
+  }
+
+  async deleteCampaign(id: string): Promise<boolean> {
+    const result = await db.delete(campaigns).where(eq(campaigns.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getActiveCampaigns(): Promise<Campaign[]> {
+    const now = new Date();
+    return db
+      .select()
+      .from(campaigns)
+      .where(
+        and(
+          eq(campaigns.isActive, true),
+          sql`${campaigns.startDate} <= ${now}`,
+          sql`${campaigns.endDate} >= ${now}`
+        )
+      );
+  }
+
+  // Admin dashboard statistics
+  async getAdminDashboardStats(): Promise<{
+    totalRewards: number;
+    activeRewards: number;
+    totalRedemptions: number;
+    totalUsers: number;
+    totalPointsDistributed: number;
+    activePointsRules: number;
+    activeCampaigns: number;
+  }> {
+    const [totalRewards] = await db.select({ count: count() }).from(loyaltyRewards);
+    const [activeRewards] = await db.select({ count: count() }).from(loyaltyRewards).where(eq(loyaltyRewards.isActive, true));
+    const [totalRedemptions] = await db.select({ count: count() }).from(loyaltyRedemptions);
+    const [totalUsers] = await db.select({ count: count() }).from(users);
+    const [pointsDistributed] = await db.select({ total: sql`SUM(${loyaltyTransactions.pointsChange})` }).from(loyaltyTransactions).where(sql`${loyaltyTransactions.pointsChange} > 0`);
+    const [activeRules] = await db.select({ count: count() }).from(pointsRules).where(eq(pointsRules.isActive, true));
+    const [activeCampaignsCount] = await db.select({ count: count() }).from(campaigns).where(eq(campaigns.isActive, true));
+
+    return {
+      totalRewards: totalRewards?.count || 0,
+      activeRewards: activeRewards?.count || 0,
+      totalRedemptions: totalRedemptions?.count || 0,
+      totalUsers: totalUsers?.count || 0,
+      totalPointsDistributed: Number(pointsDistributed?.total) || 0,
+      activePointsRules: activeRules?.count || 0,
+      activeCampaigns: activeCampaignsCount?.count || 0,
+    };
   }
 }
 
