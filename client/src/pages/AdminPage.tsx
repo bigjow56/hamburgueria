@@ -6,6 +6,7 @@ import { AdminRewards } from "@/components/admin/AdminRewards";
 import { AdminPointsRules } from "@/components/admin/AdminPointsRules";
 import { AdminTiers } from "@/components/admin/AdminTiers";
 import { AdminCampaigns } from "@/components/admin/AdminCampaigns";
+import { AdminUsers } from "@/components/admin/AdminUsers";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
@@ -14,10 +15,11 @@ import {
   Trophy, 
   Megaphone, 
   LogOut,
-  Menu 
+  Menu,
+  Users 
 } from "lucide-react";
 
-type AdminSection = 'dashboard' | 'rewards' | 'points-rules' | 'tiers' | 'campaigns';
+type AdminSection = 'dashboard' | 'rewards' | 'points-rules' | 'tiers' | 'campaigns' | 'users';
 
 interface AdminUser {
   id: string;
@@ -56,6 +58,7 @@ export default function AdminPage() {
     { id: 'points-rules', label: 'Regras de Pontos', icon: Target },
     { id: 'tiers', label: 'Tiers de Fidelidade', icon: Trophy },
     { id: 'campaigns', label: 'Campanhas', icon: Megaphone },
+    { id: 'users', label: 'Usuários', icon: Users },
   ];
 
   if (!currentAdmin) {
@@ -78,6 +81,8 @@ export default function AdminPage() {
         return <AdminTiers />;
       case 'campaigns':
         return <AdminCampaigns />;
+      case 'users':
+        return <AdminUsers />;
       default:
         return <AdminDashboard />;
     }
