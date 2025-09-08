@@ -61,7 +61,7 @@ import {
   type InsertCampaign,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, count, or, gt } from "drizzle-orm";
+import { eq, desc, and, sql, count, or, gt, isNotNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -1321,7 +1321,7 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(
         and(
-          users.lastPurchaseDate !== null,
+          isNotNull(users.lastPurchaseDate),
           sql`${users.lastPurchaseDate} >= ${thirtyDaysAgo.toISOString()}`
         )
       );
@@ -1335,7 +1335,7 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(
         and(
-          users.lastPurchaseDate !== null,
+          isNotNull(users.lastPurchaseDate),
           sql`${users.lastPurchaseDate} < ${thirtyDaysAgo.toISOString()}`,
           sql`${users.lastPurchaseDate} >= ${ninetyDaysAgo.toISOString()}`
         )
@@ -1347,7 +1347,7 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(
         and(
-          users.lastPurchaseDate !== null,
+          isNotNull(users.lastPurchaseDate),
           sql`${users.lastPurchaseDate} < ${ninetyDaysAgo.toISOString()}`
         )
       );

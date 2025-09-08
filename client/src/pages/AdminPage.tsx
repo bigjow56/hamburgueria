@@ -7,6 +7,7 @@ import { AdminPointsRules } from "@/components/admin/AdminPointsRules";
 import { AdminTiers } from "@/components/admin/AdminTiers";
 import { AdminCampaigns } from "@/components/admin/AdminCampaigns";
 import { AdminUsers } from "@/components/admin/AdminUsers";
+import { AdminLeads } from "@/components/admin/AdminLeads";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -18,10 +19,11 @@ import {
   Megaphone, 
   LogOut,
   Menu,
-  Users 
+  Users,
+  UserCheck
 } from "lucide-react";
 
-type AdminSection = 'dashboard' | 'rewards' | 'points-rules' | 'tiers' | 'campaigns' | 'users';
+type AdminSection = 'dashboard' | 'rewards' | 'points-rules' | 'tiers' | 'campaigns' | 'users' | 'leads';
 
 interface AdminUser {
   id: string;
@@ -70,6 +72,7 @@ export default function AdminPage() {
     { id: 'tiers', label: 'Tiers de Fidelidade', icon: Trophy },
     { id: 'campaigns', label: 'Campanhas', icon: Megaphone },
     { id: 'users', label: 'Usuários', icon: Users },
+    { id: 'leads', label: 'Leads', icon: UserCheck },
   ];
 
   const NavigationMenu = ({ onItemClick }: { onItemClick: (section: AdminSection) => void }) => (
@@ -121,6 +124,8 @@ export default function AdminPage() {
         return <AdminCampaigns />;
       case 'users':
         return <AdminUsers />;
+      case 'leads':
+        return <AdminLeads />;
       default:
         return <AdminDashboard />;
     }
