@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Star, Gift, Trophy, Crown, Award, Phone, UserPlus, LogIn, ArrowLeft, Copy, Check } from "lucide-react";
+import { Star, Gift, Trophy, Crown, Award, Phone, UserPlus, LogIn, ArrowLeft, Copy, Check, Share2 } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface User {
@@ -19,6 +19,9 @@ interface User {
   pointsBalance: number;
   totalPointsEarned: number;
   loyaltyTier: string;
+  referralCode?: string;
+  totalReferrals?: number;
+  totalReferralPoints?: number;
 }
 
 interface LoyaltyTransaction {
@@ -97,6 +100,11 @@ export default function LoyaltyPage() {
     rewardName: ""
   });
   const [copiedCode, setCopiedCode] = useState(false);
+  
+  // Referral system state
+  const [referralCodeInput, setReferralCodeInput] = useState("");
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [copiedReferralCode, setCopiedReferralCode] = useState(false);
 
   const fetchLoyaltyData = async () => {
     if (!emailOrPhone.trim() || !password.trim()) {
@@ -285,6 +293,73 @@ export default function LoyaltyPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const copyReferralCode = async () => {
+    if (!loyaltyData?.user.referralCode) return;
+    
+    try {
+      await navigator.clipboard.writeText(loyaltyData.user.referralCode);
+      setCopiedReferralCode(true);
+      toast({
+        title: "Código copiado!",
+        description: "Seu código de indicação foi copiado para a área de transferência.",
+      });
+      setTimeout(() => setCopiedReferralCode(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o código.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const validateReferralCode = async () => {
+    if (!referralCodeInput.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira um código de indicação.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setReferralLoading(true);
+    try {
+      const response = await fetch("/api/user/validate-referral-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referralCode: referralCodeInput }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Erro ao validar código");
+      }
+
+      if (data.valid) {
+        toast({
+          title: "Código válido!",
+          description: "Você pode usar este código na sua próxima compra para ganhar pontos.",
+        });
+      } else {
+        toast({
+          title: "Código inválido",
+          description: "Este código de indicação não é válido ou já foi usado.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao validar código de indicação",
+        variant: "destructive",
+      });
+    } finally {
+      setReferralLoading(false);
+    }
   };
 
   const handleBackToHome = () => {
@@ -582,6 +657,103 @@ export default function LoyaltyPage() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Referral System */}
+          <Card className="mb-6" data-testid="referrals-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Share2 className="w-5 h-5" />
+                Sistema de Indicações
+              </CardTitle>
+              <CardDescription>
+                Indique amigos e ganhe pontos quando eles fizerem sua primeira compra
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* User's referral code */}
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-blue-700 dark:text-blue-300">Seu Código de Indicação</h4>
+                    <Badge className="bg-blue-100 text-blue-800">
+                      {loyaltyData.user.totalReferrals || 0} indicações feitas
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex-1 p-3 bg-white dark:bg-gray-800 rounded border-2 border-dashed border-blue-300">
+                      <p className="text-lg font-mono font-bold text-center text-blue-600 dark:text-blue-400" data-testid="user-referral-code">
+                        {loyaltyData.user.referralCode || "Carregando..."}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={copyReferralCode}
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      data-testid="copy-referral-code"
+                    >
+                      {copiedReferralCode ? (
+                        <>
+                          <Check className="w-4 h-4 mr-1" />
+                          Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-1" />
+                          Copiar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  <div className="text-sm text-blue-600 dark:text-blue-400">
+                    <p className="mb-1">💰 <strong>Você ganha 50 pontos</strong> quando um amigo usar seu código</p>
+                    <p>🎁 <strong>Seu amigo ganha 25 pontos</strong> na primeira compra</p>
+                  </div>
+                  
+                  {(loyaltyData.user.totalReferralPoints || 0) > 0 && (
+                    <div className="mt-3 p-2 bg-green-100 dark:bg-green-900/30 rounded">
+                      <p className="text-sm text-green-700 dark:text-green-300">
+                        🏆 Você já ganhou <strong>{loyaltyData.user.totalReferralPoints} pontos</strong> com indicações!
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Enter referral code */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold">Usar Código de Indicação</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Tem um código de indicação de um amigo? Digite aqui para validar.
+                  </p>
+                  
+                  <div className="flex gap-3">
+                    <Input
+                      placeholder="Digite o código de indicação"
+                      value={referralCodeInput}
+                      onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                      className="flex-1"
+                      data-testid="referral-code-input"
+                    />
+                    <Button
+                      onClick={validateReferralCode}
+                      disabled={referralLoading || !referralCodeInput.trim()}
+                      data-testid="validate-referral-code"
+                    >
+                      {referralLoading ? "Validando..." : "Validar"}
+                    </Button>
+                  </div>
+                  
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <p>💡 Dica: Use o código na sua próxima compra para ganhar pontos extras!</p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
