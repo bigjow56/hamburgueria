@@ -349,22 +349,23 @@ export function AdminTiers() {
   return (
     <div className="space-y-6" data-testid="admin-tiers">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900" data-testid="tiers-title">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words" data-testid="tiers-title">
             Tiers de Fidelidade
           </h2>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             Configure os níveis de fidelidade e seus benefícios
           </p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="create-tier-button">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Tier
-            </Button>
-          </DialogTrigger>
+        <div className="flex-shrink-0">
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto" data-testid="create-tier-button">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Tier
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Novo Tier de Fidelidade</DialogTitle>
@@ -378,6 +379,7 @@ export function AdminTiers() {
             />
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Tiers Grid */}

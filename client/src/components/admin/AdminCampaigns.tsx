@@ -407,22 +407,23 @@ export function AdminCampaigns() {
   return (
     <div className="space-y-6" data-testid="admin-campaigns">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900" data-testid="campaigns-title">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words" data-testid="campaigns-title">
             Campanhas Especiais
           </h2>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             Gerencie campanhas promocionais e eventos especiais
           </p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="create-campaign-button">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Campanha
-            </Button>
-          </DialogTrigger>
+        <div className="flex-shrink-0">
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto" data-testid="create-campaign-button">
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Campanha
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Nova Campanha</DialogTitle>
@@ -436,6 +437,7 @@ export function AdminCampaigns() {
             />
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Campaigns Grid */}

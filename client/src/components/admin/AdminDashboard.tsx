@@ -129,18 +129,20 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6" data-testid="admin-dashboard">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900" data-testid="dashboard-title">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words" data-testid="dashboard-title">
             Dashboard Administrativo
           </h2>
-          <p className="text-gray-600" data-testid="dashboard-description">
+          <p className="text-sm sm:text-base text-gray-600 mt-1" data-testid="dashboard-description">
             Visão geral do programa de fidelidade
           </p>
         </div>
-        <Badge variant="secondary" className="text-green-700 bg-green-100" data-testid="status-badge">
-          Sistema Online
-        </Badge>
+        <div className="flex-shrink-0">
+          <Badge variant="secondary" className="text-green-700 bg-green-100 text-xs sm:text-sm" data-testid="status-badge">
+            Sistema Online
+          </Badge>
+        </div>
       </div>
 
       {/* Stats Grid */}

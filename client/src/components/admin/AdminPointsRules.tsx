@@ -298,22 +298,23 @@ export function AdminPointsRules() {
   return (
     <div className="space-y-6" data-testid="admin-points-rules">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900" data-testid="points-rules-title">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words" data-testid="points-rules-title">
             Regras de Pontuação
           </h2>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             Configure como os pontos são distribuídos no programa de fidelidade
           </p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="create-rule-button">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Regra
-            </Button>
-          </DialogTrigger>
+        <div className="flex-shrink-0">
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto" data-testid="create-rule-button">
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Regra
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Criar Nova Regra de Pontuação</DialogTitle>
@@ -327,6 +328,7 @@ export function AdminPointsRules() {
             />
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Rules Grid */}
