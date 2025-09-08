@@ -15,6 +15,12 @@ export const users = pgTable("users", {
   pointsBalance: integer("points_balance").default(0),
   loyaltyTier: text("loyalty_tier").default("bronze"), // bronze, silver, gold
   totalPointsEarned: integer("total_points_earned").default(0),
+  // Sistema de indicações
+  referralCode: text("referral_code").unique(), // Código único do usuário para indicações
+  referredByCode: text("referred_by_code"), // Código de quem indicou este usuário
+  referredById: varchar("referred_by_id"), // ID de quem indicou
+  totalReferrals: integer("total_referrals").default(0), // Total de pessoas indicadas
+  totalReferralPoints: integer("total_referral_points").default(0), // Pontos ganhos com indicações
   // Sistema de leads e recaptação
   lastPurchaseDate: timestamp("last_purchase_date"),
   totalSpent: decimal("total_spent", { precision: 10, scale: 2 }).default("0.00"),
@@ -350,6 +356,68 @@ export const campaigns = pgTable("campaigns", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// === SISTEMA DE INDICAÇÕES DETALHADO ===
+
+// Referral transactions table (histórico detalhado de indicações)
+export const referralTransactions = pgTable("referral_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerId: varchar("referrer_id").notNull(), // Quem indicou
+  referredId: varchar("referred_id").notNull(), // Quem foi indicado
+  referralCode: text("referral_code").notNull(), // Código usado
+  status: text("status").default("pending"), // pending, confirmed, rejected
+  pointsAwarded: integer("points_awarded").default(0),
+  orderValue: decimal("order_value", { precision: 10, scale: 2 }), // Valor do primeiro pedido (se aplicável)
+  validatedAt: timestamp("validated_at"), // Quando foi validado
+  expiresAt: timestamp("expires_at"), // Prazo para primeira compra
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User streaks table (sequências/gamificação)
+export const userStreaks = pgTable("user_streaks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  streakType: text("streak_type").notNull(), // daily_order, weekly_order, monthly_purchase
+  currentStreak: integer("current_streak").default(0),
+  longestStreak: integer("longest_streak").default(0),
+  lastActivityDate: timestamp("last_activity_date"),
+  bonusPointsEarned: integer("bonus_points_earned").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Seasonal rewards table (recompensas sazonais)
+export const seasonalRewards = pgTable("seasonal_rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  season: text("season").notNull(), // christmas, valentine, easter, summer, etc
+  year: integer("year").notNull(),
+  pointsRequired: integer("points_required").notNull(),
+  category: text("category").notNull(), // discount, freebie, cashback, product
+  value: decimal("value", { precision: 10, scale: 2 }),
+  discountPercentage: integer("discount_percentage"),
+  imageUrl: text("image_url"),
+  stock: integer("stock").default(-1),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  minTier: text("min_tier").default("bronze"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Reward analytics table (analytics das recompensas)
+export const rewardAnalytics = pgTable("reward_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  rewardId: varchar("reward_id").references(() => loyaltyRewards.id).notNull(),
+  period: text("period").notNull(), // daily, weekly, monthly
+  periodDate: timestamp("period_date").notNull(), // Data do período
+  redemptions: integer("redemptions").default(0),
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0.00"),
+  totalPointsUsed: integer("total_points_used").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -458,6 +526,29 @@ export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   updatedAt: true,
 });
 
+// === REFERRAL SYSTEM SCHEMAS ===
+
+export const insertReferralTransactionSchema = createInsertSchema(referralTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserStreakSchema = createInsertSchema(userStreaks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSeasonalRewardSchema = createInsertSchema(seasonalRewards).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRewardAnalyticsSchema = createInsertSchema(rewardAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -521,3 +612,17 @@ export type InsertLoyaltyTiersConfig = z.infer<typeof insertLoyaltyTiersConfigSc
 
 export type Campaign = typeof campaigns.$inferSelect;
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+
+// === REFERRAL SYSTEM TYPES ===
+
+export type ReferralTransaction = typeof referralTransactions.$inferSelect;
+export type InsertReferralTransaction = z.infer<typeof insertReferralTransactionSchema>;
+
+export type UserStreak = typeof userStreaks.$inferSelect;
+export type InsertUserStreak = z.infer<typeof insertUserStreakSchema>;
+
+export type SeasonalReward = typeof seasonalRewards.$inferSelect;
+export type InsertSeasonalReward = z.infer<typeof insertSeasonalRewardSchema>;
+
+export type RewardAnalytics = typeof rewardAnalytics.$inferSelect;
+export type InsertRewardAnalytics = z.infer<typeof insertRewardAnalyticsSchema>;
