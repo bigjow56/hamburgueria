@@ -201,6 +201,19 @@ export interface IStorage {
     activePointsRules: number;
     activeCampaigns: number;
   }>;
+
+  // Admin leads operations
+  getLeadsWithDetails(): Promise<any[]>;
+  getLeadsStats(): Promise<{
+    totalCustomers: number;
+    activeCustomers: number;
+    inactiveCustomers: number;
+    dormantCustomers: number;
+    averageOrderValue: number;
+    totalRevenue: number;
+  }>;
+  updateCustomerStatus(customerId: string, status: string): Promise<boolean>;
+  registerCustomerContact(customerId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1244,6 +1257,140 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(loyaltyRedemptions.createdAt));
 
     return allRedemptions;
+  }
+
+  // === ADMIN LEADS OPERATIONS ===
+
+  async getLeadsWithDetails(): Promise<any[]> {
+    const allLeads = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        phone: users.phone,
+        totalSpent: users.totalSpent,
+        totalOrders: users.totalOrders,
+        lastPurchaseDate: users.lastPurchaseDate,
+        customerStatus: users.customerStatus,
+        loyaltyTier: users.loyaltyTier,
+        pointsBalance: users.pointsBalance,
+        createdAt: users.createdAt,
+        lastContactDate: users.lastContactDate,
+      })
+      .from(users)
+      .orderBy(desc(users.lastPurchaseDate));
+
+    // Calculate days since last purchase for each lead
+    const leadsWithDays = allLeads.map(lead => {
+      let daysSinceLastPurchase: number | undefined = undefined;
+      
+      if (lead.lastPurchaseDate) {
+        const lastPurchase = new Date(lead.lastPurchaseDate);
+        const today = new Date();
+        daysSinceLastPurchase = Math.floor((today.getTime() - lastPurchase.getTime()) / (1000 * 3600 * 24));
+      }
+
+      return {
+        ...lead,
+        daysSinceLastPurchase
+      };
+    });
+
+    return leadsWithDays;
+  }
+
+  async getLeadsStats(): Promise<{
+    totalCustomers: number;
+    activeCustomers: number;
+    inactiveCustomers: number;
+    dormantCustomers: number;
+    averageOrderValue: number;
+    totalRevenue: number;
+  }> {
+    // Total customers
+    const [totalCustomers] = await db
+      .select({ count: count() })
+      .from(users);
+
+    // Active customers (purchased in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const [activeCustomers] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(
+        and(
+          users.lastPurchaseDate !== null,
+          sql`${users.lastPurchaseDate} >= ${thirtyDaysAgo.toISOString()}`
+        )
+      );
+
+    // Inactive customers (30-90 days without purchase)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const [inactiveCustomers] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(
+        and(
+          users.lastPurchaseDate !== null,
+          sql`${users.lastPurchaseDate} < ${thirtyDaysAgo.toISOString()}`,
+          sql`${users.lastPurchaseDate} >= ${ninetyDaysAgo.toISOString()}`
+        )
+      );
+
+    // Dormant customers (90+ days without purchase)
+    const [dormantCustomers] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(
+        and(
+          users.lastPurchaseDate !== null,
+          sql`${users.lastPurchaseDate} < ${ninetyDaysAgo.toISOString()}`
+        )
+      );
+
+    // Calculate total revenue and average order value
+    const [revenueStats] = await db
+      .select({
+        totalRevenue: sql<number>`COALESCE(SUM(CAST(${users.totalSpent} AS DECIMAL)), 0)`,
+        totalOrders: sql<number>`COALESCE(SUM(${users.totalOrders}), 0)`,
+      })
+      .from(users);
+
+    const averageOrderValue = revenueStats?.totalOrders > 0 
+      ? (revenueStats.totalRevenue / revenueStats.totalOrders) 
+      : 0;
+
+    return {
+      totalCustomers: totalCustomers?.count || 0,
+      activeCustomers: activeCustomers?.count || 0,
+      inactiveCustomers: inactiveCustomers?.count || 0,
+      dormantCustomers: dormantCustomers?.count || 0,
+      averageOrderValue: Math.round(averageOrderValue * 100) / 100,
+      totalRevenue: revenueStats?.totalRevenue || 0,
+    };
+  }
+
+  async updateCustomerStatus(customerId: string, status: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ customerStatus: status })
+      .where(eq(users.id, customerId));
+
+    return (result.rowCount || 0) > 0;
+  }
+
+  async registerCustomerContact(customerId: string): Promise<boolean> {
+    const now = new Date();
+    const result = await db
+      .update(users)
+      .set({ lastContactDate: now })
+      .where(eq(users.id, customerId));
+
+    return (result.rowCount || 0) > 0;
   }
 }
 

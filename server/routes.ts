@@ -1677,6 +1677,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === ADMIN LEADS ROUTES ===
+
+  // GET /api/admin/leads - Get all leads with detailed information
+  app.get("/api/admin/leads", async (req, res) => {
+    try {
+      const leads = await storage.getLeadsWithDetails();
+      res.json(leads);
+    } catch (error) {
+      console.error("Get admin leads error:", error);
+      res.status(500).json({ message: "Failed to fetch leads" });
+    }
+  });
+
+  // GET /api/admin/leads/stats - Get leads statistics
+  app.get("/api/admin/leads/stats", async (req, res) => {
+    try {
+      const stats = await storage.getLeadsStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Get leads stats error:", error);
+      res.status(500).json({ message: "Failed to fetch leads statistics" });
+    }
+  });
+
+  // PUT /api/admin/leads/:id/status - Update customer status
+  app.put("/api/admin/leads/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!status || !['active', 'inactive', 'dormant'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be active, inactive, or dormant" });
+      }
+
+      const success = await storage.updateCustomerStatus(req.params.id, status);
+      if (!success) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      res.json({ message: "Customer status updated successfully" });
+    } catch (error) {
+      console.error("Update customer status error:", error);
+      res.status(500).json({ message: "Failed to update customer status" });
+    }
+  });
+
+  // POST /api/admin/leads/:id/contact - Register contact with customer
+  app.post("/api/admin/leads/:id/contact", async (req, res) => {
+    try {
+      const success = await storage.registerCustomerContact(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      res.json({ message: "Customer contact registered successfully" });
+    } catch (error) {
+      console.error("Register contact error:", error);
+      res.status(500).json({ message: "Failed to register contact" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
