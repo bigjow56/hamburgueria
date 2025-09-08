@@ -1382,63 +1382,6 @@ export class DatabaseStorage implements IStorage {
     averageOrderValue: number;
     totalRevenue: number;
   }> {
-    // Total customers
-    const [totalCustomers] = await db
-      .select({ count: count() })
-      .from(users);
-
-    // Active customers (purchased in last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const [activeCustomers] = await db
-      .select({ count: count() })
-      .from(users)
-      .where(
-        and(
-          isNotNull(users.lastPurchaseDate),
-          sql`${users.lastPurchaseDate} >= ${thirtyDaysAgo.toISOString()}`
-        )
-      );
-
-    // Inactive customers (30-90 days without purchase)
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-    const [inactiveCustomers] = await db
-      .select({ count: count() })
-      .from(users)
-      .where(
-        and(
-          isNotNull(users.lastPurchaseDate),
-          sql`${users.lastPurchaseDate} < ${thirtyDaysAgo.toISOString()}`,
-          sql`${users.lastPurchaseDate} >= ${ninetyDaysAgo.toISOString()}`
-        )
-      );
-
-    // Dormant customers (90+ days without purchase)
-    const [dormantCustomers] = await db
-      .select({ count: count() })
-      .from(users)
-      .where(
-        and(
-          isNotNull(users.lastPurchaseDate),
-          sql`${users.lastPurchaseDate} < ${ninetyDaysAgo.toISOString()}`
-        )
-      );
-
-    // Calculate total revenue and average order value
-    const [revenueStats] = await db
-      .select({
-        totalRevenue: sql<number>`COALESCE(SUM(CAST(${users.totalSpent} AS DECIMAL)), 0)`,
-        totalOrders: sql<number>`COALESCE(SUM(${users.totalOrders}), 0)`,
-      })
-      .from(users);
-
-    const averageOrderValue = revenueStats?.totalOrders > 0 
-      ? (revenueStats.totalRevenue / revenueStats.totalOrders) 
-      : 0;
-
     // Get all leads to calculate proper statistics including guest customers
     const allLeads = await this.getLeadsWithDetails();
     

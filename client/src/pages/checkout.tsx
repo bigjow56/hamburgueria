@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, CreditCard, DollarSign, Smartphone } from "lucide-react";
+import { RegistrationBenefitsPopup } from "@/components/RegistrationBenefitsPopup";
 import type { StoreSettings, DeliveryZone } from "@shared/schema";
 
 export default function Checkout() {
@@ -36,6 +37,8 @@ export default function Checkout() {
   });
 
   const [deliveryFee, setDeliveryFee] = useState(5.90);
+  const [showBenefitsPopup, setShowBenefitsPopup] = useState(false);
+  const [proceedToOrder, setProceedToOrder] = useState(false);
 
   // Fetch store settings
   const { data: storeSettings } = useQuery<StoreSettings>({
@@ -69,6 +72,35 @@ export default function Checkout() {
     },
   });
 
+  const processOrder = () => {
+    const orderData = {
+      ...formData,
+      // Remove email if empty to avoid validation issues
+      customerEmail: formData.customerEmail || undefined,
+      items: items.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        unitPrice: item.customPrice.toFixed(2), // Use customPrice with modifications
+        modifications: item.modifications.map(mod => ({
+          ingredientId: mod.ingredientId,
+          ingredientName: mod.ingredient.name,
+          modificationType: mod.modificationType,
+          quantity: mod.quantity,
+          unitPrice: mod.unitPrice,
+        })),
+      })),
+    };
+
+    // Debug: Log dados antes de enviar
+    console.log("🚀 ENVIANDO PEDIDO - DADOS COMPLETOS:");
+    orderData.items.forEach((item, index) => {
+      console.log(`ITEM ${index + 1}:`, item.productId);
+      console.log(`MODIFICAÇÕES ENVIADAS:`, item.modifications);
+    });
+
+    createOrderMutation.mutate(orderData);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -97,32 +129,35 @@ export default function Checkout() {
       return;
     }
 
-    const orderData = {
-      ...formData,
-      // Remove email if empty to avoid validation issues
-      customerEmail: formData.customerEmail || undefined,
-      items: items.map(item => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-        unitPrice: item.customPrice.toFixed(2), // Use customPrice with modifications
-        modifications: item.modifications.map(mod => ({
-          ingredientId: mod.ingredientId,
-          ingredientName: mod.ingredient.name,
-          modificationType: mod.modificationType,
-          quantity: mod.quantity,
-          unitPrice: mod.unitPrice,
-        })),
-      })),
-    };
+    // Show registration benefits popup for guest customers
+    // Since we don't have user authentication, all customers are guests
+    if (!proceedToOrder) {
+      setShowBenefitsPopup(true);
+      return;
+    }
 
-    // Debug: Log dados antes de enviar
-    console.log("🚀 ENVIANDO PEDIDO - DADOS COMPLETOS:");
-    orderData.items.forEach((item, index) => {
-      console.log(`ITEM ${index + 1}:`, item.productId);
-      console.log(`MODIFICAÇÕES ENVIADAS:`, item.modifications);
+    // If user chose to proceed, process the order
+    processOrder();
+  };
+
+  // Handle when user chooses to continue as guest
+  const handleProceedAsGuest = () => {
+    setShowBenefitsPopup(false);
+    setProceedToOrder(true);
+    // Process order immediately
+    processOrder();
+  };
+
+  // Handle when user wants to register first
+  const handleGoToRegister = () => {
+    setShowBenefitsPopup(false);
+    // For now, just show a message. In a real app, redirect to registration page
+    toast({
+      title: "Funcionalidade em breve!",
+      description: "O sistema de cadastro será implementado em breve. Por enquanto, continue como convidado.",
     });
-
-    createOrderMutation.mutate(orderData);
+    // Continue as guest for now
+    handleProceedAsGuest();
   };
 
   // Update delivery fee when neighborhood or delivery type changes
@@ -461,6 +496,14 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+      
+      {/* Registration Benefits Popup */}
+      <RegistrationBenefitsPopup
+        isOpen={showBenefitsPopup}
+        onClose={() => setShowBenefitsPopup(false)}
+        onProceedAsGuest={handleProceedAsGuest}
+        onGoToRegister={handleGoToRegister}
+      />
     </div>
   );
 }
