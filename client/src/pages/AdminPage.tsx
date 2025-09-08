@@ -8,6 +8,7 @@ import { AdminTiers } from "@/components/admin/AdminTiers";
 import { AdminCampaigns } from "@/components/admin/AdminCampaigns";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminLeads } from "@/components/admin/AdminLeads";
+import { AdminReferrals } from "@/components/admin/AdminReferrals";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -20,10 +21,11 @@ import {
   LogOut,
   Menu,
   Users,
-  UserCheck
+  UserCheck,
+  UserPlus
 } from "lucide-react";
 
-type AdminSection = 'dashboard' | 'rewards' | 'points-rules' | 'tiers' | 'campaigns' | 'users' | 'leads';
+type AdminSection = 'dashboard' | 'rewards' | 'points-rules' | 'tiers' | 'campaigns' | 'users' | 'leads' | 'referrals';
 
 interface AdminUser {
   id: string;
@@ -71,6 +73,7 @@ export default function AdminPage() {
     { id: 'points-rules', label: 'Regras de Pontos', icon: Target },
     { id: 'tiers', label: 'Tiers de Fidelidade', icon: Trophy },
     { id: 'campaigns', label: 'Campanhas', icon: Megaphone },
+    { id: 'referrals', label: 'Indicações', icon: UserPlus },
     { id: 'users', label: 'Usuários', icon: Users },
     { id: 'leads', label: 'Leads', icon: UserCheck },
   ];
@@ -126,6 +129,8 @@ export default function AdminPage() {
         return <AdminUsers />;
       case 'leads':
         return <AdminLeads />;
+      case 'referrals':
+        return <AdminReferrals />;
       default:
         return <AdminDashboard />;
     }
