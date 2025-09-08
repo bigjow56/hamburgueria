@@ -1092,6 +1092,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errors: error.errors,
           error: "VALIDATION_ERROR" 
         });
+      } else if ((error as any)?.message && ((error as any).message.includes('já existe'))) {
+        res.status(409).json({ 
+          message: (error as any).message,
+          error: "USER_EXISTS" 
+        });
       } else {
         res.status(500).json({ 
           message: "Failed to register user",
@@ -1767,6 +1772,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid user data", 
           errors: error.errors,
           error: "VALIDATION_ERROR" 
+        });
+      } else if ((error as any)?.message && ((error as any).message.includes('já existe'))) {
+        res.status(409).json({ 
+          message: (error as any).message,
+          error: "USER_EXISTS" 
         });
       } else {
         res.status(500).json({ 
