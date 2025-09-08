@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Star, Gift, Trophy, Crown, Award, Phone, UserPlus, LogIn, ArrowLeft } from "lucide-react";
+import { Star, Gift, Trophy, Crown, Award, Phone, UserPlus, LogIn, ArrowLeft, Copy, Check } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface User {
@@ -42,6 +43,7 @@ interface LoyaltyRedemption {
   rewardName: string;
   pointsCost: number;
   status: string;
+  redemptionCode?: string;
   createdAt: string;
 }
 
@@ -83,6 +85,18 @@ export default function LoyaltyPage() {
     password: "",
     address: ""
   });
+
+  // Redemption modal state
+  const [redemptionModal, setRedemptionModal] = useState<{
+    open: boolean;
+    redemptionCode: string;
+    rewardName: string;
+  }>({
+    open: false,
+    redemptionCode: "",
+    rewardName: ""
+  });
+  const [copiedCode, setCopiedCode] = useState(false);
 
   const fetchLoyaltyData = async () => {
     if (!emailOrPhone.trim() || !password.trim()) {
@@ -202,6 +216,9 @@ export default function LoyaltyPage() {
   const redeemReward = async (rewardId: string) => {
     if (!loyaltyData) return;
 
+    const reward = loyaltyData.availableRewards.find(r => r.id === rewardId);
+    if (!reward) return;
+
     try {
       const response = await fetch("/api/loyalty/redeem", {
         method: "POST",
@@ -213,13 +230,17 @@ export default function LoyaltyPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Erro ao resgatar recompensa");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erro ao resgatar recompensa");
       }
 
       const result = await response.json();
-      toast({
-        title: "Recompensa resgatada!",
-        description: `Você resgatou: ${result.reward.name}`,
+      
+      // Show redemption modal with code
+      setRedemptionModal({
+        open: true,
+        redemptionCode: result.redemption.redemptionCode,
+        rewardName: reward.name
       });
       
       // Refresh data
@@ -228,6 +249,24 @@ export default function LoyaltyPage() {
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Erro ao resgatar recompensa",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const copyRedemptionCode = async () => {
+    try {
+      await navigator.clipboard.writeText(redemptionModal.redemptionCode);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+      toast({
+        title: "Código copiado!",
+        description: "O código de resgate foi copiado para a área de transferência.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o código.",
         variant: "destructive",
       });
     }
@@ -639,6 +678,54 @@ export default function LoyaltyPage() {
           )}
         </>
       )}
+
+      {/* Redemption Success Modal */}
+      <Dialog open={redemptionModal.open} onOpenChange={(open) => setRedemptionModal(prev => ({ ...prev, open }))}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="w-6 h-6 text-green-600" />
+              Resgate Realizado!
+            </DialogTitle>
+            <DialogDescription>
+              Parabéns! Você resgatou com sucesso: <strong>{redemptionModal.rewardName}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Seu código de resgate:
+              </p>
+              <div className="flex items-center justify-between bg-white dark:bg-gray-900 border rounded-lg p-3">
+                <code className="text-lg font-mono font-bold text-blue-600 dark:text-blue-400">
+                  {redemptionModal.redemptionCode}
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={copyRedemptionCode}
+                  className="ml-2"
+                >
+                  {copiedCode ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                📋 <strong>Como usar:</strong><br/>
+                Apresente este código no estabelecimento para resgatar sua recompensa. 
+                O código é válido por 30 dias.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
