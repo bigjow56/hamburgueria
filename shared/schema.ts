@@ -245,6 +245,7 @@ export const loyaltyRedemptions = pgTable("loyalty_redemptions", {
   pointsUsed: integer("points_used").notNull(),
   status: text("status").default("pending"), // 'pending', 'approved', 'delivered', 'cancelled'
   redemptionCode: text("redemption_code").unique(), // Código único para usar o benefício
+  adminNote: text("admin_note"), // Nota do admin para resgates manuais
   expiresAt: timestamp("expires_at"), // Data de expiração do benefício
   usedAt: timestamp("used_at"), // Quando foi utilizado
   createdAt: timestamp("created_at").defaultNow(),

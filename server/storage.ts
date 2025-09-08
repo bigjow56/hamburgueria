@@ -1445,6 +1445,136 @@ export class DatabaseStorage implements IStorage {
 
     return (result.rowCount || 0) > 0;
   }
+
+  // === ADMIN MANUAL OPERATIONS ===
+  
+  async createUserByAdmin(userData: InsertUser): Promise<User> {
+    // Admin can create users directly with all loyalty data
+    const welcomeBonus = 100; // Same as normal registration
+    
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...userData,
+        pointsBalance: welcomeBonus,
+        totalPointsEarned: welcomeBonus,
+        loyaltyTier: 'bronze'
+      })
+      .returning();
+
+    // Create welcome bonus transaction record
+    await db.insert(loyaltyTransactions).values({
+      userId: user.id,
+      type: 'welcome',
+      pointsChange: welcomeBonus,
+      description: 'Bônus de boas-vindas - Cadastro pelo admin',
+      multiplier: '1.0'
+    });
+
+    return user;
+  }
+
+  async redeemRewardByAdmin(userId: string, rewardId: string, adminNote?: string): Promise<{ redemption: LoyaltyRedemption; newBalance: number }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const [reward] = await db
+      .select()
+      .from(loyaltyRewards)
+      .where(eq(loyaltyRewards.id, rewardId));
+
+    if (!reward) {
+      throw new Error("Reward not found");
+    }
+
+    if (!reward.isActive) {
+      throw new Error("Reward is not active");
+    }
+
+    // Check stock (if limited)
+    if (reward.stock !== -1 && (reward.stock || 0) <= 0) {
+      throw new Error("Reward is out of stock");
+    }
+
+    // Check if user has enough points
+    if ((user.pointsBalance || 0) < reward.pointsRequired) {
+      throw new Error("Insufficient points");
+    }
+
+    // Check tier eligibility
+    const tierHierarchy = { bronze: 0, silver: 1, gold: 2 };
+    const userTierLevel = tierHierarchy[user.loyaltyTier as keyof typeof tierHierarchy] || 0;
+    const rewardTierLevel = tierHierarchy[reward.minTier as keyof typeof tierHierarchy] || 0;
+    
+    if (userTierLevel < rewardTierLevel) {
+      throw new Error(`This reward requires ${reward.minTier} tier or higher`);
+    }
+
+    // Generate redemption code
+    const redemptionCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    // Create redemption record - start as 'approved' since admin is doing it manually
+    const [redemption] = await db
+      .insert(loyaltyRedemptions)
+      .values({
+        userId: userId,
+        rewardId: rewardId,
+        pointsUsed: reward.pointsRequired,
+        status: 'approved', // Admin redemptions start as approved
+        redemptionCode: redemptionCode,
+        adminNote: adminNote || 'Resgate manual realizado pelo admin'
+      })
+      .returning();
+
+    // Update user points balance
+    const newBalance = (user.pointsBalance || 0) - reward.pointsRequired;
+    await db
+      .update(users)
+      .set({
+        pointsBalance: newBalance
+      })
+      .where(eq(users.id, userId));
+
+    // Create transaction record for points deduction
+    await db.insert(loyaltyTransactions).values({
+      userId,
+      type: 'redemption',
+      pointsChange: -reward.pointsRequired,
+      description: `Resgate: ${reward.name} (admin: ${adminNote || 'resgate manual'})`,
+      multiplier: '1.0'
+    });
+
+    // Update stock if limited
+    if (reward.stock !== -1) {
+      await db
+        .update(loyaltyRewards)
+        .set({
+          stock: (reward.stock || 0) - 1
+        })
+        .where(eq(loyaltyRewards.id, rewardId));
+    }
+
+    return {
+      redemption,
+      newBalance
+    };
+  }
+
+  async getUsersByPhoneOrName(searchTerm: string): Promise<User[]> {
+    // Search users by phone or name for admin redemption interface
+    return await db
+      .select()
+      .from(users)
+      .where(
+        or(
+          sql`${users.phone} ILIKE ${`%${searchTerm}%`}`,
+          sql`${users.name} ILIKE ${`%${searchTerm}%`}`
+        )
+      )
+      .limit(10);
+  }
 }
 
 export const storage = new DatabaseStorage();

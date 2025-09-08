@@ -1736,6 +1736,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === ADMIN MANUAL OPERATIONS ===
+
+  // POST /api/admin/users - Create new user (manual registration by admin)
+  app.post("/api/admin/users", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if user already exists by phone
+      const existingUser = await storage.getUserByPhone(userData.phone);
+      if (existingUser) {
+        return res.status(409).json({ 
+          message: "User already exists with this phone number",
+          error: "USER_EXISTS" 
+        });
+      }
+
+      // Create new user via admin
+      const newUser = await storage.createUserByAdmin(userData);
+      
+      res.status(201).json({
+        success: true,
+        user: newUser,
+        message: "Cliente cadastrado com sucesso pelo admin! Recebeu 100 pontos de bônus."
+      });
+    } catch (error) {
+      console.error("Error creating user by admin:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ 
+          message: "Invalid user data", 
+          errors: error.errors,
+          error: "VALIDATION_ERROR" 
+        });
+      } else {
+        res.status(500).json({ 
+          message: "Failed to create user",
+          error: "INTERNAL_ERROR" 
+        });
+      }
+    }
+  });
+
+  // POST /api/admin/manual-redemption - Manual redemption by admin
+  app.post("/api/admin/manual-redemption", async (req, res) => {
+    try {
+      const { userId, rewardId, adminNote } = req.body;
+      
+      if (!userId || !rewardId) {
+        return res.status(400).json({ 
+          message: "userId and rewardId are required" 
+        });
+      }
+
+      const result = await storage.redeemRewardByAdmin(userId, rewardId, adminNote);
+      
+      res.json({
+        success: true,
+        redemption: result.redemption,
+        newBalance: result.newBalance,
+        message: "Resgate realizado com sucesso pelo admin!"
+      });
+    } catch (error: any) {
+      console.error("Error in manual redemption:", error);
+      res.status(400).json({ 
+        message: error.message || "Failed to process manual redemption",
+        error: "REDEMPTION_ERROR"
+      });
+    }
+  });
+
+  // GET /api/admin/search-users - Search users by phone or name
+  app.get("/api/admin/search-users", async (req, res) => {
+    try {
+      const { q: searchTerm } = req.query;
+      
+      if (!searchTerm || typeof searchTerm !== 'string') {
+        return res.status(400).json({ 
+          message: "Search term is required" 
+        });
+      }
+
+      const users = await storage.getUsersByPhoneOrName(searchTerm);
+      res.json(users);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ message: "Failed to search users" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
