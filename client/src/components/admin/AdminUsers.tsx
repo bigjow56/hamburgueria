@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, UserCheck, Gift, Search, Filter, Trophy, Medal, Award, Crown } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { Users, UserCheck, Gift, Search, Filter, Trophy, Medal, Award, Crown, CheckCircle, XCircle } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface User {
   id: string;
@@ -39,6 +41,8 @@ export function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  
+  const queryClient = useQueryClient();
 
   const { data: users, isLoading: loadingUsers } = useQuery<User[]>({
     queryKey: ['/api/admin/users'],
@@ -46,6 +50,29 @@ export function AdminUsers() {
 
   const { data: redemptions, isLoading: loadingRedemptions } = useQuery<Redemption[]>({
     queryKey: ['/api/admin/redemptions'],
+  });
+
+  // Mutation for updating redemption status
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ redemptionId, status }: { redemptionId: string; status: string }) => 
+      apiRequest(`/api/loyalty/admin/redemptions/${redemptionId}/status`, { 
+        method: 'PUT', 
+        body: { status } 
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/redemptions'] });
+      toast({
+        title: "Status atualizado!",
+        description: "O status do resgate foi atualizado com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar status do resgate",
+        variant: "destructive",
+      });
+    },
   });
 
   // Filter users based on search term and tier
@@ -93,6 +120,20 @@ export function AdminUsers() {
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pendente';
+      case 'approved': return 'Aprovado';
+      case 'delivered': return 'Entregue';
+      case 'cancelled': return 'Cancelado';
+      default: return status;
+    }
+  };
+
+  const handleStatusChange = (redemptionId: string, newStatus: string) => {
+    updateStatusMutation.mutate({ redemptionId, status: newStatus });
   };
 
   const formatDate = (dateString: string) => {
@@ -343,9 +384,11 @@ export function AdminUsers() {
                           <p className="text-sm text-gray-600">por {redemption.userName}</p>
                         </div>
                       </div>
-                      <Badge className={getStatusColor(redemption.status)}>
-                        {redemption.status.toUpperCase()}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(redemption.status)}>
+                          {getStatusLabel(redemption.status)}
+                        </Badge>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -373,6 +416,74 @@ export function AdminUsers() {
                       <div>
                         <p className="text-sm text-gray-500">Data do Resgate:</p>
                         <p className="text-sm">{formatDate(redemption.createdAt)}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Status Actions */}
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex gap-2">
+                          {redemption.status === 'pending' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleStatusChange(redemption.id, 'approved')}
+                                disabled={updateStatusMutation.isPending}
+                                className="text-green-600 border-green-300 hover:bg-green-50"
+                                data-testid={`approve-redemption-${redemption.id}`}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Aprovar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleStatusChange(redemption.id, 'cancelled')}
+                                disabled={updateStatusMutation.isPending}
+                                className="text-red-600 border-red-300 hover:bg-red-50"
+                                data-testid={`cancel-redemption-${redemption.id}`}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Cancelar
+                              </Button>
+                            </>
+                          )}
+                          {redemption.status === 'approved' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStatusChange(redemption.id, 'delivered')}
+                              disabled={updateStatusMutation.isPending}
+                              className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                              data-testid={`deliver-redemption-${redemption.id}`}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Marcar como Entregue
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`status-${redemption.id}`} className="text-sm text-gray-600">
+                            Status:
+                          </Label>
+                          <Select 
+                            value={redemption.status} 
+                            onValueChange={(newStatus) => handleStatusChange(redemption.id, newStatus)}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            <SelectTrigger className="w-32" data-testid={`status-select-${redemption.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pendente</SelectItem>
+                              <SelectItem value="approved">Aprovado</SelectItem>
+                              <SelectItem value="delivered">Entregue</SelectItem>
+                              <SelectItem value="cancelled">Cancelado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
