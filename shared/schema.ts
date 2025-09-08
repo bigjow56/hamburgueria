@@ -15,6 +15,12 @@ export const users = pgTable("users", {
   pointsBalance: integer("points_balance").default(0),
   loyaltyTier: text("loyalty_tier").default("bronze"), // bronze, silver, gold
   totalPointsEarned: integer("total_points_earned").default(0),
+  // Sistema de leads e recaptação
+  lastPurchaseDate: timestamp("last_purchase_date"),
+  totalSpent: decimal("total_spent", { precision: 10, scale: 2 }).default("0.00"),
+  totalOrders: integer("total_orders").default(0),
+  customerStatus: text("customer_status").default("active"), // active, inactive, dormant
+  lastContactDate: timestamp("last_contact_date"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
