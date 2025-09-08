@@ -8,7 +8,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   email: text("email").unique(),
-  phone: text("phone").notNull(),
+  phone: text("phone").notNull().unique(),
   password: text("password").notNull(),
   address: text("address"),
   // Sistema de fidelidade
