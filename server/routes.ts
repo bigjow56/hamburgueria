@@ -1883,13 +1883,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/user/validate-referral-code - Validate referral code
+  // Anti-fraud helper functions
+  const calculateRiskScore = (userId: string, actionType: string, additionalData: any = {}): number => {
+    let score = 0;
+    
+    // Add points based on suspicious patterns
+    if (actionType === 'referral_code_validation') {
+      // Multiple rapid attempts
+      if (additionalData.attemptsInLastHour > 10) score += 30;
+      if (additionalData.attemptsInLastMinute > 3) score += 50;
+      
+      // Similar IP addresses
+      if (additionalData.sameIpReferrals > 2) score += 40;
+      
+      // Same device/browser patterns
+      if (additionalData.sameUserAgentReferrals > 3) score += 35;
+    }
+    
+    if (actionType === 'referral_usage') {
+      // Rapid account creation and usage
+      if (additionalData.accountAge < 3600000) score += 25; // Less than 1 hour old
+      
+      // Suspicious email patterns
+      if (additionalData.temporaryEmail) score += 30;
+      
+      // Geographic anomalies
+      if (additionalData.unusualLocation) score += 20;
+    }
+    
+    return Math.min(score, 100); // Cap at 100
+  };
+
+  const logFraudDetection = async (userId: string, actionType: string, riskScore: number, blocked: boolean, req: any, additionalData: any = {}) => {
+    try {
+      await storage.logFraudDetection({
+        userId,
+        actionType,
+        riskScore,
+        blocked,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        additionalData
+      });
+    } catch (error) {
+      console.error("Error logging fraud detection:", error);
+    }
+  };
+
+  // POST /api/user/validate-referral-code - Validate referral code with fraud detection
   app.post("/api/user/validate-referral-code", async (req, res) => {
     try {
-      const { referralCode } = req.body;
+      const { referralCode, userId = null } = req.body;
       
       if (!referralCode) {
         return res.status(400).json({ message: "Referral code is required" });
+      }
+
+      // Check for fraud patterns
+      const clientIp = req.ip || req.connection.remoteAddress;
+      const userAgent = req.get('User-Agent');
+      
+      const additionalData = {
+        attemptsInLastHour: await storage.countReferralValidationAttempts(clientIp, 3600000),
+        attemptsInLastMinute: await storage.countReferralValidationAttempts(clientIp, 60000),
+        sameIpReferrals: await storage.countSameIpReferrals(clientIp),
+        sameUserAgentReferrals: await storage.countSameUserAgentReferrals(userAgent),
+      };
+
+      const riskScore = calculateRiskScore(userId || 'anonymous', 'referral_code_validation', additionalData);
+      const isBlocked = riskScore >= 70;
+
+      // Log the attempt
+      await logFraudDetection(userId || 'anonymous', 'referral_code_validation', riskScore, isBlocked, req, additionalData);
+
+      if (isBlocked) {
+        return res.status(429).json({ 
+          message: "Muitas tentativas detectadas. Tente novamente mais tarde.",
+          riskScore 
+        });
       }
 
       const isValid = await storage.validateReferralCode(referralCode);

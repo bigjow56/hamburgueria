@@ -266,6 +266,20 @@ export interface IStorage {
     bonusPoints: number;
     message: string;
   }>;
+  
+  // Fraud detection methods
+  logFraudDetection(data: {
+    userId: string;
+    actionType: string;
+    riskScore: number;
+    blocked: boolean;
+    ipAddress?: string;
+    userAgent?: string;
+    additionalData: any;
+  }): Promise<void>;
+  countReferralValidationAttempts(ipAddress: string, timeWindow: number): Promise<number>;
+  countSameIpReferrals(ipAddress: string): Promise<number>;
+  countSameUserAgentReferrals(userAgent: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2025,6 +2039,36 @@ export class DatabaseStorage implements IStorage {
       bonusPoints,
       message
     };
+  }
+
+  // Fraud detection methods - simplified for now
+  async logFraudDetection(data: {
+    userId: string;
+    actionType: string;
+    riskScore: number;
+    blocked: boolean;
+    ipAddress?: string;
+    userAgent?: string;
+    additionalData: any;
+  }): Promise<void> {
+    // Log to console for now - can be enhanced later with proper table
+    console.log(`[FRAUD DETECTION] ${data.actionType} by ${data.userId} - Risk: ${data.riskScore}${data.blocked ? ' [BLOCKED]' : ''}`);
+  }
+
+  async countReferralValidationAttempts(ipAddress: string, timeWindow: number): Promise<number> {
+    // Simplified implementation - returns 0 for now
+    // In a real implementation, this would query the fraud_detection_logs table
+    return 0;
+  }
+
+  async countSameIpReferrals(ipAddress: string): Promise<number> {
+    // Simplified implementation - returns 0 for now
+    return 0;
+  }
+
+  async countSameUserAgentReferrals(userAgent: string): Promise<number> {
+    // Simplified implementation - returns 0 for now
+    return 0;
   }
 }
 
