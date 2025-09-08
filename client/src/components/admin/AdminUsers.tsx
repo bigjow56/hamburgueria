@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { Users, UserCheck, Gift, Search, Filter, Trophy, Medal, Award, Crown, CheckCircle, XCircle } from "lucide-react";
+import { Users, UserCheck, Gift, Search, Filter, Trophy, Medal, Award, Crown, CheckCircle, XCircle, Plus, UserPlus, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface User {
@@ -36,11 +38,38 @@ interface Redemption {
   createdAt: string;
 }
 
+interface Reward {
+  id: string;
+  name: string;
+  pointsRequired: number;
+  category: string;
+  isActive: boolean;
+  stock: number;
+  minTier: string;
+}
+
 export function AdminUsers() {
   const [activeTab, setActiveTab] = useState("users");
   const [searchTerm, setSearchTerm] = useState("");
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  
+  // New customer registration states
+  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    address: ''
+  });
+
+  // Manual redemption states
+  const [isManualRedemptionOpen, setIsManualRedemptionOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedReward, setSelectedReward] = useState<string>('');
+  const [redemptionNote, setRedemptionNote] = useState('');
+  const [userSearchTerm, setUserSearchTerm] = useState('');
   
   const queryClient = useQueryClient();
 
@@ -50,6 +79,18 @@ export function AdminUsers() {
 
   const { data: redemptions, isLoading: loadingRedemptions } = useQuery<Redemption[]>({
     queryKey: ['/api/admin/redemptions'],
+  });
+
+  // Query for available rewards
+  const { data: rewards } = useQuery<Reward[]>({
+    queryKey: ['/api/admin/rewards'],
+  });
+
+  // Query for searching users
+  const { data: searchedUsers } = useQuery<User[]>({
+    queryKey: ['/api/admin/search-users', userSearchTerm],
+    enabled: userSearchTerm.length > 2,
+    queryFn: () => apiRequest(`/api/admin/search-users?q=${encodeURIComponent(userSearchTerm)}`),
   });
 
   // Mutation for updating redemption status
@@ -70,6 +111,53 @@ export function AdminUsers() {
       toast({
         title: "Erro",
         description: error.message || "Erro ao atualizar status do resgate",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for creating new user
+  const createUserMutation = useMutation({
+    mutationFn: (userData: any) => apiRequest('/api/admin/users', { method: 'POST', body: userData }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      setIsCreateUserOpen(false);
+      setNewUserData({ name: '', email: '', phone: '', password: '', address: '' });
+      toast({
+        title: "Cliente cadastrado!",
+        description: "Cliente cadastrado com sucesso e recebeu 100 pontos de bônus.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao cadastrar cliente",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for manual redemption
+  const manualRedemptionMutation = useMutation({
+    mutationFn: (data: { userId: string; rewardId: string; adminNote: string }) => 
+      apiRequest('/api/admin/manual-redemption', { method: 'POST', body: data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/redemptions'] });
+      setIsManualRedemptionOpen(false);
+      setSelectedUser(null);
+      setSelectedReward('');
+      setRedemptionNote('');
+      setUserSearchTerm('');
+      toast({
+        title: "Resgate realizado!",
+        description: "Resgate manual realizado com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao realizar resgate manual",
         variant: "destructive",
       });
     },
@@ -146,6 +234,231 @@ export function AdminUsers() {
     });
   };
 
+  // Create User Form Component
+  const CreateUserForm = () => {
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newUserData.name || !newUserData.phone || !newUserData.password) {
+        toast({
+          title: "Erro",
+          description: "Nome, telefone e senha são obrigatórios",
+          variant: "destructive",
+        });
+        return;
+      }
+      createUserMutation.mutate(newUserData);
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Nome completo *</Label>
+          <Input
+            id="name"
+            value={newUserData.name}
+            onChange={(e) => setNewUserData({...newUserData, name: e.target.value})}
+            placeholder="Nome do cliente"
+            required
+            data-testid="input-user-name"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="phone">Telefone *</Label>
+          <Input
+            id="phone"
+            value={newUserData.phone}
+            onChange={(e) => setNewUserData({...newUserData, phone: e.target.value})}
+            placeholder="(11) 99999-9999"
+            required
+            data-testid="input-user-phone"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            value={newUserData.email}
+            onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
+            placeholder="email@exemplo.com"
+            data-testid="input-user-email"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password">Senha *</Label>
+          <Input
+            id="password"
+            type="password"
+            value={newUserData.password}
+            onChange={(e) => setNewUserData({...newUserData, password: e.target.value})}
+            placeholder="Senha do cliente"
+            required
+            data-testid="input-user-password"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="address">Endereço</Label>
+          <Textarea
+            id="address"
+            value={newUserData.address}
+            onChange={(e) => setNewUserData({...newUserData, address: e.target.value})}
+            placeholder="Endereço completo (opcional)"
+            data-testid="textarea-user-address"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setIsCreateUserOpen(false)}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={createUserMutation.isPending}
+            data-testid="submit-create-user"
+          >
+            {createUserMutation.isPending ? 'Cadastrando...' : 'Cadastrar Cliente'}
+          </Button>
+        </div>
+      </form>
+    );
+  };
+
+  // Manual Redemption Form Component
+  const ManualRedemptionForm = () => {
+    const activeRewards = rewards?.filter(r => r.isActive && (r.stock === -1 || r.stock > 0)) || [];
+    const usersToShow = userSearchTerm.length > 2 ? searchedUsers : users?.slice(0, 10);
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedUser || !selectedReward) {
+        toast({
+          title: "Erro",
+          description: "Selecione um cliente e uma recompensa",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      manualRedemptionMutation.mutate({
+        userId: selectedUser.id,
+        rewardId: selectedReward,
+        adminNote: redemptionNote || 'Resgate manual - atendimento presencial'
+      });
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* User Selection */}
+        <div className="space-y-3">
+          <Label>1. Selecionar Cliente</Label>
+          <Input
+            placeholder="Buscar por nome ou telefone..."
+            value={userSearchTerm}
+            onChange={(e) => setUserSearchTerm(e.target.value)}
+            data-testid="input-search-users"
+          />
+          
+          {selectedUser ? (
+            <Card className="p-3 bg-green-50 border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{selectedUser.name}</p>
+                  <p className="text-sm text-gray-600">{selectedUser.phone}</p>
+                  <p className="text-sm font-medium text-green-600">
+                    {selectedUser.pointsBalance} pontos disponíveis
+                  </p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setSelectedUser(null)}
+                >
+                  <XCircle className="w-4 h-4" />
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <div className="max-h-48 overflow-y-auto space-y-2">
+              {usersToShow?.map((user) => (
+                <Card 
+                  key={user.id} 
+                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setSelectedUser(user)}
+                  data-testid={`select-user-${user.id}`}
+                >
+                  <div className="flex justify-between">
+                    <div>
+                      <p className="font-medium">{user.name}</p>
+                      <p className="text-sm text-gray-600">{user.phone}</p>
+                    </div>
+                    <p className="text-sm font-medium text-blue-600">
+                      {user.pointsBalance} pts
+                    </p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Reward Selection */}
+        <div className="space-y-3">
+          <Label htmlFor="reward">2. Selecionar Recompensa</Label>
+          <Select value={selectedReward} onValueChange={setSelectedReward}>
+            <SelectTrigger data-testid="select-reward">
+              <SelectValue placeholder="Escolha uma recompensa" />
+            </SelectTrigger>
+            <SelectContent>
+              {activeRewards.map((reward) => (
+                <SelectItem key={reward.id} value={reward.id}>
+                  {reward.name} - {reward.pointsRequired} pontos
+                  {reward.stock !== -1 && ` (${reward.stock} restantes)`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Admin Note */}
+        <div className="space-y-2">
+          <Label htmlFor="note">3. Observação (opcional)</Label>
+          <Textarea
+            id="note"
+            value={redemptionNote}
+            onChange={(e) => setRedemptionNote(e.target.value)}
+            placeholder="Ex: Cliente preferiu retirar na loja..."
+            data-testid="textarea-admin-note"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setIsManualRedemptionOpen(false)}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={manualRedemptionMutation.isPending || !selectedUser || !selectedReward}
+            data-testid="submit-manual-redemption"
+          >
+            {manualRedemptionMutation.isPending ? 'Processando...' : 'Realizar Resgate'}
+          </Button>
+        </div>
+      </form>
+    );
+  };
+
   if (loadingUsers || loadingRedemptions) {
     return (
       <div className="space-y-6">
@@ -179,6 +492,43 @@ export function AdminUsers() {
         <div>
           <h1 className="text-3xl font-bold">Usuários do Sistema</h1>
           <p className="text-gray-600">Gerencie usuários e visualize histórico de resgates</p>
+        </div>
+        <div className="flex gap-3">
+          <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="create-user-button">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Cadastrar Cliente
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
+                <DialogDescription>
+                  Cadastre um cliente manualmente para o programa de fidelidade
+                </DialogDescription>
+              </DialogHeader>
+              <CreateUserForm />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isManualRedemptionOpen} onOpenChange={setIsManualRedemptionOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="manual-redemption-button">
+                <Zap className="w-4 h-4 mr-2" />
+                Resgate Manual
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Resgate Manual de Recompensa</DialogTitle>
+                <DialogDescription>
+                  Realize um resgate de recompensa em nome do cliente (atendimento presencial)
+                </DialogDescription>
+              </DialogHeader>
+              <ManualRedemptionForm />
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
