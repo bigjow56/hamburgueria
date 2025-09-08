@@ -15,6 +15,11 @@ import {
   loyaltyTransactions,
   loyaltyRewards,
   loyaltyRedemptions,
+  // Referral system tables
+  referralTransactions,
+  userStreaks,
+  seasonalRewards,
+  rewardAnalytics,
   type User,
   type InsertUser,
   type Category,
@@ -46,6 +51,15 @@ import {
   type InsertLoyaltyReward,
   type LoyaltyRedemption,
   type InsertLoyaltyRedemption,
+  // Referral system types
+  type ReferralTransaction,
+  type InsertReferralTransaction,
+  type UserStreak,
+  type InsertUserStreak,
+  type SeasonalReward,
+  type InsertSeasonalReward,
+  type RewardAnalytics,
+  type InsertRewardAnalytics,
   // Admin system imports
   adminUsers,
   pointsRules,
@@ -214,6 +228,44 @@ export interface IStorage {
   }>;
   updateCustomerStatus(customerId: string, status: string): Promise<boolean>;
   registerCustomerContact(customerId: string): Promise<boolean>;
+
+  // === REFERRAL SYSTEM METHODS ===
+  registerUserWithReferral(data: {
+    name: string;
+    email?: string;
+    phone: string;
+    password: string;
+    address?: string;
+    referralCode?: string;
+  }): Promise<{
+    user: User;
+    referralBonus?: number;
+    message: string;
+  }>;
+  getUserReferralInfo(userId: string): Promise<{
+    referralCode: string;
+    totalReferrals: number;
+    totalReferralPoints: number;
+    referredUsers: any[];
+    referralTransactions: ReferralTransaction[];
+  }>;
+  validateReferralCode(code: string): Promise<boolean>;
+  getReferralAnalytics(): Promise<{
+    totalReferrals: number;
+    pendingReferrals: number;
+    confirmedReferrals: number;
+    totalPointsAwarded: number;
+    topReferrers: any[];
+  }>;
+  getAllReferralTransactions(): Promise<ReferralTransaction[]>;
+  createSeasonalReward(reward: InsertSeasonalReward): Promise<SeasonalReward>;
+  getActiveSeasonalRewards(): Promise<SeasonalReward[]>;
+  getUserStreaks(userId: string): Promise<UserStreak[]>;
+  updateUserStreak(userId: string, streakType: string, orderValue?: number): Promise<{
+    streak: UserStreak;
+    bonusPoints: number;
+    message: string;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1602,6 +1654,377 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .limit(10);
+  }
+
+  // === REFERRAL SYSTEM IMPLEMENTATIONS ===
+
+  async registerUserWithReferral(data: {
+    name: string;
+    email?: string;
+    phone: string;
+    password: string;
+    address?: string;
+    referralCode?: string;
+  }): Promise<{
+    user: User;
+    referralBonus?: number;
+    message: string;
+  }> {
+    // Generate unique referral code for new user
+    const newReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    let referrerId: string | null = null;
+    let referralBonus = 0;
+    let message = "Usuário cadastrado com sucesso!";
+
+    // Validate referral code if provided
+    if (data.referralCode) {
+      const referrer = await db
+        .select()
+        .from(users)
+        .where(eq(users.referralCode, data.referralCode))
+        .limit(1);
+
+      if (referrer.length === 0) {
+        throw new Error("Código de indicação inválido");
+      }
+
+      referrerId = referrer[0].id;
+      
+      // Get points rule for referral
+      const referralRule = await db
+        .select()
+        .from(pointsRules)
+        .where(and(
+          eq(pointsRules.ruleType, "action_bonus"),
+          eq(pointsRules.actionType, "referral"),
+          eq(pointsRules.isActive, true)
+        ))
+        .limit(1);
+
+      if (referralRule.length > 0) {
+        referralBonus = referralRule[0].actionPoints || 100; // Default 100 points
+        message = `Usuário cadastrado com sucesso! Você ganhou ${referralBonus} pontos de bônus por indicação!`;
+      }
+    }
+
+    // Create new user
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        password: data.password,
+        address: data.address,
+        referralCode: newReferralCode,
+        referredByCode: data.referralCode,
+        referredById: referrerId,
+        pointsBalance: referralBonus
+      })
+      .returning();
+
+    // If referred by someone, create referral transaction and update referrer
+    if (referrerId && referralBonus > 0) {
+      // Create referral transaction
+      await db.insert(referralTransactions).values({
+        referrerId: referrerId,
+        referredId: newUser.id,
+        referralCode: data.referralCode!,
+        status: "confirmed",
+        pointsAwarded: referralBonus,
+        validatedAt: new Date()
+      });
+
+      // Update referrer's stats and points
+      const referrer = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, referrerId))
+        .limit(1);
+
+      if (referrer.length > 0) {
+        await db
+          .update(users)
+          .set({
+            totalReferrals: (referrer[0].totalReferrals || 0) + 1,
+            totalReferralPoints: (referrer[0].totalReferralPoints || 0) + referralBonus,
+            pointsBalance: (referrer[0].pointsBalance || 0) + referralBonus
+          })
+          .where(eq(users.id, referrerId));
+
+        // Create loyalty transaction for referrer
+        await db.insert(loyaltyTransactions).values({
+          userId: referrerId,
+          type: "referral",
+          pointsChange: referralBonus,
+          description: `Indicação confirmada: ${newUser.name}`,
+          multiplier: "1.0"
+        });
+      }
+    }
+
+    // Create welcome bonus transaction if applicable
+    if (referralBonus > 0) {
+      await db.insert(loyaltyTransactions).values({
+        userId: newUser.id,
+        type: "welcome",
+        pointsChange: referralBonus,
+        description: "Bônus de boas-vindas por indicação",
+        multiplier: "1.0"
+      });
+    }
+
+    return {
+      user: newUser,
+      referralBonus: referralBonus > 0 ? referralBonus : undefined,
+      message
+    };
+  }
+
+  async getUserReferralInfo(userId: string): Promise<{
+    referralCode: string;
+    totalReferrals: number;
+    totalReferralPoints: number;
+    referredUsers: any[];
+    referralTransactions: ReferralTransaction[];
+  }> {
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (user.length === 0) {
+      throw new Error("Usuário não encontrado");
+    }
+
+    // Get referred users
+    const referredUsers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        createdAt: users.createdAt,
+        pointsBalance: users.pointsBalance
+      })
+      .from(users)
+      .where(eq(users.referredById, userId));
+
+    // Get referral transactions
+    const transactions = await db
+      .select()
+      .from(referralTransactions)
+      .where(eq(referralTransactions.referrerId, userId))
+      .orderBy(desc(referralTransactions.createdAt));
+
+    return {
+      referralCode: user[0].referralCode || "",
+      totalReferrals: user[0].totalReferrals || 0,
+      totalReferralPoints: user[0].totalReferralPoints || 0,
+      referredUsers,
+      referralTransactions: transactions
+    };
+  }
+
+  async validateReferralCode(code: string): Promise<boolean> {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.referralCode, code))
+      .limit(1);
+
+    return result.length > 0;
+  }
+
+  async getReferralAnalytics(): Promise<{
+    totalReferrals: number;
+    pendingReferrals: number;
+    confirmedReferrals: number;
+    totalPointsAwarded: number;
+    topReferrers: any[];
+  }> {
+    // Get total referrals
+    const totalReferralsResult = await db
+      .select({ count: count() })
+      .from(referralTransactions);
+
+    // Get pending referrals
+    const pendingReferralsResult = await db
+      .select({ count: count() })
+      .from(referralTransactions)
+      .where(eq(referralTransactions.status, "pending"));
+
+    // Get confirmed referrals
+    const confirmedReferralsResult = await db
+      .select({ count: count() })
+      .from(referralTransactions)
+      .where(eq(referralTransactions.status, "confirmed"));
+
+    // Get total points awarded
+    const pointsAwardedResult = await db
+      .select({ total: sql<number>`SUM(${referralTransactions.pointsAwarded})` })
+      .from(referralTransactions)
+      .where(eq(referralTransactions.status, "confirmed"));
+
+    // Get top referrers
+    const topReferrers = await db
+      .select({
+        userId: users.id,
+        name: users.name,
+        totalReferrals: users.totalReferrals,
+        totalReferralPoints: users.totalReferralPoints
+      })
+      .from(users)
+      .where(gt(users.totalReferrals, 0))
+      .orderBy(desc(users.totalReferrals))
+      .limit(10);
+
+    return {
+      totalReferrals: totalReferralsResult[0]?.count || 0,
+      pendingReferrals: pendingReferralsResult[0]?.count || 0,
+      confirmedReferrals: confirmedReferralsResult[0]?.count || 0,
+      totalPointsAwarded: pointsAwardedResult[0]?.total || 0,
+      topReferrers
+    };
+  }
+
+  async getAllReferralTransactions(): Promise<ReferralTransaction[]> {
+    return await db
+      .select()
+      .from(referralTransactions)
+      .orderBy(desc(referralTransactions.createdAt));
+  }
+
+  async createSeasonalReward(reward: InsertSeasonalReward): Promise<SeasonalReward> {
+    const [newReward] = await db
+      .insert(seasonalRewards)
+      .values(reward)
+      .returning();
+
+    return newReward;
+  }
+
+  async getActiveSeasonalRewards(): Promise<SeasonalReward[]> {
+    const now = new Date();
+    
+    return await db
+      .select()
+      .from(seasonalRewards)
+      .where(and(
+        eq(seasonalRewards.isActive, true),
+        sql`${seasonalRewards.startDate} <= ${now}`,
+        sql`${seasonalRewards.endDate} >= ${now}`
+      ))
+      .orderBy(seasonalRewards.pointsRequired);
+  }
+
+  async getUserStreaks(userId: string): Promise<UserStreak[]> {
+    return await db
+      .select()
+      .from(userStreaks)
+      .where(eq(userStreaks.userId, userId))
+      .orderBy(desc(userStreaks.currentStreak));
+  }
+
+  async updateUserStreak(userId: string, streakType: string, orderValue?: number): Promise<{
+    streak: UserStreak;
+    bonusPoints: number;
+    message: string;
+  }> {
+    const now = new Date();
+    let bonusPoints = 0;
+    let message = "Streak atualizada!";
+
+    // Get or create streak record
+    let streak = await db
+      .select()
+      .from(userStreaks)
+      .where(and(
+        eq(userStreaks.userId, userId),
+        eq(userStreaks.streakType, streakType)
+      ))
+      .limit(1);
+
+    if (streak.length === 0) {
+      // Create new streak
+      const [newStreak] = await db
+        .insert(userStreaks)
+        .values({
+          userId,
+          streakType,
+          currentStreak: 1,
+          longestStreak: 1,
+          lastActivityDate: now,
+          isActive: true
+        })
+        .returning();
+
+      streak = [newStreak];
+      message = "Nova sequência iniciada!";
+    } else {
+      // Update existing streak
+      const currentStreak = streak[0];
+      const lastActivity = currentStreak.lastActivityDate;
+      const daysDiff = lastActivity ? Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+
+      let newCurrentStreak = 1;
+      
+      if (daysDiff === 1) {
+        // Consecutive day - increment streak
+        newCurrentStreak = (currentStreak.currentStreak || 0) + 1;
+        
+        // Calculate bonus points based on streak length
+        if (newCurrentStreak >= 7) {
+          bonusPoints = Math.floor(newCurrentStreak / 7) * 50; // 50 points per week
+        }
+        
+        message = `Sequência de ${newCurrentStreak} dias! +${bonusPoints} pontos bônus`;
+      } else if (daysDiff > 1) {
+        // Streak broken - reset
+        newCurrentStreak = 1;
+        message = "Sequência reiniciada!";
+      }
+
+      const newLongestStreak = Math.max(newCurrentStreak, currentStreak.longestStreak || 0);
+
+      const [updatedStreak] = await db
+        .update(userStreaks)
+        .set({
+          currentStreak: newCurrentStreak,
+          longestStreak: newLongestStreak,
+          lastActivityDate: now,
+          bonusPointsEarned: (currentStreak.bonusPointsEarned || 0) + bonusPoints
+        })
+        .where(eq(userStreaks.id, currentStreak.id))
+        .returning();
+
+      streak = [updatedStreak];
+    }
+
+    // Award bonus points if any
+    if (bonusPoints > 0) {
+      await db
+        .update(users)
+        .set({
+          pointsBalance: sql`${users.pointsBalance} + ${bonusPoints}`
+        })
+        .where(eq(users.id, userId));
+
+      // Create loyalty transaction
+      await db.insert(loyaltyTransactions).values({
+        userId,
+        type: "bonus",
+        pointsChange: bonusPoints,
+        description: `Bônus de sequência: ${streakType}`,
+        multiplier: "1.0"
+      });
+    }
+
+    return {
+      streak: streak[0],
+      bonusPoints,
+      message
+    };
   }
 }
 

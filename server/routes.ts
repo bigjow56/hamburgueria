@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema, insertLoyaltyRewardSchema, insertLoyaltyRedemptionSchema } from "@shared/schema";
+import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema, insertLoyaltyRewardSchema, insertLoyaltyRedemptionSchema, insertSeasonalRewardSchema } from "@shared/schema";
 import { z } from "zod";
 import { notifyProductChange } from "./webhook";
 
@@ -1831,6 +1831,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error searching users:", error);
       res.status(500).json({ message: "Failed to search users" });
+    }
+  });
+
+  // === REFERRAL SYSTEM APIS ===
+
+  // POST /api/user/register-with-referral - Register user with referral code
+  app.post("/api/user/register-with-referral", async (req, res) => {
+    try {
+      const { name, email, phone, password, address, referralCode } = req.body;
+      
+      if (!name || !phone || !password) {
+        return res.status(400).json({ 
+          message: "Name, phone, and password are required" 
+        });
+      }
+
+      const result = await storage.registerUserWithReferral({
+        name,
+        email,
+        phone,
+        password,
+        address,
+        referralCode
+      });
+      
+      res.json({
+        success: true,
+        user: result.user,
+        referralBonus: result.referralBonus,
+        message: result.message
+      });
+    } catch (error: any) {
+      console.error("Error registering user with referral:", error);
+      res.status(400).json({ 
+        message: error.message || "Failed to register user",
+        error: "REGISTRATION_ERROR"
+      });
+    }
+  });
+
+  // GET /api/user/:userId/referral-info - Get user's referral information
+  app.get("/api/user/:userId/referral-info", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const referralInfo = await storage.getUserReferralInfo(userId);
+      res.json(referralInfo);
+    } catch (error) {
+      console.error("Error getting referral info:", error);
+      res.status(500).json({ message: "Failed to get referral information" });
+    }
+  });
+
+  // POST /api/user/validate-referral-code - Validate referral code
+  app.post("/api/user/validate-referral-code", async (req, res) => {
+    try {
+      const { referralCode } = req.body;
+      
+      if (!referralCode) {
+        return res.status(400).json({ message: "Referral code is required" });
+      }
+
+      const isValid = await storage.validateReferralCode(referralCode);
+      res.json({ valid: isValid });
+    } catch (error) {
+      console.error("Error validating referral code:", error);
+      res.status(500).json({ message: "Failed to validate referral code" });
+    }
+  });
+
+  // GET /api/admin/referral-analytics - Get referral analytics for admin
+  app.get("/api/admin/referral-analytics", async (req, res) => {
+    try {
+      const analytics = await storage.getReferralAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error getting referral analytics:", error);
+      res.status(500).json({ message: "Failed to get referral analytics" });
+    }
+  });
+
+  // GET /api/admin/referral-transactions - Get all referral transactions
+  app.get("/api/admin/referral-transactions", async (req, res) => {
+    try {
+      const transactions = await storage.getAllReferralTransactions();
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error getting referral transactions:", error);
+      res.status(500).json({ message: "Failed to get referral transactions" });
+    }
+  });
+
+  // POST /api/admin/seasonal-reward - Create seasonal reward
+  app.post("/api/admin/seasonal-reward", async (req, res) => {
+    try {
+      const result = insertSeasonalRewardSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid seasonal reward data", 
+          errors: result.error.errors 
+        });
+      }
+
+      const seasonalReward = await storage.createSeasonalReward(result.data);
+      res.status(201).json(seasonalReward);
+    } catch (error) {
+      console.error("Error creating seasonal reward:", error);
+      res.status(500).json({ message: "Failed to create seasonal reward" });
+    }
+  });
+
+  // GET /api/seasonal-rewards - Get active seasonal rewards
+  app.get("/api/seasonal-rewards", async (req, res) => {
+    try {
+      const rewards = await storage.getActiveSeasonalRewards();
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error getting seasonal rewards:", error);
+      res.status(500).json({ message: "Failed to get seasonal rewards" });
+    }
+  });
+
+  // GET /api/user/:userId/streaks - Get user's streaks and gamification data
+  app.get("/api/user/:userId/streaks", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const streaks = await storage.getUserStreaks(userId);
+      res.json(streaks);
+    } catch (error) {
+      console.error("Error getting user streaks:", error);
+      res.status(500).json({ message: "Failed to get user streaks" });
+    }
+  });
+
+  // POST /api/user/:userId/update-streak - Update user streak after order
+  app.post("/api/user/:userId/update-streak", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { streakType, orderValue } = req.body;
+      
+      const result = await storage.updateUserStreak(userId, streakType, orderValue);
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating user streak:", error);
+      res.status(500).json({ message: "Failed to update user streak" });
     }
   });
 
