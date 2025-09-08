@@ -234,6 +234,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(userData: InsertUser): Promise<User> {
+    // Check for existing email
+    if (userData.email) {
+      const existingEmail = await this.getUserByEmail(userData.email);
+      if (existingEmail) {
+        throw new Error('Um usuário com este email já existe');
+      }
+    }
+
+    // Check for existing phone
+    const existingPhone = await this.getUserByPhone(userData.phone);
+    if (existingPhone) {
+      throw new Error('Um usuário com este telefone já existe');
+    }
+
     // Give welcome bonus points to new users
     const [user] = await db.insert(users).values({
       ...userData,
@@ -1449,6 +1463,20 @@ export class DatabaseStorage implements IStorage {
   // === ADMIN MANUAL OPERATIONS ===
   
   async createUserByAdmin(userData: InsertUser): Promise<User> {
+    // Check for existing email
+    if (userData.email) {
+      const existingEmail = await this.getUserByEmail(userData.email);
+      if (existingEmail) {
+        throw new Error('Um usuário com este email já existe');
+      }
+    }
+
+    // Check for existing phone
+    const existingPhone = await this.getUserByPhone(userData.phone);
+    if (existingPhone) {
+      throw new Error('Um usuário com este telefone já existe');
+    }
+
     // Admin can create users directly with all loyalty data
     const welcomeBonus = 100; // Same as normal registration
     
