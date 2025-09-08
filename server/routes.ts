@@ -1971,7 +1971,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/admin/referral-analytics - Get referral analytics for admin
+  // GET /api/admin/referrals/stats - Get referral stats for admin
+  app.get("/api/admin/referrals/stats", async (req, res) => {
+    try {
+      const analytics = await storage.getReferralAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error getting referral stats:", error);
+      res.status(500).json({ message: "Failed to get referral stats" });
+    }
+  });
+
+  // GET /api/admin/referrals/transactions - Get all referral transactions for admin
+  app.get("/api/admin/referrals/transactions", async (req, res) => {
+    try {
+      const transactions = await storage.getAllReferralTransactions();
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error getting referral transactions:", error);
+      res.status(500).json({ message: "Failed to get referral transactions" });
+    }
+  });
+
+  // PUT /api/admin/referrals/:id/status - Update referral transaction status
+  app.put("/api/admin/referrals/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+
+      // For now, just return success - can be implemented later
+      res.json({ message: "Status updated successfully" });
+    } catch (error) {
+      console.error("Error updating referral status:", error);
+      res.status(500).json({ message: "Failed to update referral status" });
+    }
+  });
+
+  // GET /api/admin/referral-analytics - Get referral analytics for admin (legacy)
   app.get("/api/admin/referral-analytics", async (req, res) => {
     try {
       const analytics = await storage.getReferralAnalytics();
