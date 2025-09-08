@@ -1262,7 +1262,8 @@ export class DatabaseStorage implements IStorage {
   // === ADMIN LEADS OPERATIONS ===
 
   async getLeadsWithDetails(): Promise<any[]> {
-    const allLeads = await db
+    // Get all registered users first
+    const registeredUsers = await db
       .select({
         id: users.id,
         name: users.name,
@@ -1277,26 +1278,100 @@ export class DatabaseStorage implements IStorage {
         createdAt: users.createdAt,
         lastContactDate: users.lastContactDate,
       })
-      .from(users)
-      .orderBy(desc(users.lastPurchaseDate));
+      .from(users);
 
-    // Calculate days since last purchase for each lead
-    const leadsWithDays = allLeads.map(lead => {
-      let daysSinceLastPurchase: number | undefined = undefined;
+    // Get unique guest customers (orders without userId)
+    const guestCustomers = await db
+      .select({
+        customerPhone: orders.customerPhone,
+        customerName: orders.customerName,
+        customerEmail: orders.customerEmail,
+        totalSpent: sql<string>`SUM(${orders.total})`,
+        totalOrders: sql<string>`COUNT(*)`,
+        lastPurchaseDate: sql<Date>`MAX(${orders.createdAt})`,
+        createdAt: sql<Date>`MIN(${orders.createdAt})`,
+      })
+      .from(orders)
+      .where(sql`${orders.userId} IS NULL`)
+      .groupBy(orders.customerPhone, orders.customerName, orders.customerEmail)
+      .having(sql`COUNT(*) > 0`);
+
+    // Combine all customers
+    const allLeads: any[] = [];
+
+    // Add registered users
+    registeredUsers.forEach(user => {
+      let daysSinceLastPurchase: number | null = null;
       
-      if (lead.lastPurchaseDate) {
-        const lastPurchase = new Date(lead.lastPurchaseDate);
+      if (user.lastPurchaseDate) {
+        const lastPurchase = new Date(user.lastPurchaseDate);
         const today = new Date();
         daysSinceLastPurchase = Math.floor((today.getTime() - lastPurchase.getTime()) / (1000 * 3600 * 24));
       }
 
-      return {
-        ...lead,
-        daysSinceLastPurchase
-      };
+      allLeads.push({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        totalSpent: user.totalSpent || "0.00",
+        totalOrders: user.totalOrders || 0,
+        lastPurchaseDate: user.lastPurchaseDate,
+        customerStatus: user.customerStatus || "active",
+        loyaltyTier: user.loyaltyTier || "bronze",
+        pointsBalance: user.pointsBalance || 0,
+        createdAt: user.createdAt,
+        lastContactDate: user.lastContactDate,
+        daysSinceLastPurchase,
+        isRegistered: true,
+      });
     });
 
-    return leadsWithDays;
+    // Add guest customers
+    guestCustomers.forEach(guest => {
+      let daysSinceLastPurchase: number | null = null;
+      let customerStatus = "active";
+      
+      if (guest.lastPurchaseDate) {
+        const lastPurchase = new Date(guest.lastPurchaseDate);
+        const today = new Date();
+        daysSinceLastPurchase = Math.floor((today.getTime() - lastPurchase.getTime()) / (1000 * 3600 * 24));
+        
+        // Calculate status based on days since last purchase
+        if (daysSinceLastPurchase > 90) {
+          customerStatus = "dormant";
+        } else if (daysSinceLastPurchase > 30) {
+          customerStatus = "inactive";
+        }
+      }
+
+      allLeads.push({
+        id: `guest_${guest.customerPhone}`, // Create a unique ID for guest customers
+        name: guest.customerName,
+        email: guest.customerEmail,
+        phone: guest.customerPhone,
+        totalSpent: guest.totalSpent || "0.00",
+        totalOrders: parseInt(guest.totalOrders) || 0,
+        lastPurchaseDate: guest.lastPurchaseDate,
+        customerStatus,
+        loyaltyTier: "none", // Guest customers don't have loyalty tiers
+        pointsBalance: 0,
+        createdAt: guest.createdAt,
+        lastContactDate: null,
+        daysSinceLastPurchase,
+        isRegistered: false,
+      });
+    });
+
+    // Sort by last purchase date (most recent first)
+    allLeads.sort((a, b) => {
+      if (!a.lastPurchaseDate && !b.lastPurchaseDate) return 0;
+      if (!a.lastPurchaseDate) return 1;
+      if (!b.lastPurchaseDate) return -1;
+      return new Date(b.lastPurchaseDate).getTime() - new Date(a.lastPurchaseDate).getTime();
+    });
+
+    return allLeads;
   }
 
   async getLeadsStats(): Promise<{
@@ -1364,13 +1439,48 @@ export class DatabaseStorage implements IStorage {
       ? (revenueStats.totalRevenue / revenueStats.totalOrders) 
       : 0;
 
+    // Get all leads to calculate proper statistics including guest customers
+    const allLeads = await this.getLeadsWithDetails();
+    
+    const totalCustomers = allLeads.length;
+    let activeCustomers = 0;
+    let inactiveCustomers = 0;
+    let dormantCustomers = 0;
+
+    // Count customers by status
+    allLeads.forEach(lead => {
+      switch (lead.customerStatus) {
+        case 'active':
+          activeCustomers++;
+          break;
+        case 'inactive':
+          inactiveCustomers++;
+          break;
+        case 'dormant':
+          dormantCustomers++;
+          break;
+      }
+    });
+
+    // Calculate average order value and total revenue from all orders
+    const [orderStats] = await db
+      .select({
+        totalRevenue: sql<string>`COALESCE(SUM(${orders.total}), 0)`,
+        totalOrders: sql<string>`COALESCE(COUNT(*), 0)`
+      })
+      .from(orders);
+
+    const totalRevenue = parseFloat(orderStats.totalRevenue || "0");
+    const totalOrdersCount = parseInt(orderStats.totalOrders || "0");
+    const averageOrderValue = totalOrdersCount > 0 ? totalRevenue / totalOrdersCount : 0;
+
     return {
-      totalCustomers: totalCustomers?.count || 0,
-      activeCustomers: activeCustomers?.count || 0,
-      inactiveCustomers: inactiveCustomers?.count || 0,
-      dormantCustomers: dormantCustomers?.count || 0,
+      totalCustomers,
+      activeCustomers,
+      inactiveCustomers,
+      dormantCustomers,
       averageOrderValue: Math.round(averageOrderValue * 100) / 100,
-      totalRevenue: revenueStats?.totalRevenue || 0,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
     };
   }
 
