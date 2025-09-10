@@ -1342,7 +1342,7 @@ export class DatabaseStorage implements IStorage {
   // === ADMIN LEADS OPERATIONS ===
 
   async getLeadsWithDetails(): Promise<any[]> {
-    // Get all registered users first
+    // Get all registered users only (exclude guest customers)
     const registeredUsers = await db
       .select({
         id: users.id,
@@ -1360,26 +1360,9 @@ export class DatabaseStorage implements IStorage {
       })
       .from(users);
 
-    // Get unique guest customers (orders without userId)
-    const guestCustomers = await db
-      .select({
-        customerPhone: orders.customerPhone,
-        customerName: orders.customerName,
-        customerEmail: orders.customerEmail,
-        totalSpent: sql<string>`SUM(${orders.total})`,
-        totalOrders: sql<string>`COUNT(*)`,
-        lastPurchaseDate: sql<Date>`MAX(${orders.createdAt})`,
-        createdAt: sql<Date>`MIN(${orders.createdAt})`,
-      })
-      .from(orders)
-      .where(sql`${orders.userId} IS NULL`)
-      .groupBy(orders.customerPhone, orders.customerName, orders.customerEmail)
-      .having(sql`COUNT(*) > 0`);
-
-    // Combine all customers
+    // Process registered users only
     const allLeads: any[] = [];
 
-    // Add registered users
     registeredUsers.forEach(user => {
       let daysSinceLastPurchase: number | null = null;
       
@@ -1404,42 +1387,6 @@ export class DatabaseStorage implements IStorage {
         lastContactDate: user.lastContactDate,
         daysSinceLastPurchase,
         isRegistered: true,
-      });
-    });
-
-    // Add guest customers
-    guestCustomers.forEach(guest => {
-      let daysSinceLastPurchase: number | null = null;
-      let customerStatus = "active";
-      
-      if (guest.lastPurchaseDate) {
-        const lastPurchase = new Date(guest.lastPurchaseDate);
-        const today = new Date();
-        daysSinceLastPurchase = Math.floor((today.getTime() - lastPurchase.getTime()) / (1000 * 3600 * 24));
-        
-        // Calculate status based on days since last purchase
-        if (daysSinceLastPurchase > 90) {
-          customerStatus = "dormant";
-        } else if (daysSinceLastPurchase > 30) {
-          customerStatus = "inactive";
-        }
-      }
-
-      allLeads.push({
-        id: `guest_${guest.customerPhone}`, // Create a unique ID for guest customers
-        name: guest.customerName,
-        email: guest.customerEmail,
-        phone: guest.customerPhone,
-        totalSpent: guest.totalSpent || "0.00",
-        totalOrders: parseInt(guest.totalOrders) || 0,
-        lastPurchaseDate: guest.lastPurchaseDate,
-        customerStatus,
-        loyaltyTier: "none", // Guest customers don't have loyalty tiers
-        pointsBalance: 0,
-        createdAt: guest.createdAt,
-        lastContactDate: null,
-        daysSinceLastPurchase,
-        isRegistered: false,
       });
     });
 
