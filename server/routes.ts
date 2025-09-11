@@ -1672,6 +1672,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/admin/webhook-events/process - Manual webhook processing diagnostic
+  app.post("/api/admin/webhook-events/process", async (req, res) => {
+    try {
+      console.log("🔧 Manual webhook processing triggered via admin endpoint");
+      
+      const pendingEventsBefore = await storage.getPendingWebhookEvents();
+      console.log(`📋 Found ${pendingEventsBefore.length} pending events before processing`);
+      
+      // Import and process webhooks manually
+      const { webhookNotificationService } = await import('./webhook');
+      await webhookNotificationService.processScheduledWebhooks();
+      
+      const pendingEventsAfter = await storage.getPendingWebhookEvents();
+      console.log(`📋 Found ${pendingEventsAfter.length} pending events after processing`);
+      
+      res.json({
+        message: "Manual webhook processing completed",
+        pendingBefore: pendingEventsBefore.length,
+        pendingAfter: pendingEventsAfter.length,
+        processed: pendingEventsBefore.length - pendingEventsAfter.length,
+        events: pendingEventsBefore.map(e => ({ id: e.id, status: e.status, table: e.tableName, operation: e.operationType }))
+      });
+    } catch (error) {
+      console.error("Manual webhook processing error:", error);
+      res.status(500).json({ message: "Failed to process webhooks manually", error: error.message });
+    }
+  });
+
   // POST /api/admin/webhook-events/:id/retry - Retry failed webhook event
   app.post("/api/admin/webhook-events/:id/retry", async (req, res) => {
     try {
