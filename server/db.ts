@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-// Use Replit database (fallback while Supabase is not accessible)
+// Use Replit database for now (Supabase still not accessible)
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
