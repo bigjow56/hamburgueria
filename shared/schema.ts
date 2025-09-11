@@ -549,6 +549,63 @@ export const insertRewardAnalyticsSchema = createInsertSchema(rewardAnalytics).o
   createdAt: true,
 });
 
+// === WEBHOOK SYSTEM ===
+
+// Webhook configurations table (configurações dos webhooks para n8n)
+export const webhookConfigs = pgTable("webhook_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // Nome identificador do webhook
+  url: text("url").notNull(), // URL do webhook n8n
+  isActive: boolean("is_active").default(true),
+  // Configurações de quais tabelas monitorar
+  watchProducts: boolean("watch_products").default(true),
+  watchIngredients: boolean("watch_ingredients").default(true),
+  watchCategories: boolean("watch_categories").default(false),
+  // Configurações de quais tipos de operação monitorar
+  watchInserts: boolean("watch_inserts").default(true),
+  watchUpdates: boolean("watch_updates").default(true),
+  watchDeletes: boolean("watch_deletes").default(true),
+  // Configurações de retry
+  maxRetries: integer("max_retries").default(3),
+  timeoutSeconds: integer("timeout_seconds").default(30),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Webhook events table (histórico de eventos disparados)
+export const webhookEvents = pgTable("webhook_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  webhookConfigId: varchar("webhook_config_id").references(() => webhookConfigs.id).notNull(),
+  tableName: text("table_name").notNull(), // 'products', 'ingredients', etc
+  operationType: text("operation_type").notNull(), // 'INSERT', 'UPDATE', 'DELETE'
+  recordId: varchar("record_id").notNull(), // ID do registro que foi modificado
+  // Dados do registro (antes e depois da mudança)
+  oldData: jsonb("old_data"), // Dados antes da mudança (para UPDATE/DELETE)
+  newData: jsonb("new_data"), // Dados depois da mudança (para INSERT/UPDATE)
+  // Status do webhook
+  status: text("status").default("pending"), // 'pending', 'sent', 'failed', 'retry'
+  httpStatus: integer("http_status"), // Status HTTP da resposta
+  response: text("response"), // Resposta do webhook
+  errorMessage: text("error_message"), // Mensagem de erro se falhou
+  retryCount: integer("retry_count").default(0),
+  lastRetryAt: timestamp("last_retry_at"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// === WEBHOOK SYSTEM SCHEMAS ===
+
+export const insertWebhookConfigSchema = createInsertSchema(webhookConfigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -626,3 +683,11 @@ export type InsertSeasonalReward = z.infer<typeof insertSeasonalRewardSchema>;
 
 export type RewardAnalytics = typeof rewardAnalytics.$inferSelect;
 export type InsertRewardAnalytics = z.infer<typeof insertRewardAnalyticsSchema>;
+
+// === WEBHOOK SYSTEM TYPES ===
+
+export type WebhookConfig = typeof webhookConfigs.$inferSelect;
+export type InsertWebhookConfig = z.infer<typeof insertWebhookConfigSchema>;
+
+export type WebhookEvent = typeof webhookEvents.$inferSelect;
+export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
