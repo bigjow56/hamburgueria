@@ -71,7 +71,13 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   // Populate database with initial data if needed
-  await seedDatabase();
+  try {
+    await seedDatabase();
+    console.log("✅ Database seeding completed successfully");
+  } catch (error) {
+    console.warn("⚠️ Database seeding failed, continuing without seed data:", error.message);
+    // Continue server startup even if seeding fails (useful for connection issues)
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
