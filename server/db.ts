@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-// Use Replit database while new Supabase project becomes active
+// Use Replit database while Supabase DNS propagates
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
