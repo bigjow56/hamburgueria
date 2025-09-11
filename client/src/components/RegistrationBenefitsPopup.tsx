@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Star, Users, Sparkles, X } from "lucide-react";
+import { RegisterForm } from "@/components/RegisterForm";
 
 interface RegistrationBenefitsPopupProps {
   isOpen: boolean;
@@ -18,9 +19,32 @@ export function RegistrationBenefitsPopup({
   onProceedAsGuest,
   onGoToRegister
 }: RegistrationBenefitsPopupProps) {
+  const [showRegisterForm, setShowRegisterForm] = useState(false);
+
+  const handleGoToRegister = () => {
+    setShowRegisterForm(true);
+  };
+
+  const handleRegisterSuccess = () => {
+    setShowRegisterForm(false);
+    onClose();
+    // Process order after successful registration
+    onGoToRegister();
+  };
+
+  const handleBackToBenefits = () => {
+    setShowRegisterForm(false);
+  };
+
+  // Reset form state when popup closes
+  const handleClose = () => {
+    setShowRegisterForm(false);
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className={`${showRegisterForm ? "sm:max-w-md" : "sm:max-w-2xl"}`}>
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -43,7 +67,16 @@ export function RegistrationBenefitsPopup({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Benefícios em cards */}
+          {showRegisterForm ? (
+            // Show register form
+            <RegisterForm 
+              onSuccess={handleRegisterSuccess}
+              onCancel={handleBackToBenefits}
+            />
+          ) : (
+            <>
+              {/* Content when not showing register form */}
+            {/* Benefícios em cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="border-l-4 border-l-primary">
               <CardContent className="p-4">
@@ -138,7 +171,7 @@ export function RegistrationBenefitsPopup({
           {/* Botões de ação */}
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Button
-              onClick={onGoToRegister}
+              onClick={handleGoToRegister}
               className="flex-1 bg-primary hover:bg-primary/90"
               data-testid="button-create-account"
             >
@@ -156,9 +189,11 @@ export function RegistrationBenefitsPopup({
             </Button>
           </div>
 
-          <p className="text-xs text-center text-muted-foreground">
-            Você pode criar sua conta a qualquer momento. Os benefícios estarão esperando por você!
-          </p>
+            <p className="text-xs text-center text-muted-foreground">
+              Você pode criar sua conta a qualquer momento. Os benefícios estarão esperando por você!
+            </p>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
