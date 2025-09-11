@@ -229,6 +229,39 @@ export function createWebhookNotificationService(): WebhookNotificationService {
           payload.categoryId = event.recordId;
         }
         
+        // Detect product availability changes for special notification
+        const op = (event.operationType || '').toUpperCase();
+        if (event.tableName === 'products' && op === 'UPDATE' && event.oldData && event.newData) {
+          // Parse JSON if data comes as string, otherwise use as object
+          const oldObj = typeof event.oldData === 'string' ? JSON.parse(event.oldData) : (event.oldData || {});
+          const newObj = typeof event.newData === 'string' ? JSON.parse(event.newData) : (event.newData || {});
+          
+          const wasAvailable = oldObj.isAvailable ?? oldObj.is_available ?? true;
+          const isNowAvailable = newObj.isAvailable ?? newObj.is_available ?? true;
+          
+          console.log(`🔍 DEBUG: op=${op}, oldAvailable=${wasAvailable}, newAvailable=${isNowAvailable}`);
+          
+          if (wasAvailable && !isNowAvailable) {
+            (payload as any).productBecameUnavailable = true;
+            (payload as any).availabilityChange = {
+              from: 'available',
+              to: 'unavailable',
+              productName: newObj.name || oldObj.name,
+              timestamp: payload.timestamp
+            };
+            console.log(`🚨 PRODUTO INDISPONÍVEL: ${newObj.name || event.recordId} foi marcado como esgotado`);
+          } else if (!wasAvailable && isNowAvailable) {
+            (payload as any).productBecameAvailable = true;
+            (payload as any).availabilityChange = {
+              from: 'unavailable', 
+              to: 'available',
+              productName: newObj.name || oldObj.name,
+              timestamp: payload.timestamp
+            };
+            console.log(`✅ PRODUTO DISPONÍVEL: ${newObj.name || event.recordId} voltou a estar disponível`);
+          }
+        }
+
         // Send webhook notification
         const success = await this.sendWebhookNotification(webhookConfig, payload);
         
@@ -289,6 +322,39 @@ export function createWebhookNotificationService(): WebhookNotificationService {
           payload.categoryId = event.recordId;
         }
         
+        // Detect product availability changes for special notification
+        const op = (event.operationType || '').toUpperCase();
+        if (event.tableName === 'products' && op === 'UPDATE' && event.oldData && event.newData) {
+          // Parse JSON if data comes as string, otherwise use as object
+          const oldObj = typeof event.oldData === 'string' ? JSON.parse(event.oldData) : (event.oldData || {});
+          const newObj = typeof event.newData === 'string' ? JSON.parse(event.newData) : (event.newData || {});
+          
+          const wasAvailable = oldObj.isAvailable ?? oldObj.is_available ?? true;
+          const isNowAvailable = newObj.isAvailable ?? newObj.is_available ?? true;
+          
+          console.log(`🔍 DEBUG: op=${op}, oldAvailable=${wasAvailable}, newAvailable=${isNowAvailable}`);
+          
+          if (wasAvailable && !isNowAvailable) {
+            (payload as any).productBecameUnavailable = true;
+            (payload as any).availabilityChange = {
+              from: 'available',
+              to: 'unavailable',
+              productName: newObj.name || oldObj.name,
+              timestamp: payload.timestamp
+            };
+            console.log(`🚨 PRODUTO INDISPONÍVEL: ${newObj.name || event.recordId} foi marcado como esgotado`);
+          } else if (!wasAvailable && isNowAvailable) {
+            (payload as any).productBecameAvailable = true;
+            (payload as any).availabilityChange = {
+              from: 'unavailable', 
+              to: 'available',
+              productName: newObj.name || oldObj.name,
+              timestamp: payload.timestamp
+            };
+            console.log(`✅ PRODUTO DISPONÍVEL: ${newObj.name || event.recordId} voltou a estar disponível`);
+          }
+        }
+
         // Send webhook notification using environment URL
         const success = await this.sendWebhookNotificationToUrl(webhookUrl, payload);
         

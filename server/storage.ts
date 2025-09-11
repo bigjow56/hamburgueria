@@ -2181,7 +2181,10 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(webhookEvents)
-      .where(eq(webhookEvents.status, 'pending'))
+      .where(or(
+        eq(webhookEvents.status, 'pending'),
+        eq(webhookEvents.status, 'retry')
+      ))
       .orderBy(webhookEvents.createdAt);
   }
 
