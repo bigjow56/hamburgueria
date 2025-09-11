@@ -1,0 +1,2 @@
+id,username,email,password,role,isActive,lastLogin,createdAt
+8a3f0640-457c-4da7-ad40-0210cd030aaa,admin,admin@hamburgueria.com,$2b$12$OjwILF7ariOPKZzmcDKzbeN9K3Py5vravXtxlCbgJNeGuDRDCCV6G,admin,true,Thu Sep 11 2025 13:20:37 GMT+0000 (Coordinated Universal Time),Sun Sep 07 2025 19:28:37 GMT+0000 (Coordinated Universal Time)

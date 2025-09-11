@@ -8,7 +8,11 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:push:supabase": "DRIZZLE_CONFIG_PATH=drizzle.config.supabase.ts drizzle-kit push",
+    "migrate:supabase": "npx tsx scripts/migrate-to-supabase.ts",
+    "migrate:supabase:dry": "npx tsx scripts/migrate-to-supabase.ts --dry-run",
+    "migrate:supabase:verify": "npx tsx scripts/migrate-to-supabase.ts --verify-only"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

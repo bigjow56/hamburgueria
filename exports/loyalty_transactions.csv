@@ -1,0 +1,7 @@
+id,userId,orderId,type,pointsChange,description,multiplier,createdAt
+40636d22-d4c9-4e65-938a-3850b0f5fa84,69c08f29-bbdd-4ee6-b27b-9f499ed50c50,,welcome,100,Bônus de boas-vindas - 100 pontos!,1.00,Sun Sep 07 2025 19:01:40 GMT+0000 (Coordinated Universal Time)
+8da1122c-5c7f-4904-abb3-5e875f9fb0ae,69c08f29-bbdd-4ee6-b27b-9f499ed50c50,,welcome,100,Bônus de boas-vindas - 100 pontos!,1.00,Sun Sep 07 2025 18:50:07 GMT+0000 (Coordinated Universal Time)
+3016414b-a654-43d8-b556-0ab155b4d90d,69c08f29-bbdd-4ee6-b27b-9f499ed50c50,,reward_redemption,-150,Resgate: Batata Frita Grátis,1.00,Sun Sep 07 2025 21:39:49 GMT+0000 (Coordinated Universal Time)
+bb457b24-d2c1-40f1-83b2-866fa95b89cb,69c08f29-bbdd-4ee6-b27b-9f499ed50c50,,reward_redemption,-200,Resgate: Desconto 10%,1.00,Mon Sep 08 2025 10:38:58 GMT+0000 (Coordinated Universal Time)
+db2ff340-9d3b-407a-97a6-d729f5b35e65,69c08f29-bbdd-4ee6-b27b-9f499ed50c50,,welcome,100,Bônus de boas-vindas - 100 pontos!,1.00,Mon Sep 08 2025 18:19:41 GMT+0000 (Coordinated Universal Time)
+67706b76-f94a-4c06-a0a4-0f62c03891c1,69c08f29-bbdd-4ee6-b27b-9f499ed50c50,195740f7-27b2-4c07-9a44-4c17ee2272dc,purchase,57,Compra - Pedido #BH2509081819831,1.00,Mon Sep 08 2025 18:19:41 GMT+0000 (Coordinated Universal Time)

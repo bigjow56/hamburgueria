@@ -1,0 +1,4 @@
+id,isOpen,closingTime,minimumOrderAmount,deliveryAreas,useNeighborhoodDelivery,defaultDeliveryFee,bannerTitle,bannerDescription,bannerPrice,bannerImageUrl,bannerColor1,bannerColor2,bannerColor3,bannerColor4,bannerBackgroundImage,bannerUseImageBackground,storeTitle,siteName,storeImageUrl,storeAddress,storeNeighborhood,storeHours,deliveryTime,deliveryFeeRange,paymentMethods,updatedAt
+ab36e539-f918-4a89-8a86-4953bcb7faa3,true,23:00,25.00,,false,5.90,Hambúrguers Artesanais,"Ingredientes frescos, sabor incomparável. Faça seu pedido!",18.90,,#ff6b35,#f7931e,#ffd23f,#ff8c42,,false,Nossa Loja,Burger House,,"Rua dos Sabores, 123","Centro, São Paulo - SP",Segunda a Sexta: 18h - 23h
+Sábado e Domingo: 18h - 00h,Tempo médio: 30-45 minutos,"Taxa: R$ 3,90 - R$ 8,90","Dinheiro, Cartão, PIX
+Mercado Pago integrado",Wed Sep 03 2025 12:07:33 GMT+0000 (Coordinated Universal Time)
