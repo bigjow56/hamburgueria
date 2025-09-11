@@ -6,6 +6,18 @@ import { z } from "zod";
 import { notifyProductChange } from "./webhook";
 import { requireAuth, requireAdmin, authRateLimit, adminRateLimit, generateToken } from "./auth";
 
+// Timing-safe string comparison to prevent timing attacks
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 // Admin login schema
 const adminLoginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -1677,11 +1689,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/internal/webhook-notification - Internal endpoint for PostgreSQL triggers
   app.post("/api/internal/webhook-notification", async (req, res) => {
     try {
-      // Security: Verify internal webhook secret
+      // Security: Verify internal webhook secret with timing-safe comparison
       const webhookSecret = process.env.INTERNAL_WEBHOOK_SECRET || 'webhook-secret-key';
       const providedSecret = req.headers['x-internal-webhook-secret'];
       
-      if (!providedSecret || providedSecret !== webhookSecret) {
+      if (!providedSecret || typeof providedSecret !== 'string' || !safeCompare(providedSecret, webhookSecret)) {
         console.error('⚠️ Unauthorized access to internal webhook endpoint');
         return res.status(401).json({ message: "Unauthorized" });
       }

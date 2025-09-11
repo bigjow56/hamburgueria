@@ -48,9 +48,11 @@ export async function notifyProductChange(action: 'create' | 'update' | 'delete'
     action === 'delete' ? null : productData  // newData for create/update
   );
   
-  // Also try the legacy environment variable approach for backwards compatibility
+  // Legacy environment variable approach - only use if explicitly enabled to avoid duplication
   const webhookUrl = process.env.N8N_URL_MENU;
-  if (webhookUrl) {
+  const enableLegacyWebhook = process.env.ENABLE_LEGACY_WEBHOOK === 'true';
+  
+  if (webhookUrl && enableLegacyWebhook) {
     try {
       const sanitizedData = sanitizeProductData(productData);
       const payload: WebhookPayload = {
@@ -75,6 +77,8 @@ export async function notifyProductChange(action: 'create' | 'update' | 'delete'
     } catch (error) {
       console.error(`⚠️ Legacy webhook failed for product ${action} (ID: ${productId})`);
     }
+  } else if (webhookUrl && !enableLegacyWebhook) {
+    console.log(`⏭️ Legacy webhook available but disabled via ENABLE_LEGACY_WEBHOOK flag`);
   }
 }
 
@@ -157,7 +161,7 @@ export function createWebhookNotificationService(): WebhookNotificationService {
           return false;
         }
         
-        if (event.status !== 'pending') {
+        if (event.status !== 'pending' && event.status !== 'retry') {
           console.log(`⏭️ Webhook event ${eventId} already processed (status: ${event.status})`);
           return true;
         }
@@ -210,7 +214,8 @@ export function createWebhookNotificationService(): WebhookNotificationService {
             await storage.updateWebhookEventStatus(eventId, 'failed', undefined, undefined, 'Maximum retry attempts reached');
             console.error(`❌ Webhook event ${eventId} failed after ${maxRetries} attempts`);
           } else {
-            await storage.updateWebhookEventStatus(eventId, 'pending', undefined, undefined, 'Retry needed');
+            // Use 'retry' status to trigger the retryCount increment logic in storage
+            await storage.updateWebhookEventStatus(eventId, 'retry', undefined, undefined, `Retry attempt ${retryCount}`);
             console.log(`🔄 Webhook event ${eventId} scheduled for retry (attempt ${retryCount})`);
           }
         }
