@@ -43,7 +43,7 @@ export const generateToken = (payload: { adminId: string; username: string; role
     expiresIn: JWT_EXPIRES_IN,
     issuer: 'hamburgueria-admin',
     audience: 'admin-panel'
-  });
+  }) as string;
 };
 
 // Verify JWT token

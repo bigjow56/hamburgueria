@@ -60,17 +60,63 @@ const createOrderRequestSchema = z.object({
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Security middleware: Apply rate limiting and protect ALL admin routes
-  app.use('/api/admin/*', (req, res, next) => {
-    // Skip authentication for login route (but still apply its own rate limiting)
+  // === ADMIN LOGIN ROUTE (MUST BE FIRST - NO AUTH REQUIRED) ===
+  app.post("/api/admin/login", authRateLimit, async (req, res) => {
+    try {
+      console.log('🔍 Processing admin login request');
+      const result = adminLoginSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid login data", 
+          errors: result.error.errors 
+        });
+      }
+
+      const { username, password } = result.data;
+      const admin = await storage.authenticateAdmin(username, password);
+      
+      if (!admin) {
+        return res.status(401).json({ message: "Invalid credentials or inactive account" });
+      }
+
+      // Generate JWT token for authenticated admin
+      const token = generateToken({
+        adminId: admin.id,
+        username: admin.username,
+        role: admin.role || 'admin'
+      });
+
+      console.log(`✅ Admin login successful: ${admin.username} (ID: ${admin.id})`);
+
+      res.json({ 
+        success: true, 
+        token,
+        admin: { 
+          id: admin.id, 
+          username: admin.username, 
+          email: admin.email, 
+          role: admin.role 
+        } 
+      });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === ADMIN PROTECTION MIDDLEWARE (AFTER LOGIN ROUTE) ===
+  app.use('/api/admin', (req, res, next) => {
+    console.log(`🔒 Protecting admin route: ${req.originalUrl}`);
+    
+    // CRITICAL: Skip authentication for login route
     if (req.path === '/api/admin/login') {
+      console.log(`🔍 Skipping auth for login route: ${req.path}`);
       return next();
     }
     
-    // Apply rate limiting to all admin routes
+    // Apply rate limiting and authentication to all other admin routes
     return adminRateLimit(req, res, (err) => {
       if (err) return next(err);
-      // Apply authentication middleware to all admin routes
       return requireAuth(req as any, res, next);
     });
   });
@@ -100,10 +146,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'DELETE:/api/banners/*'
   ];
 
-  // Apply authentication to admin-only routes
+  // Apply authentication to admin-only routes (SKIP admin login route)
   app.use((req, res, next) => {
     const routeMethod = req.method;
     const routePath = req.path;
+    
+    // Skip authentication for admin login
+    if (routeMethod === 'POST' && routePath === '/api/admin/login') {
+      console.log(`🔍 Allowing admin login route without auth: ${routeMethod} ${routePath}`);
+      return next();
+    }
     
     const needsAuth = adminOnlyRoutes.some(route => {
       const [method, path] = route.split(':');
@@ -1462,49 +1514,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // === ADMIN PANEL API ROUTES ===
-
-  // Admin login/authentication with rate limiting and JWT tokens
-  app.post("/api/admin/login", authRateLimit, async (req, res) => {
-    try {
-      const result = adminLoginSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ 
-          message: "Invalid login data", 
-          errors: result.error.errors 
-        });
-      }
-
-      const { username, password } = result.data;
-      const admin = await storage.authenticateAdmin(username, password);
-      
-      if (!admin) {
-        return res.status(401).json({ message: "Invalid credentials or inactive account" });
-      }
-
-      // Generate JWT token for authenticated admin
-      const token = generateToken({
-        adminId: admin.id,
-        username: admin.username,
-        role: admin.role
-      });
-
-      console.log(`✅ Admin login successful: ${admin.username} (ID: ${admin.id})`);
-
-      res.json({ 
-        success: true, 
-        token,
-        admin: { 
-          id: admin.id, 
-          username: admin.username, 
-          email: admin.email, 
-          role: admin.role 
-        } 
-      });
-    } catch (error) {
-      console.error("Admin login error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
 
   // Admin dashboard stats
   app.get("/api/admin/dashboard/stats", async (req, res) => {

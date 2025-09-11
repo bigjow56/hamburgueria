@@ -7,6 +7,9 @@ import { seedDatabase } from "./seed";
 
 const app = express();
 
+// Trust proxy for rate limiting to work correctly in Replit environment (set to 1 for single proxy)
+app.set('trust proxy', 1);
+
 // Security headers with Helmet
 app.use(helmet({
   contentSecurityPolicy: {
