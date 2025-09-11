@@ -1129,12 +1129,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async authenticateAdmin(username: string, password: string): Promise<AdminUser | undefined> {
+    console.log(`🔍 DEBUG: Authenticating admin with username: ${username}`);
     const admin = await this.getAdminUserByUsername(username);
-    if (!admin || !admin.isActive) return undefined;
+    
+    if (!admin) {
+      console.log(`❌ DEBUG: Admin user not found for username: ${username}`);
+      return undefined;
+    }
+    
+    console.log(`✅ DEBUG: Admin user found:`, {
+      id: admin.id,
+      username: admin.username,
+      isActive: admin.isActive,
+      passwordExists: !!admin.password
+    });
+    
+    if (!admin.isActive) {
+      console.log(`❌ DEBUG: Admin user is inactive: ${username}`);
+      return undefined;
+    }
     
     // Use bcrypt to verify password
+    console.log(`🔐 DEBUG: Comparing passwords for ${username}`);
     const isPasswordValid = await bcrypt.compare(password, admin.password);
+    console.log(`🔐 DEBUG: Password valid for ${username}:`, isPasswordValid);
+    
     if (isPasswordValid) {
+      console.log(`✅ DEBUG: Authentication successful for ${username}`);
       // Update last login
       await db
         .update(adminUsers)
@@ -1142,6 +1163,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(adminUsers.id, admin.id));
       return admin;
     }
+    
+    console.log(`❌ DEBUG: Invalid password for ${username}`);
     return undefined;
   }
 
