@@ -15,7 +15,9 @@ interface WebhookPayload {
 interface WebhookNotificationService {
   processScheduledWebhooks: () => Promise<void>;
   processWebhookEvent: (eventId: string) => Promise<boolean>;
+  processWebhookEventWithUrl: (eventId: string, webhookUrl: string) => Promise<boolean>;
   sendWebhookNotification: (webhookConfig: any, payload: WebhookPayload) => Promise<boolean>;
+  sendWebhookNotificationToUrl: (webhookUrl: string, payload: WebhookPayload) => Promise<boolean>;
 }
 
 // Sanitize product data to remove sensitive information
@@ -132,20 +134,47 @@ export function createWebhookNotificationService(): WebhookNotificationService {
     async processScheduledWebhooks(): Promise<void> {
       try {
         console.log('🔄 Processing scheduled webhooks...');
-        const pendingEvents = await storage.getPendingWebhookEvents();
         
-        if (pendingEvents.length === 0) {
-          console.log('📭 No pending webhook events to process');
-          return;
-        }
+        // Check if we should use environment variable URL instead of DB configs
+        const n8nTriggerUrl = process.env.N8N_TRIGGER_URL;
         
-        console.log(`📋 Found ${pendingEvents.length} pending webhook events`);
-        
-        for (const event of pendingEvents) {
-          try {
-            await this.processWebhookEvent(event.id);
-          } catch (error) {
-            console.error(`❌ Failed to process webhook event ${event.id}:`, error);
+        if (n8nTriggerUrl) {
+          console.log(`🌐 Using N8N_TRIGGER_URL: ${n8nTriggerUrl}`);
+          // Process all pending events using the environment URL
+          const pendingEvents = await storage.getPendingWebhookEvents();
+          
+          if (pendingEvents.length === 0) {
+            console.log('📭 No pending webhook events to process');
+            return;
+          }
+          
+          console.log(`📋 Found ${pendingEvents.length} pending webhook events`);
+          
+          for (const event of pendingEvents) {
+            try {
+              await this.processWebhookEventWithUrl(event.id, n8nTriggerUrl);
+            } catch (error) {
+              console.error(`❌ Failed to process webhook event ${event.id}:`, error);
+            }
+          }
+        } else {
+          console.log('🗄️ Using database webhook configurations');
+          // Original database-driven approach
+          const pendingEvents = await storage.getPendingWebhookEvents();
+          
+          if (pendingEvents.length === 0) {
+            console.log('📭 No pending webhook events to process');
+            return;
+          }
+          
+          console.log(`📋 Found ${pendingEvents.length} pending webhook events`);
+          
+          for (const event of pendingEvents) {
+            try {
+              await this.processWebhookEvent(event.id);
+            } catch (error) {
+              console.error(`❌ Failed to process webhook event ${event.id}:`, error);
+            }
           }
         }
       } catch (error) {
@@ -223,6 +252,97 @@ export function createWebhookNotificationService(): WebhookNotificationService {
         return success;
       } catch (error) {
         console.error(`💥 Error processing webhook event ${eventId}:`, error);
+        return false;
+      }
+    },
+
+    async processWebhookEventWithUrl(eventId: string, webhookUrl: string): Promise<boolean> {
+      try {
+        const event = await storage.getWebhookEvent(eventId);
+        if (!event) {
+          console.error(`⚠️ Webhook event ${eventId} not found`);
+          return false;
+        }
+        
+        if (event.status !== 'pending' && event.status !== 'retry') {
+          console.log(`⏭️ Webhook event ${eventId} already processed (status: ${event.status})`);
+          return true;
+        }
+        
+        // Create payload
+        const payload: WebhookPayload = {
+          action: event.operationType.toLowerCase() === 'insert' ? 'create' : 
+                  event.operationType.toLowerCase() === 'update' ? 'update' : 'delete',
+          tableName: event.tableName,
+          recordId: event.recordId,
+          recordData: event.newData ? sanitizeData(event.tableName, event.newData) : null,
+          oldData: event.oldData ? sanitizeData(event.tableName, event.oldData) : null,
+          timestamp: typeof event.createdAt === 'string' ? event.createdAt : event.createdAt ? event.createdAt.toISOString() : new Date().toISOString()
+        };
+        
+        // Set appropriate ID field based on table
+        if (event.tableName === 'products') {
+          payload.productId = event.recordId;
+        } else if (event.tableName === 'ingredients') {
+          payload.ingredientId = event.recordId;
+        } else if (event.tableName === 'categories') {
+          payload.categoryId = event.recordId;
+        }
+        
+        // Send webhook notification using environment URL
+        const success = await this.sendWebhookNotificationToUrl(webhookUrl, payload);
+        
+        if (success) {
+          await storage.updateWebhookEventStatus(eventId, 'sent');
+          console.log(`✅ Webhook event ${eventId} sent successfully to ${webhookUrl}`);
+        } else {
+          const retryCount = (event.retryCount || 0) + 1;
+          const maxRetries = 3;
+          
+          if (retryCount >= maxRetries) {
+            await storage.updateWebhookEventStatus(eventId, 'failed', undefined, undefined, 'Maximum retry attempts reached');
+            console.error(`❌ Webhook event ${eventId} failed after ${maxRetries} attempts`);
+          } else {
+            // Use 'retry' status to trigger the retryCount increment logic in storage
+            await storage.updateWebhookEventStatus(eventId, 'retry', undefined, undefined, `Retry attempt ${retryCount}`);
+            console.log(`🔄 Webhook event ${eventId} scheduled for retry (attempt ${retryCount})`);
+          }
+        }
+        
+        return success;
+      } catch (error) {
+        console.error(`💥 Error processing webhook event ${eventId}:`, error);
+        return false;
+      }
+    },
+
+    async sendWebhookNotificationToUrl(webhookUrl: string, payload: WebhookPayload): Promise<boolean> {
+      try {
+        console.log(`🚀 Sending webhook notification to ${webhookUrl} for ${payload.tableName} ${payload.action}`);
+        
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'BurgerHouse-Webhook/1.0'
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(30000) // 30 second timeout
+        });
+        
+        if (!response.ok) {
+          console.error(`❌ Webhook failed: HTTP ${response.status} ${response.statusText}`);
+          return false;
+        }
+        
+        console.log(`✅ Webhook notification sent successfully`);
+        return true;
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.error('⏰ Webhook request timed out');
+        } else {
+          console.error('💥 Webhook connection failed:', error);
+        }
         return false;
       }
     },
