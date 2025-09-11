@@ -42,9 +42,23 @@ export async function apiRequest(
     bodyData = data;
   }
 
+  // Get admin token for authentication
+  const adminToken = localStorage.getItem('adminToken');
+  
+  // Build headers
+  const headers: Record<string, string> = {};
+  if (bodyData) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  // Add Authorization header if admin token exists
+  if (adminToken) {
+    headers["Authorization"] = `Bearer ${adminToken}`;
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: bodyData ? { "Content-Type": "application/json" } : {},
+    headers,
     body: bodyData ? JSON.stringify(bodyData) : undefined,
     credentials: "include",
   });
@@ -59,17 +73,53 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Get admin token for authentication
+    const adminToken = localStorage.getItem('adminToken');
+    
+    // Build headers for queries
+    const headers: Record<string, string> = {};
+    if (adminToken) {
+      headers["Authorization"] = `Bearer ${adminToken}`;
+    }
+    
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      // Clear invalid token and redirect to login
+      if (res.status === 401) {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        console.log('🔒 Authentication failed, cleared tokens');
+      }
       return null;
     }
 
     await throwIfResNotOk(res);
     return await res.json();
   };
+
+// Admin authentication utilities
+export const isAdminAuthenticated = () => {
+  const token = localStorage.getItem('adminToken');
+  const user = localStorage.getItem('adminUser');
+  return !!(token && user);
+};
+
+export const getAdminUser = () => {
+  const userData = localStorage.getItem('adminUser');
+  return userData ? JSON.parse(userData) : null;
+};
+
+export const adminLogout = () => {
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('adminUser');
+  console.log('🔓 Admin logged out, tokens cleared');
+  // Redirect to login or home page
+  window.location.href = '/admin-login';
+};
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +132,13 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
+      onError: (error: any) => {
+        // Handle 401 errors globally for mutations
+        if (error.message?.includes('401')) {
+          console.log('🔒 Authentication failed in mutation, logging out');
+          adminLogout();
+        }
+      },
     },
   },
 });

@@ -18,18 +18,41 @@ export default function AdminLogin() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Credenciais simples para demonstração
-    // Em produção, isso seria um sistema de autenticação real
-    if (username === "admin" && password === "admin123") {
-      toast({
-        title: "Login realizado!",
-        description: "Bem-vindo ao painel administrativo.",
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
       });
-      setLocation("/admin");
-    } else {
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Store JWT token and admin info in localStorage for authentication
+        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminUser', JSON.stringify(data.admin));
+        
+        console.log('✅ Admin login successful, token stored');
+        
+        toast({
+          title: "Login realizado!",
+          description: `Bem-vindo, ${data.admin.username}!`,
+        });
+        setLocation("/admin");
+      } else {
+        toast({
+          title: "Credenciais inválidas",
+          description: data.message || "Verifique o usuário e senha.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Erro no login:', error);
       toast({
-        title: "Credenciais inválidas",
-        description: "Verifique o usuário e senha.",
+        title: "Erro no sistema",
+        description: "Não foi possível realizar o login. Tente novamente.",
         variant: "destructive",
       });
     }
@@ -96,11 +119,6 @@ export default function AdminLogin() {
               </Button>
             </form>
             
-            <div className="mt-6 p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground text-center">
-                <strong>Demo:</strong> usuário: admin | senha: admin123
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

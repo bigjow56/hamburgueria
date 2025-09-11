@@ -108,12 +108,6 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
           </Button>
         </form>
 
-        {/* Development hint */}
-        <div className="mt-4 p-3 bg-gray-50 rounded-md text-sm text-gray-600">
-          <p className="font-medium mb-1">Para desenvolvimento:</p>
-          <p>Usuário: admin</p>
-          <p>Senha: admin123</p>
-        </div>
       </CardContent>
     </Card>
   );

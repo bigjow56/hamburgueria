@@ -1,9 +1,26 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema, insertLoyaltyRewardSchema, insertLoyaltyRedemptionSchema, insertSeasonalRewardSchema } from "@shared/schema";
+import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema, insertLoyaltyRewardSchema, insertLoyaltyRedemptionSchema, insertSeasonalRewardSchema, insertPointsRuleSchema, insertLoyaltyTiersConfigSchema, insertCampaignSchema } from "@shared/schema";
 import { z } from "zod";
 import { notifyProductChange } from "./webhook";
+import { requireAuth, requireAdmin, authRateLimit, adminRateLimit, generateToken } from "./auth";
+
+// Admin login schema
+const adminLoginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required")
+});
+
+// User registration with referral schema
+const registerWithReferralSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email().optional(),
+  phone: z.string().min(1, "Phone is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  address: z.string().optional(),
+  referralCode: z.string().optional()
+});
 
 const createOrderRequestSchema = z.object({
   customerName: z.string().min(1),
@@ -43,6 +60,73 @@ const createOrderRequestSchema = z.object({
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Security middleware: Apply rate limiting and protect ALL admin routes
+  app.use('/api/admin/*', (req, res, next) => {
+    // Skip authentication for login route (but still apply its own rate limiting)
+    if (req.path === '/api/admin/login') {
+      return next();
+    }
+    
+    // Apply rate limiting to all admin routes
+    return adminRateLimit(req, res, (err) => {
+      if (err) return next(err);
+      // Apply authentication middleware to all admin routes
+      return requireAuth(req as any, res, next);
+    });
+  });
+
+  // CRITICAL SECURITY: Protect admin-only operations that don't start with /api/admin/
+  const adminOnlyRoutes = [
+    'PUT:/api/store/settings',
+    'POST:/api/categories', 
+    'DELETE:/api/categories/*',
+    'PUT:/api/products/*',
+    'POST:/api/products',
+    'DELETE:/api/products/*',
+    'POST:/api/products/*/recalculate-price',
+    'POST:/api/products/recalculate-all-prices',
+    'DELETE:/api/orders/*',
+    'POST:/api/delivery-zones',
+    'PUT:/api/delivery-zones/*',
+    'DELETE:/api/delivery-zones/*',
+    'POST:/api/expenses',
+    'PUT:/api/expenses/*', 
+    'DELETE:/api/expenses/*',
+    'POST:/api/ingredients',
+    'PUT:/api/ingredients/*',
+    'DELETE:/api/ingredients/*',
+    'POST:/api/banners',
+    'PUT:/api/banners/*',
+    'DELETE:/api/banners/*'
+  ];
+
+  // Apply authentication to admin-only routes
+  app.use((req, res, next) => {
+    const routeMethod = req.method;
+    const routePath = req.path;
+    
+    const needsAuth = adminOnlyRoutes.some(route => {
+      const [method, path] = route.split(':');
+      if (method !== routeMethod) return false;
+      
+      if (path.includes('*')) {
+        const basePath = path.replace('/*', '');
+        return routePath.startsWith(basePath);
+      }
+      return routePath === path;
+    });
+    
+    if (needsAuth) {
+      console.log(`🔒 Admin auth required for: ${routeMethod} ${routePath}`);
+      return adminRateLimit(req, res, (err) => {
+        if (err) return next(err);
+        return requireAuth(req as any, res, next);
+      });
+    }
+    
+    next();
+  });
+
   // Delete order
   app.delete("/api/orders/:id", async (req, res) => {
     try {
@@ -1379,22 +1463,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // === ADMIN PANEL API ROUTES ===
 
-  // Admin login/authentication
-  app.post("/api/admin/login", async (req, res) => {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username and password are required" });
-    }
-
+  // Admin login/authentication with rate limiting and JWT tokens
+  app.post("/api/admin/login", authRateLimit, async (req, res) => {
     try {
+      const result = adminLoginSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid login data", 
+          errors: result.error.errors 
+        });
+      }
+
+      const { username, password } = result.data;
       const admin = await storage.authenticateAdmin(username, password);
+      
       if (!admin) {
         return res.status(401).json({ message: "Invalid credentials or inactive account" });
       }
 
+      // Generate JWT token for authenticated admin
+      const token = generateToken({
+        adminId: admin.id,
+        username: admin.username,
+        role: admin.role
+      });
+
+      console.log(`✅ Admin login successful: ${admin.username} (ID: ${admin.id})`);
+
       res.json({ 
         success: true, 
+        token,
         admin: { 
           id: admin.id, 
           username: admin.username, 
@@ -1433,7 +1531,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/points-rules", async (req, res) => {
     try {
-      const rule = await storage.createPointsRule(req.body);
+      const result = insertPointsRuleSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid points rule data", 
+          errors: result.error.errors 
+        });
+      }
+      
+      const rule = await storage.createPointsRule(result.data);
       res.status(201).json(rule);
     } catch (error) {
       console.error("Create points rule error:", error);
@@ -1456,7 +1562,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/points-rules/:id", async (req, res) => {
     try {
-      const rule = await storage.updatePointsRule(req.params.id, req.body);
+      const result = insertPointsRuleSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid points rule data", 
+          errors: result.error.errors 
+        });
+      }
+      
+      const rule = await storage.updatePointsRule(req.params.id, result.data);
       if (!rule) {
         return res.status(404).json({ message: "Points rule not found" });
       }
@@ -1494,7 +1608,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/loyalty-tiers", async (req, res) => {
     try {
-      const tier = await storage.createLoyaltyTierConfig(req.body);
+      const result = insertLoyaltyTiersConfigSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid loyalty tier data", 
+          errors: result.error.errors 
+        });
+      }
+      
+      const tier = await storage.createLoyaltyTierConfig(result.data);
       res.status(201).json(tier);
     } catch (error) {
       console.error("Create loyalty tier error:", error);
@@ -1517,7 +1639,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/loyalty-tiers/:id", async (req, res) => {
     try {
-      const tier = await storage.updateLoyaltyTierConfig(req.params.id, req.body);
+      const result = insertLoyaltyTiersConfigSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid loyalty tier data", 
+          errors: result.error.errors 
+        });
+      }
+      
+      const tier = await storage.updateLoyaltyTierConfig(req.params.id, result.data);
       if (!tier) {
         return res.status(404).json({ message: "Loyalty tier not found" });
       }
@@ -1555,7 +1685,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/campaigns", async (req, res) => {
     try {
-      const campaign = await storage.createCampaign(req.body);
+      const result = insertCampaignSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid campaign data", 
+          errors: result.error.errors 
+        });
+      }
+      
+      const campaign = await storage.createCampaign(result.data);
       res.status(201).json(campaign);
     } catch (error) {
       console.error("Create campaign error:", error);
@@ -1578,7 +1716,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/campaigns/:id", async (req, res) => {
     try {
-      const campaign = await storage.updateCampaign(req.params.id, req.body);
+      const result = insertCampaignSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid campaign data", 
+          errors: result.error.errors 
+        });
+      }
+      
+      const campaign = await storage.updateCampaign(req.params.id, result.data);
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
@@ -1839,22 +1985,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/user/register-with-referral - Register user with referral code
   app.post("/api/user/register-with-referral", async (req, res) => {
     try {
-      const { name, email, phone, password, address, referralCode } = req.body;
-      
-      if (!name || !phone || !password) {
+      const validationResult = registerWithReferralSchema.safeParse(req.body);
+      if (!validationResult.success) {
         return res.status(400).json({ 
-          message: "Name, phone, and password are required" 
+          message: "Invalid registration data", 
+          errors: validationResult.error.errors 
         });
       }
 
-      const result = await storage.registerUserWithReferral({
-        name,
-        email,
-        phone,
-        password,
-        address,
-        referralCode
-      });
+      const result = await storage.registerUserWithReferral(validationResult.data);
       
       res.json({
         success: true,
@@ -1944,10 +2083,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userAgent = req.get('User-Agent');
       
       const additionalData = {
-        attemptsInLastHour: await storage.countReferralValidationAttempts(clientIp, 3600000),
-        attemptsInLastMinute: await storage.countReferralValidationAttempts(clientIp, 60000),
-        sameIpReferrals: await storage.countSameIpReferrals(clientIp),
-        sameUserAgentReferrals: await storage.countSameUserAgentReferrals(userAgent),
+        attemptsInLastHour: await storage.countReferralValidationAttempts(clientIp || 'unknown', 3600000),
+        attemptsInLastMinute: await storage.countReferralValidationAttempts(clientIp || 'unknown', 60000),
+        sameIpReferrals: await storage.countSameIpReferrals(clientIp || 'unknown'),
+        sameUserAgentReferrals: await storage.countSameUserAgentReferrals(userAgent || 'unknown'),
       };
 
       const riskScore = calculateRiskScore(userId || 'anonymous', 'referral_code_validation', additionalData);

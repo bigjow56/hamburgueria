@@ -76,6 +76,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, or, gt, isNotNull } from "drizzle-orm";
+import bcrypt from 'bcryptjs';
 
 export interface IStorage {
   // User operations
@@ -314,9 +315,13 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Um usuário com este telefone já existe');
     }
 
+    // Hash password before storing
+    const hashedPassword = await bcrypt.hash(userData.password, 12);
+
     // Give welcome bonus points to new users
     const [user] = await db.insert(users).values({
       ...userData,
+      password: hashedPassword,
       pointsBalance: 100, // Welcome bonus
       totalPointsEarned: 100
     }).returning();
@@ -1100,7 +1105,11 @@ export class DatabaseStorage implements IStorage {
 
   // Admin users operations
   async createAdminUser(admin: InsertAdminUser): Promise<AdminUser> {
-    const [adminUser] = await db.insert(adminUsers).values(admin).returning();
+    // Hash password before storing
+    const hashedPassword = await bcrypt.hash(admin.password, 12);
+    const adminWithHashedPassword = { ...admin, password: hashedPassword };
+    
+    const [adminUser] = await db.insert(adminUsers).values(adminWithHashedPassword).returning();
     return adminUser;
   }
 
@@ -1123,8 +1132,9 @@ export class DatabaseStorage implements IStorage {
     const admin = await this.getAdminUserByUsername(username);
     if (!admin || !admin.isActive) return undefined;
     
-    // In a real app, you would hash and compare passwords here
-    if (admin.password === password) {
+    // Use bcrypt to verify password
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+    if (isPasswordValid) {
       // Update last login
       await db
         .update(adminUsers)
@@ -1490,6 +1500,9 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Um usuário com este telefone já existe');
     }
 
+    // Hash password before storing
+    const hashedPassword = await bcrypt.hash(userData.password, 12);
+
     // Admin can create users directly with all loyalty data
     const welcomeBonus = 100; // Same as normal registration
     
@@ -1497,6 +1510,7 @@ export class DatabaseStorage implements IStorage {
       .insert(users)
       .values({
         ...userData,
+        password: hashedPassword,
         pointsBalance: welcomeBonus,
         totalPointsEarned: welcomeBonus,
         loyaltyTier: 'bronze'
@@ -1669,6 +1683,9 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    // Hash password before storing
+    const hashedPassword = await bcrypt.hash(data.password, 12);
+
     // Create new user
     const [newUser] = await db
       .insert(users)
@@ -1676,7 +1693,7 @@ export class DatabaseStorage implements IStorage {
         name: data.name,
         email: data.email,
         phone: data.phone,
-        password: data.password,
+        password: hashedPassword,
         address: data.address,
         referralCode: newReferralCode,
         referredByCode: data.referralCode,
