@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema, insertLoyaltyRewardSchema, insertLoyaltyRedemptionSchema, insertSeasonalRewardSchema, insertPointsRuleSchema, insertLoyaltyTiersConfigSchema, insertCampaignSchema } from "@shared/schema";
+import { insertUserSchema, insertOrderSchema, insertOrderItemSchema, insertProductSchema, insertDeliveryZoneSchema, insertCategorySchema, insertExpenseSchema, insertIngredientSchema, insertProductIngredientSchema, insertProductAdditionalSchema, insertBannerThemeSchema, insertLoyaltyRewardSchema, insertLoyaltyRedemptionSchema, insertSeasonalRewardSchema, insertPointsRuleSchema, insertLoyaltyTiersConfigSchema, insertCampaignSchema, insertWebhookConfigSchema, insertWebhookEventSchema } from "@shared/schema";
 import { z } from "zod";
 import { notifyProductChange } from "./webhook";
 import { requireAuth, requireAdmin, authRateLimit, adminRateLimit, generateToken } from "./auth";
@@ -20,6 +20,21 @@ const registerWithReferralSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   address: z.string().optional(),
   referralCode: z.string().optional()
+});
+
+// Webhook configuration schemas
+const createWebhookConfigSchema = insertWebhookConfigSchema.extend({
+  url: z.string().url("Invalid webhook URL")
+});
+
+const updateWebhookConfigSchema = createWebhookConfigSchema.partial();
+
+const webhookNotificationSchema = z.object({
+  tableName: z.enum(["products", "ingredients", "categories"]),
+  operationType: z.enum(["INSERT", "UPDATE", "DELETE"]),
+  recordId: z.string().min(1),
+  oldData: z.any().optional(),
+  newData: z.any().optional()
 });
 
 const createOrderRequestSchema = z.object({
@@ -1523,6 +1538,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Dashboard stats error:", error);
       res.status(500).json({ message: "Failed to fetch dashboard statistics" });
+    }
+  });
+
+  // === WEBHOOK MANAGEMENT ROUTES ===
+  
+  // GET /api/admin/webhooks - List all webhook configurations
+  app.get("/api/admin/webhooks", async (req, res) => {
+    try {
+      const webhooks = await storage.getWebhookConfigs();
+      res.json(webhooks);
+    } catch (error) {
+      console.error("Get webhooks error:", error);
+      res.status(500).json({ message: "Failed to fetch webhook configurations" });
+    }
+  });
+
+  // POST /api/admin/webhooks - Create new webhook configuration
+  app.post("/api/admin/webhooks", async (req, res) => {
+    try {
+      const result = createWebhookConfigSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid webhook configuration", 
+          errors: result.error.errors 
+        });
+      }
+      
+      const webhook = await storage.createWebhookConfig(result.data);
+      res.status(201).json(webhook);
+    } catch (error) {
+      console.error("Create webhook error:", error);
+      res.status(500).json({ message: "Failed to create webhook configuration" });
+    }
+  });
+
+  // GET /api/admin/webhooks/:id - Get specific webhook configuration
+  app.get("/api/admin/webhooks/:id", async (req, res) => {
+    try {
+      const webhook = await storage.getWebhookConfig(req.params.id);
+      if (!webhook) {
+        return res.status(404).json({ message: "Webhook configuration not found" });
+      }
+      res.json(webhook);
+    } catch (error) {
+      console.error("Get webhook error:", error);
+      res.status(500).json({ message: "Failed to fetch webhook configuration" });
+    }
+  });
+
+  // PUT /api/admin/webhooks/:id - Update webhook configuration
+  app.put("/api/admin/webhooks/:id", async (req, res) => {
+    try {
+      const result = updateWebhookConfigSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid webhook configuration", 
+          errors: result.error.errors 
+        });
+      }
+      
+      const webhook = await storage.updateWebhookConfig(req.params.id, result.data);
+      if (!webhook) {
+        return res.status(404).json({ message: "Webhook configuration not found" });
+      }
+      res.json(webhook);
+    } catch (error) {
+      console.error("Update webhook error:", error);
+      res.status(500).json({ message: "Failed to update webhook configuration" });
+    }
+  });
+
+  // DELETE /api/admin/webhooks/:id - Delete webhook configuration
+  app.delete("/api/admin/webhooks/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteWebhookConfig(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Webhook configuration not found" });
+      }
+      res.json({ message: "Webhook configuration deleted successfully" });
+    } catch (error) {
+      console.error("Delete webhook error:", error);
+      res.status(500).json({ message: "Failed to delete webhook configuration" });
+    }
+  });
+
+  // GET /api/admin/webhook-events - List webhook events with optional filtering
+  app.get("/api/admin/webhook-events", async (req, res) => {
+    try {
+      const { webhookConfigId, limit } = req.query;
+      const events = await storage.getWebhookEvents(
+        webhookConfigId as string, 
+        limit ? parseInt(limit as string) : undefined
+      );
+      res.json(events);
+    } catch (error) {
+      console.error("Get webhook events error:", error);
+      res.status(500).json({ message: "Failed to fetch webhook events" });
+    }
+  });
+
+  // GET /api/admin/webhook-events/pending - Get pending webhook events
+  app.get("/api/admin/webhook-events/pending", async (req, res) => {
+    try {
+      const events = await storage.getPendingWebhookEvents();
+      res.json(events);
+    } catch (error) {
+      console.error("Get pending webhook events error:", error);
+      res.status(500).json({ message: "Failed to fetch pending webhook events" });
+    }
+  });
+
+  // GET /api/admin/webhook-events/failed - Get failed webhook events
+  app.get("/api/admin/webhook-events/failed", async (req, res) => {
+    try {
+      const events = await storage.getFailedWebhookEvents();
+      res.json(events);
+    } catch (error) {
+      console.error("Get failed webhook events error:", error);
+      res.status(500).json({ message: "Failed to fetch failed webhook events" });
+    }
+  });
+
+  // POST /api/admin/webhook-events/:id/retry - Retry failed webhook event
+  app.post("/api/admin/webhook-events/:id/retry", async (req, res) => {
+    try {
+      const event = await storage.retryWebhookEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ message: "Webhook event not found" });
+      }
+      res.json(event);
+    } catch (error) {
+      console.error("Retry webhook event error:", error);
+      res.status(500).json({ message: "Failed to retry webhook event" });
+    }
+  });
+
+  // POST /api/internal/webhook-notification - Internal endpoint for PostgreSQL triggers
+  app.post("/api/internal/webhook-notification", async (req, res) => {
+    try {
+      const result = webhookNotificationSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid notification data", 
+          errors: result.error.errors 
+        });
+      }
+      
+      const { tableName, operationType, recordId, oldData, newData } = result.data;
+      
+      // Create webhook events for active configurations
+      await storage.notifyWebhookChange(tableName, operationType, recordId, oldData, newData);
+      
+      res.json({ message: "Webhook notifications processed successfully" });
+    } catch (error) {
+      console.error("Webhook notification error:", error);
+      res.status(500).json({ message: "Failed to process webhook notification" });
     }
   });
 
