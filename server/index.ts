@@ -4,6 +4,7 @@ import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
+import { webhookNotificationService } from "./webhook";
 
 const app = express();
 
@@ -42,7 +43,7 @@ app.use(cors({
     : ['http://localhost:5000', 'http://127.0.0.1:5000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'], // Removed insecure X-Admin-Id header
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Internal-Webhook-Secret'], // Added webhook auth header
   exposedHeaders: ['Authorization'] // Allow frontend to read auth headers
 }));
 
@@ -78,6 +79,25 @@ app.use((req, res, next) => {
     console.warn("⚠️ Database seeding failed, continuing without seed data:", error.message);
     // Continue server startup even if seeding fails (useful for connection issues)
   }
+
+  // Start webhook notification processing service
+  console.log("🔄 Starting webhook notification service...");
+  
+  // Process pending webhooks immediately on startup
+  try {
+    await webhookNotificationService.processScheduledWebhooks();
+  } catch (error) {
+    console.error("⚠️ Initial webhook processing failed:", error);
+  }
+  
+  // Set up periodic webhook processing (every 30 seconds)
+  setInterval(async () => {
+    try {
+      await webhookNotificationService.processScheduledWebhooks();
+    } catch (error) {
+      console.error("⚠️ Periodic webhook processing failed:", error);
+    }
+  }, 30000);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

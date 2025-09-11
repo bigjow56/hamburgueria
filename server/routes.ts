@@ -1677,6 +1677,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/internal/webhook-notification - Internal endpoint for PostgreSQL triggers
   app.post("/api/internal/webhook-notification", async (req, res) => {
     try {
+      // Security: Verify internal webhook secret
+      const webhookSecret = process.env.INTERNAL_WEBHOOK_SECRET || 'webhook-secret-key';
+      const providedSecret = req.headers['x-internal-webhook-secret'];
+      
+      if (!providedSecret || providedSecret !== webhookSecret) {
+        console.error('⚠️ Unauthorized access to internal webhook endpoint');
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const result = webhookNotificationSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ 
@@ -1686,6 +1695,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { tableName, operationType, recordId, oldData, newData } = result.data;
+      
+      // Validate table name is in allowed list
+      const allowedTables = ['products', 'ingredients', 'categories'];
+      if (!allowedTables.includes(tableName)) {
+        return res.status(400).json({ message: "Invalid table name" });
+      }
+      
+      // Validate operation type
+      const allowedOperations = ['INSERT', 'UPDATE', 'DELETE'];
+      if (!allowedOperations.includes(operationType)) {
+        return res.status(400).json({ message: "Invalid operation type" });
+      }
+      
+      console.log(`📋 Processing internal webhook: ${operationType} on ${tableName} (ID: ${recordId})`);
       
       // Create webhook events for active configurations
       await storage.notifyWebhookChange(tableName, operationType, recordId, oldData, newData);
