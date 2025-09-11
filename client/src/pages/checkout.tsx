@@ -151,13 +151,9 @@ export default function Checkout() {
   // Handle when user wants to register first
   const handleGoToRegister = () => {
     setShowBenefitsPopup(false);
-    // For now, just show a message. In a real app, redirect to registration page
-    toast({
-      title: "Funcionalidade em breve!",
-      description: "O sistema de cadastro será implementado em breve. Por enquanto, continue como convidado.",
-    });
-    // Continue as guest for now
-    handleProceedAsGuest();
+    setProceedToOrder(true);
+    // Process order after successful registration
+    processOrder();
   };
 
   // Update delivery fee when neighborhood or delivery type changes
