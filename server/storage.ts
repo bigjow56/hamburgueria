@@ -73,6 +73,13 @@ import {
   type InsertLoyaltyTiersConfig,
   type Campaign,
   type InsertCampaign,
+  // Webhook system imports
+  webhookConfigs,
+  webhookEvents,
+  type WebhookConfig,
+  type InsertWebhookConfig,
+  type WebhookEvent,
+  type InsertWebhookEvent,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, or, gt, isNotNull } from "drizzle-orm";
@@ -281,6 +288,28 @@ export interface IStorage {
   countReferralValidationAttempts(ipAddress: string, timeWindow: number): Promise<number>;
   countSameIpReferrals(ipAddress: string): Promise<number>;
   countSameUserAgentReferrals(userAgent: string): Promise<number>;
+
+  // === WEBHOOK SYSTEM METHODS ===
+  
+  // Webhook configuration methods
+  createWebhookConfig(config: InsertWebhookConfig): Promise<WebhookConfig>;
+  getWebhookConfigs(): Promise<WebhookConfig[]>;
+  getActiveWebhookConfigs(): Promise<WebhookConfig[]>;
+  getWebhookConfig(id: string): Promise<WebhookConfig | undefined>;
+  updateWebhookConfig(id: string, updates: Partial<InsertWebhookConfig>): Promise<WebhookConfig | undefined>;
+  deleteWebhookConfig(id: string): Promise<boolean>;
+  
+  // Webhook event methods
+  createWebhookEvent(event: InsertWebhookEvent): Promise<WebhookEvent>;
+  getWebhookEvents(webhookConfigId?: string, limit?: number): Promise<WebhookEvent[]>;
+  getWebhookEvent(id: string): Promise<WebhookEvent | undefined>;
+  updateWebhookEventStatus(id: string, status: string, httpStatus?: number, response?: string, errorMessage?: string): Promise<WebhookEvent | undefined>;
+  getPendingWebhookEvents(): Promise<WebhookEvent[]>;
+  getFailedWebhookEvents(): Promise<WebhookEvent[]>;
+  retryWebhookEvent(id: string): Promise<WebhookEvent | undefined>;
+  
+  // Webhook notification methods
+  notifyWebhookChange(tableName: string, operationType: string, recordId: string, oldData?: any, newData?: any): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2056,6 +2085,168 @@ export class DatabaseStorage implements IStorage {
   async countSameUserAgentReferrals(userAgent: string): Promise<number> {
     // Simplified implementation - returns 0 for now
     return 0;
+  }
+
+  // === WEBHOOK SYSTEM IMPLEMENTATIONS ===
+
+  // Webhook configuration methods
+  async createWebhookConfig(configData: InsertWebhookConfig): Promise<WebhookConfig> {
+    const [config] = await db.insert(webhookConfigs).values(configData).returning();
+    return config;
+  }
+
+  async getWebhookConfigs(): Promise<WebhookConfig[]> {
+    return await db.select().from(webhookConfigs).orderBy(desc(webhookConfigs.createdAt));
+  }
+
+  async getActiveWebhookConfigs(): Promise<WebhookConfig[]> {
+    return await db
+      .select()
+      .from(webhookConfigs)
+      .where(eq(webhookConfigs.isActive, true))
+      .orderBy(desc(webhookConfigs.createdAt));
+  }
+
+  async getWebhookConfig(id: string): Promise<WebhookConfig | undefined> {
+    const [config] = await db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id));
+    return config;
+  }
+
+  async updateWebhookConfig(id: string, updates: Partial<InsertWebhookConfig>): Promise<WebhookConfig | undefined> {
+    const [config] = await db
+      .update(webhookConfigs)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(webhookConfigs.id, id))
+      .returning();
+    return config;
+  }
+
+  async deleteWebhookConfig(id: string): Promise<boolean> {
+    const result = await db.delete(webhookConfigs).where(eq(webhookConfigs.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Webhook event methods
+  async createWebhookEvent(eventData: InsertWebhookEvent): Promise<WebhookEvent> {
+    const [event] = await db.insert(webhookEvents).values(eventData).returning();
+    return event;
+  }
+
+  async getWebhookEvents(webhookConfigId?: string, limit?: number): Promise<WebhookEvent[]> {
+    let query = db.select().from(webhookEvents);
+    
+    if (webhookConfigId) {
+      query = query.where(eq(webhookEvents.webhookConfigId, webhookConfigId)) as any;
+    }
+    
+    query = query.orderBy(desc(webhookEvents.createdAt)) as any;
+    
+    if (limit) {
+      query = query.limit(limit) as any;
+    }
+    
+    return await query;
+  }
+
+  async getWebhookEvent(id: string): Promise<WebhookEvent | undefined> {
+    const [event] = await db.select().from(webhookEvents).where(eq(webhookEvents.id, id));
+    return event;
+  }
+
+  async updateWebhookEventStatus(
+    id: string, 
+    status: string, 
+    httpStatus?: number, 
+    response?: string, 
+    errorMessage?: string
+  ): Promise<WebhookEvent | undefined> {
+    const updateData: any = { 
+      status,
+      ...(httpStatus && { httpStatus }),
+      ...(response && { response }),
+      ...(errorMessage && { errorMessage }),
+      ...(status === 'sent' && { sentAt: new Date() }),
+      ...(status === 'retry' && { lastRetryAt: new Date() })
+    };
+
+    const [event] = await db
+      .update(webhookEvents)
+      .set(updateData)
+      .where(eq(webhookEvents.id, id))
+      .returning();
+    return event;
+  }
+
+  async getPendingWebhookEvents(): Promise<WebhookEvent[]> {
+    return await db
+      .select()
+      .from(webhookEvents)
+      .where(eq(webhookEvents.status, 'pending'))
+      .orderBy(webhookEvents.createdAt);
+  }
+
+  async getFailedWebhookEvents(): Promise<WebhookEvent[]> {
+    return await db
+      .select()
+      .from(webhookEvents)
+      .where(eq(webhookEvents.status, 'failed'))
+      .orderBy(desc(webhookEvents.createdAt));
+  }
+
+  async retryWebhookEvent(id: string): Promise<WebhookEvent | undefined> {
+    const [event] = await db
+      .update(webhookEvents)
+      .set({ 
+        status: 'retry', 
+        lastRetryAt: new Date(),
+        retryCount: sql`${webhookEvents.retryCount} + 1`
+      })
+      .where(eq(webhookEvents.id, id))
+      .returning();
+    return event;
+  }
+
+  // Webhook notification methods
+  async notifyWebhookChange(
+    tableName: string, 
+    operationType: string, 
+    recordId: string, 
+    oldData?: any, 
+    newData?: any
+  ): Promise<void> {
+    // Get active webhook configurations for this table
+    const configs = await db
+      .select()
+      .from(webhookConfigs)
+      .where(and(
+        eq(webhookConfigs.isActive, true),
+        // Check if the specific table is being watched
+        or(
+          and(eq(sql`${tableName}`, 'products'), eq(webhookConfigs.watchProducts, true)),
+          and(eq(sql`${tableName}`, 'ingredients'), eq(webhookConfigs.watchIngredients, true)),
+          and(eq(sql`${tableName}`, 'categories'), eq(webhookConfigs.watchCategories, true))
+        ),
+        // Check if the specific operation type is being watched
+        or(
+          and(eq(sql`${operationType}`, 'INSERT'), eq(webhookConfigs.watchInserts, true)),
+          and(eq(sql`${operationType}`, 'UPDATE'), eq(webhookConfigs.watchUpdates, true)),
+          and(eq(sql`${operationType}`, 'DELETE'), eq(webhookConfigs.watchDeletes, true))
+        )
+      ));
+
+    // Create webhook events for each matching configuration
+    for (const config of configs) {
+      await this.createWebhookEvent({
+        webhookConfigId: config.id,
+        tableName,
+        operationType,
+        recordId,
+        oldData,
+        newData,
+        status: 'pending',
+        retryCount: 0
+      });
+    }
   }
 }
 
