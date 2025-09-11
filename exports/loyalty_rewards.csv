@@ -1,7 +1,0 @@
-id,name,description,pointsRequired,category,value,discountPercentage,imageUrl,stock,isActive,minTier,createdAt
-44bcc58b-8ebc-4010-a9eb-4f67f7183346,Desconto 10%,Desconto de 10% em qualquer pedido,200,discount,,10,,-1,true,bronze,Sun Sep 07 2025 19:30:43 GMT+0000 (Coordinated Universal Time)
-ff01ef21-3e1a-43ee-958d-69bd7ede608a,Hambúrguer Grátis,Ganhe um hambúrguer clássico grátis,500,freebie,25.90,,,20,true,bronze,Sun Sep 07 2025 19:30:43 GMT+0000 (Coordinated Universal Time)
-f60f8657-bad0-439e-a2d8-a8d4ed15bb77,Desconto 20%,Desconto de 20% em qualquer pedido,400,discount,,20,,-1,true,silver,Sun Sep 07 2025 19:30:43 GMT+0000 (Coordinated Universal Time)
-1e263ae2-2726-4a79-80cb-68682594d754,Desconto 30%,Desconto VIP de 30% para clientes Gold,800,discount,,30,,-1,true,gold,Sun Sep 07 2025 19:30:43 GMT+0000 (Coordinated Universal Time)
-7f99aa74-85d5-4c32-ba92-2a052d496ba9,Combo Completo,Combo hambúrguer + batata + refrigerante grátis,1000,product,45.90,,,10,true,silver,Sun Sep 07 2025 19:30:43 GMT+0000 (Coordinated Universal Time)
-986f32be-079b-44ab-bc3c-70f9c196f782,Batata Frita Grátis,Ganhe uma porção de batata frita grátis,150,freebie,12.90,,,49,true,bronze,Sun Sep 07 2025 19:30:43 GMT+0000 (Coordinated Universal Time)

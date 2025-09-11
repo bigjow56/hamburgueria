@@ -74,7 +74,7 @@ app.use((req, res, next) => {
   try {
     await seedDatabase();
     console.log("✅ Database seeding completed successfully");
-  } catch (error) {
+  } catch (error: any) {
     console.warn("⚠️ Database seeding failed, continuing without seed data:", error.message);
     // Continue server startup even if seeding fails (useful for connection issues)
   }

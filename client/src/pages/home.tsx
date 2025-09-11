@@ -29,11 +29,13 @@ export default function Home() {
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
+    select: (data) => Array.isArray(data) ? data : [],
   });
 
   const { data: featuredProducts = [] } = useQuery<Product[]>({
     queryKey: ["/api/products/featured", "customer"],
     queryFn: () => fetch("/api/products/featured?admin=true").then(res => res.json()),
+    select: (data) => Array.isArray(data) ? data : [],
   });
 
   // For customer view, we need to include unavailable products but show them as "esgotado"
@@ -45,6 +47,7 @@ export default function Home() {
         : "/api/products?admin=true";
       return fetch(url).then(res => res.json());
     },
+    select: (data) => Array.isArray(data) ? data : [],
   });
 
   // Filter products based on category but include all (available and unavailable)
