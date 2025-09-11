@@ -90,14 +90,14 @@ app.use((req, res, next) => {
     console.error("⚠️ Initial webhook processing failed:", error);
   }
   
-  // Set up periodic webhook processing (every 30 seconds)
+  // Set up periodic webhook processing (every 15 seconds)
   setInterval(async () => {
     try {
       await webhookNotificationService.processScheduledWebhooks();
     } catch (error) {
       console.error("⚠️ Periodic webhook processing failed:", error);
     }
-  }, 30000);
+  }, 15000);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
