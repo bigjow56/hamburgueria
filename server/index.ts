@@ -36,11 +36,11 @@ app.use(helmet({
   }
 }));
 
-// CORS configuration
+// CORS configuration for Replit environment
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-domain.com'] // Replace with actual production domain
-    : ['http://localhost:5000', 'http://127.0.0.1:5000'],
+    ? process.env.REPLIT_DOMAINS?.split(',') || true // Use Replit domains in production, fallback to allow all
+    : true, // Allow all origins in development for Replit proxy
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Internal-Webhook-Secret'], // Added webhook auth header
