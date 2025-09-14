@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Burger House - Menu Sticky</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b35, #ff8c42);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Menu de categorias sticky */
+        .category-menu {
+            position: sticky;
+            top: 0;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+            padding: 1rem 0;
+        }
+
+        .category-container {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 0 1rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .category-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-btn {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            min-width: 120px;
+            text-align: center;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .category-btn:hover {
+            background: #fff3e0;
+            border-color: #ff8c42;
+            color: #ff6b35;
+        }
+
+        .category-btn.active {
+            background: linear-gradient(135deg, #ff6b35, #ff8c42);
+            border-color: #ff6b35;
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .category-btn.todos { background: #ff4757; border-color: #ff3742; }
+        .category-btn.hamburguer { background: #ffa502; border-color: #ff9000; }
+        .category-btn.bebidas { background: #3742fa; border-color: #2f3542; }
+        .category-btn.sobremesas { background: #7bed9f; border-color: #70a1ff; }
+        .category-btn.porcoes { background: #ff6348; border-color: #ff4757; }
+
+        .category-btn.todos.active,
+        .category-btn.hamburguer.active,
+        .category-btn.bebidas.active,
+        .category-btn.sobremesas.active,
+        .category-btn.porcoes.active {
+            background: linear-gradient(135deg, #ff6b35, #ff8c42);
+            border-color: #ff6b35;
+        }
+
+        /* Seções de produtos */
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            min-height: 100vh;
+            scroll-margin-top: 100px;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #333;
+            border-bottom: 3px solid #ff6b35;
+            padding-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, #ff6b35, #ff8c42);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .product-info {
+            padding: 1.5rem;
+        }
+
+        .product-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .product-description {
+            color: #666;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .product-price {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff6b35;
+            margin-bottom: 1rem;
+        }
+
+        .add-to-cart {
+            background: linear-gradient(135deg, #ff6b35, #ff8c42);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+
+        .add-to-cart:hover {
+            transform: scale(1.02);
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .category-container {
+                justify-content: flex-start;
+                padding: 0 0.5rem;
+            }
+            
+            .category-btn {
+                min-width: 100px;
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .content {
+                padding: 1rem 0.5rem;
+            }
+            
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🍔 Burger House</h1>
+        <p>Os melhores hambúrgueres da cidade!</p>
+    </div>
+
+    <nav class="category-menu">
+        <div class="category-container">
+            <div class="category-btn todos active" data-target="todos">
+                🍽️ Todos
+            </div>
+            <div class="category-btn hamburguer" data-target="hamburguer">
+                🍔 Hambúrgueres
+            </div>
+            <div class="category-btn bebidas" data-target="bebidas">
+                🥤 Bebidas
+            </div>
+            <div class="category-btn sobremesas" data-target="sobremesas">
+                🍰 Sobremesas
+            </div>
+            <div class="category-btn porcoes" data-target="porcoes">
+                🍟 Porções
+            </div>
+        </div>
+    </nav>
+
+    <div class="content">
+        <section id="todos" class="section">
+            <h2 class="section-title">🍽️ Todos os Produtos</h2>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image">🍔 Burger Clássico</div>
+                    <div class="product-info">
+                        <div class="product-name">Burger Clássico</div>
+                        <div class="product-description">Hambúrguer artesanal 180g, queijo, alface, tomate, cebola roxa e molho especial</div>
+                        <div class="product-price">R$ 19,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">🥤 Coca-Cola</div>
+                    <div class="product-info">
+                        <div class="product-name">Coca-Cola 350ml</div>
+                        <div class="product-description">Refrigerante Coca-Cola gelado</div>
+                        <div class="product-price">R$ 5,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="hamburguer" class="section">
+            <h2 class="section-title">🍔 Hambúrgueres</h2>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image">🥓 Burger Bacon</div>
+                    <div class="product-info">
+                        <div class="product-name">Burger Bacon</div>
+                        <div class="product-description">Hambúrguer artesanal 180g, queijo, bacon crocante, alface, tomate e molho barbecue</div>
+                        <div class="product-price">R$ 24,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">🍗 Chicken Burger</div>
+                    <div class="product-info">
+                        <div class="product-name">Chicken Burger</div>
+                        <div class="product-description">Filé de frango grelhado, queijo, alface, tomate, cebola roxa e molho especial</div>
+                        <div class="product-price">R$ 22,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">🍔 Burger Clássico</div>
+                    <div class="product-info">
+                        <div class="product-name">Burger Clássico</div>
+                        <div class="product-description">Hambúrguer artesanal 180g, queijo, alface, tomate, cebola e molho especial</div>
+                        <div class="product-price">R$ 19,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">🔥 Burger Especial</div>
+                    <div class="product-info">
+                        <div class="product-name">Burger Especial</div>
+                        <div class="product-description">Dois hambúrgueres 120g, queijo duplo, bacon, alface e molho especial</div>
+                        <div class="product-price">R$ 29,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="bebidas" class="section">
+            <h2 class="section-title">🥤 Bebidas</h2>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image">🥤 Coca-Cola</div>
+                    <div class="product-info">
+                        <div class="product-name">Coca-Cola 350ml</div>
+                        <div class="product-description">Refrigerante Coca-Cola gelado</div>
+                        <div class="product-price">R$ 5,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">🍊 Suco de Laranja</div>
+                    <div class="product-info">
+                        <div class="product-name">Suco de Laranja 400ml</div>
+                        <div class="product-description">Suco natural de laranja</div>
+                        <div class="product-price">R$ 7,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">💧 Água Mineral</div>
+                    <div class="product-info">
+                        <div class="product-name">Água Mineral 500ml</div>
+                        <div class="product-description">Água mineral sem gás</div>
+                        <div class="product-price">R$ 3,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sobremesas" class="section">
+            <h2 class="section-title">🍰 Sobremesas</h2>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image">🍰 Brownie</div>
+                    <div class="product-info">
+                        <div class="product-name">Brownie de Chocolate</div>
+                        <div class="product-description">Brownie caseiro com chocolate meio amargo e nozes</div>
+                        <div class="product-price">R$ 12,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">🍦 Sorvete</div>
+                    <div class="product-info">
+                        <div class="product-name">Milkshake de Baunilha</div>
+                        <div class="product-description">Cremoso milkshake de baunilha com chantilly</div>
+                        <div class="product-price">R$ 15,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="porcoes" class="section">
+            <h2 class="section-title">🍟 Porções</h2>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image">🍟 Batata Frita</div>
+                    <div class="product-info">
+                        <div class="product-name">Batata Frita Grande</div>
+                        <div class="product-description">Porção grande de batata frita crocante</div>
+                        <div class="product-price">R$ 14,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">🧅 Onion Rings</div>
+                    <div class="product-info">
+                        <div class="product-name">Anéis de Cebola</div>
+                        <div class="product-description">Deliciosos anéis de cebola empanados e fritos</div>
+                        <div class="product-price">R$ 16,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">🧀 Mozzarella Sticks</div>
+                    <div class="product-info">
+                        <div class="product-name">Palitos de Mozzarella</div>
+                        <div class="product-description">Palitos de mozzarella empanados com molho marinara</div>
+                        <div class="product-price">R$ 18,99</div>
+                        <button class="add-to-cart">Adicionar ao Carrinho</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Função para scroll spy - detecta qual seção está visível
+        function scrollSpy() {
+            const sections = document.querySelectorAll('.section');
+            const categoryBtns = document.querySelectorAll('.category-btn');
+            
+            let currentSection = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                // Considera que uma seção está ativa quando está 30% visível na tela
+                if (scrollTop >= sectionTop - 200 && scrollTop < sectionTop + sectionHeight - 200) {
+                    currentSection = section.getAttribute('id');
+                }
+            });
+            
+            // Atualiza os botões das categorias
+            categoryBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-target') === currentSection) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Função para scroll suave ao clicar nas categorias
+        function smoothScrollTo(targetId) {
+            const targetElement = document.getElementById(targetId);
+            if (targetElement) {
+                const offsetTop = targetElement.offsetTop - 100; // Offset para o menu sticky
+                window.scrollTo({
+                    top: offsetTop,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Adiciona event listeners aos botões das categorias
+            const categoryBtns = document.querySelectorAll('.category-btn');
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const target = this.getAttribute('data-target');
+                    smoothScrollTo(target);
+                });
+            });
+
+            // Adiciona scroll spy
+            window.addEventListener('scroll', scrollSpy);
+            
+            // Chama o scroll spy uma vez para definir o estado inicial
+            scrollSpy();
+        });
+
+        // Throttle função para otimizar performance do scroll
+        let ticking = false;
+        function updateScrollSpy() {
+            if (!ticking) {
+                requestAnimationFrame(scrollSpy);
+                ticking = true;
+                setTimeout(() => ticking = false, 10);
+            }
+        }
+
+        window.addEventListener('scroll', updateScrollSpy);
+    </script>
+</body>
+</html>

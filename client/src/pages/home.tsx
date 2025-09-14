@@ -4,6 +4,7 @@ import ProductCard from "@/components/product-card";
 import CartSidebar from "@/components/cart-sidebar";
 import StoreInfo from "@/components/store-info";
 import Footer from "@/components/footer";
+import StickyCategoryMenu from "@/components/sticky-category-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
@@ -68,10 +69,55 @@ export default function Home() {
     document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Função para renderizar seção de categoria
+  const renderCategorySection = (categoryId: string, categoryName: string, categoryIcon: string) => {
+    const categoryProducts = searchQuery 
+      ? allProducts.filter(p => 
+          p.categoryId === categoryId && 
+          (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+      : allProducts.filter(p => p.categoryId === categoryId);
+
+    if (categoryProducts.length === 0) return null;
+
+    return (
+      <section key={categoryId} id={categoryId} className="py-12 bg-background scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">
+              {categoryIcon} {categoryName}
+            </h2>
+            <p className="text-muted-foreground">
+              {categoryProducts.length} {categoryProducts.length === 1 ? 'produto' : 'produtos'} disponível{categoryProducts.length === 1 ? '' : 'is'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            {categoryProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={addToCart}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
+      {/* Menu Sticky */}
+      <StickyCategoryMenu 
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+      />
+
       <main>
         <HeroSection 
           storeSettings={storeSettings || null}
@@ -79,7 +125,7 @@ export default function Home() {
         />
 
         {/* Best Sellers Section */}
-        <section id="bestsellers" className="py-16 bg-muted/30">
+        <section id="bestsellers" className="py-16 bg-muted/30 scroll-mt-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
@@ -101,10 +147,27 @@ export default function Home() {
           </div>
         </section>
 
-
         {/* Category Navigation */}
         <section id="menu" className="py-8 bg-background border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl lg:text-3xl font-bold text-foreground">
+                🍔 Nosso Cardápio
+              </h2>
+              
+              <div className="relative hidden md:block">
+                <Input
+                  type="text"
+                  placeholder="Buscar produtos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-64"
+                  data-testid="search-input"
+                />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
+
             <div className="flex overflow-x-auto pb-4 space-x-4 scrollbar-hide">
               <Button
                 variant={selectedCategory === "" ? "default" : "secondary"}
@@ -135,46 +198,55 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Product Grid */}
-        <section className="py-12 bg-background">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl lg:text-3xl font-bold text-foreground">
-                🍔 Nossos Produtos
-              </h2>
-              
-              <div className="relative hidden md:block">
-                <Input
-                  type="text"
-                  placeholder="Buscar produtos..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-64"
-                  data-testid="search-input"
-                />
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
-
-            {filteredProducts.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground text-lg">
-                  {searchQuery ? "Nenhum produto encontrado." : "Nenhum produto disponível."}
+        {/* Seções de Produtos por Categoria */}
+        {searchQuery ? (
+          // Modo de busca - mostrar todos os resultados juntos
+          <section className="py-12 bg-background">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="mb-8">
+                <h2 className="text-2xl lg:text-3xl font-bold text-foreground">
+                  🔍 Resultados da Busca: "{searchQuery}"
+                </h2>
+                <p className="text-muted-foreground">
+                  {filteredProducts.length} {filteredProducts.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
                 </p>
               </div>
+
+              {filteredProducts.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground text-lg">
+                    Nenhum produto encontrado para "{searchQuery}".
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+                  {filteredProducts.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onAddToCart={addToCart}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        ) : (
+          // Modo normal - mostrar por categorias
+          <>
+            {selectedCategory ? (
+              // Categoria específica selecionada
+              categories
+                .filter(cat => cat.id === selectedCategory)
+                .map(category => renderCategorySection(category.id, category.name, category.icon || '📦'))
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onAddToCart={addToCart}
-                  />
-                ))}
-              </div>
+              // Todas as categorias
+              categories.map(category => 
+                renderCategorySection(category.id, category.name, category.icon || '📦')
+              )
             )}
-          </div>
-        </section>
+          </>
+        )}
 
         <StoreInfo storeSettings={storeSettings || null} />
       </main>
