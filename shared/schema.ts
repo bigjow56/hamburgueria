@@ -288,6 +288,9 @@ export const pointsRules = pgTable("points_rules", {
   // Bônus por ações
   actionType: text("action_type"), // signup, first_purchase, referral, review, birthday
   actionPoints: integer("action_points").default(0),
+  // Pontos específicos para sistema de indicação
+  referrerPoints: integer("referrer_points").default(0), // Pontos para quem indicou
+  referredPoints: integer("referred_points").default(0), // Pontos para quem foi indicado
   // Configurações gerais
   validFrom: timestamp("valid_from").defaultNow(),
   validUntil: timestamp("valid_until"),
