@@ -266,6 +266,12 @@ export interface IStorage {
     topReferrers: any[];
   }>;
   getAllReferralTransactions(): Promise<ReferralTransaction[]>;
+  getReferralConfiguration(): Promise<PointsRule>;
+  updateReferralConfiguration(config: {
+    referrerPoints: number;
+    referredPoints: number;
+    isActive: boolean;
+  }): Promise<PointsRule>;
   createSeasonalReward(reward: InsertSeasonalReward): Promise<SeasonalReward>;
   getActiveSeasonalRewards(): Promise<SeasonalReward[]>;
   getUserStreaks(userId: string): Promise<UserStreak[]>;
@@ -1942,6 +1948,81 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(referralTransactions)
       .orderBy(desc(referralTransactions.createdAt));
+  }
+
+  async getReferralConfiguration(): Promise<PointsRule> {
+    // Get or create the referral configuration rule
+    const [existingRule] = await db
+      .select()
+      .from(pointsRules)
+      .where(eq(pointsRules.type, "referral"));
+
+    if (existingRule) {
+      return existingRule;
+    }
+
+    // Create default referral configuration if it doesn't exist
+    const [newRule] = await db
+      .insert(pointsRules)
+      .values({
+        name: "Referral Program",
+        type: "referral",
+        description: "Points awarded for referral program",
+        points: 100, // Default fallback value
+        referrerPoints: 100, // Points for referrer
+        referredPoints: 50,  // Points for referred user
+        isActive: true,
+        multiplier: 1.0
+      })
+      .returning();
+
+    return newRule;
+  }
+
+  async updateReferralConfiguration(config: {
+    referrerPoints: number;
+    referredPoints: number;
+    isActive: boolean;
+  }): Promise<PointsRule> {
+    // Check if referral rule exists
+    const [existingRule] = await db
+      .select()
+      .from(pointsRules)
+      .where(eq(pointsRules.type, "referral"));
+
+    if (existingRule) {
+      // Update existing rule
+      const [updatedRule] = await db
+        .update(pointsRules)
+        .set({
+          referrerPoints: config.referrerPoints,
+          referredPoints: config.referredPoints,
+          isActive: config.isActive,
+          // Keep the main points field for backward compatibility
+          points: config.referrerPoints
+        })
+        .where(eq(pointsRules.id, existingRule.id))
+        .returning();
+
+      return updatedRule;
+    } else {
+      // Create new rule if it doesn't exist
+      const [newRule] = await db
+        .insert(pointsRules)
+        .values({
+          name: "Referral Program",
+          type: "referral",
+          description: "Points awarded for referral program",
+          points: config.referrerPoints,
+          referrerPoints: config.referrerPoints,
+          referredPoints: config.referredPoints,
+          isActive: config.isActive,
+          multiplier: 1.0
+        })
+        .returning();
+
+      return newRule;
+    }
   }
 
   async createSeasonalReward(reward: InsertSeasonalReward): Promise<SeasonalReward> {

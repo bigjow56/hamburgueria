@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { UserPlus, Users, Gift, TrendingUp, Search, Filter, CheckCircle, XCircle, AlertTriangle, BarChart3 } from "lucide-react";
+import { UserPlus, Users, Gift, TrendingUp, Search, Filter, CheckCircle, XCircle, AlertTriangle, BarChart3, Settings, Save } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface ReferralTransaction {
@@ -45,12 +45,31 @@ interface ReferralStats {
   }>;
 }
 
+interface ReferralConfiguration {
+  id: string;
+  name: string;
+  isActive: boolean;
+  actionType: string;
+  actionPoints: number;
+  referrerPoints: number;
+  referredPoints: number;
+  validFrom: string;
+  validUntil?: string;
+}
+
 export function AdminReferrals() {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<ReferralTransaction | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  
+  // Configuration form state
+  const [configForm, setConfigForm] = useState({
+    referrerPoints: 0,
+    referredPoints: 0,
+    isActive: true
+  });
   
   const queryClient = useQueryClient();
 
@@ -63,6 +82,22 @@ export function AdminReferrals() {
   const { data: transactions, isLoading: transactionsLoading } = useQuery<ReferralTransaction[]>({
     queryKey: ["/api/admin/referrals/transactions"],
   });
+
+  // Fetch referral configuration
+  const { data: referralConfig, isLoading: configLoading } = useQuery<ReferralConfiguration>({
+    queryKey: ["/api/admin/points-rules/referral"],
+  });
+
+  // Update form when config data changes
+  useEffect(() => {
+    if (referralConfig) {
+      setConfigForm({
+        referrerPoints: referralConfig.referrerPoints || 0,
+        referredPoints: referralConfig.referredPoints || 0,
+        isActive: referralConfig.isActive
+      });
+    }
+  }, [referralConfig]);
 
   // Mutation to approve/reject referral
   const updateReferralMutation = useMutation({
@@ -83,6 +118,30 @@ export function AdminReferrals() {
       toast({
         title: "Erro",
         description: error.message || "Erro ao atualizar status da indicação",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation to update referral configuration
+  const updateConfigMutation = useMutation({
+    mutationFn: async (config: { referrerPoints: number; referredPoints: number; isActive: boolean }) => {
+      return apiRequest("/api/admin/points-rules/referral", {
+        method: "PUT",
+        body: config
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/points-rules/referral"] });
+      toast({
+        title: "Sucesso",
+        description: "Configuração de indicação atualizada com sucesso!"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar configuração",
         variant: "destructive"
       });
     }
@@ -123,6 +182,17 @@ export function AdminReferrals() {
     updateReferralMutation.mutate({ id, status });
   };
 
+  const handleConfigFormChange = (field: string, value: number | boolean) => {
+    setConfigForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveConfig = () => {
+    updateConfigMutation.mutate(configForm);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -138,7 +208,7 @@ export function AdminReferrals() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" data-testid="tab-overview">
             <BarChart3 className="w-4 h-4 mr-2" />
             Visão Geral
@@ -146,6 +216,10 @@ export function AdminReferrals() {
           <TabsTrigger value="transactions" data-testid="tab-transactions">
             <UserPlus className="w-4 h-4 mr-2" />
             Transações
+          </TabsTrigger>
+          <TabsTrigger value="config" data-testid="tab-config">
+            <Gift className="w-4 h-4 mr-2" />
+            Configurações
           </TabsTrigger>
           <TabsTrigger value="analytics" data-testid="tab-analytics">
             <TrendingUp className="w-4 h-4 mr-2" />
@@ -392,6 +466,145 @@ export function AdminReferrals() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Configuration Tab */}
+        <TabsContent value="config" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Configurações de Pontos de Indicação
+              </CardTitle>
+              <p className="text-sm text-gray-600">
+                Configure quantos pontos são concedidos para indicadores e indicados no sistema de indicações.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {configLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-10 w-32" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Referrer Points */}
+                    <Card className="border-green-200 bg-green-50">
+                      <CardContent className="p-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <UserPlus className="h-5 w-5 text-green-600" />
+                            <Label className="text-base font-semibold text-green-800">
+                              Pontos para o Indicador
+                            </Label>
+                          </div>
+                          <p className="text-sm text-green-700">
+                            Pontos concedidos para quem faz a indicação
+                          </p>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={configForm.referrerPoints}
+                            onChange={(e) => handleConfigFormChange('referrerPoints', parseInt(e.target.value) || 0)}
+                            className="text-lg font-semibold"
+                            data-testid="input-referrer-points"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Referred Points */}
+                    <Card className="border-blue-200 bg-blue-50">
+                      <CardContent className="p-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-5 w-5 text-blue-600" />
+                            <Label className="text-base font-semibold text-blue-800">
+                              Pontos para o Indicado
+                            </Label>
+                          </div>
+                          <p className="text-sm text-blue-700">
+                            Pontos concedidos para quem é indicado (novo usuário)
+                          </p>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={configForm.referredPoints}
+                            onChange={(e) => handleConfigFormChange('referredPoints', parseInt(e.target.value) || 0)}
+                            className="text-lg font-semibold"
+                            data-testid="input-referred-points"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Configuration Status */}
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label className="text-base font-semibold">
+                            Sistema de Indicação Ativo
+                          </Label>
+                          <p className="text-sm text-gray-600">
+                            Ative ou desative o sistema de indicações
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor="config-active" className="text-sm">
+                            {configForm.isActive ? 'Ativo' : 'Inativo'}
+                          </Label>
+                          <Button
+                            variant={configForm.isActive ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleConfigFormChange('isActive', !configForm.isActive)}
+                            data-testid="toggle-active"
+                          >
+                            {configForm.isActive ? 'Ativo' : 'Inativo'}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Preview */}
+                  <Card className="border-purple-200 bg-purple-50">
+                    <CardContent className="p-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Gift className="h-5 w-5 text-purple-600" />
+                          <Label className="text-base font-semibold text-purple-800">
+                            Resumo da Configuração
+                          </Label>
+                        </div>
+                        <div className="text-sm text-purple-700 space-y-1">
+                          <p>✨ Indicador ganha: <strong>{configForm.referrerPoints} pontos</strong></p>
+                          <p>🎁 Indicado ganha: <strong>{configForm.referredPoints} pontos</strong></p>
+                          <p>📊 Status: <strong>{configForm.isActive ? 'Ativo' : 'Inativo'}</strong></p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Save Button */}
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSaveConfig}
+                      disabled={updateConfigMutation.isPending}
+                      className="flex items-center gap-2"
+                      data-testid="save-config"
+                    >
+                      <Save className="h-4 w-4" />
+                      {updateConfigMutation.isPending ? 'Salvando...' : 'Salvar Configurações'}
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>

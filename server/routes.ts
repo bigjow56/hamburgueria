@@ -1837,6 +1837,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === REFERRAL CONFIGURATION ROUTES ===
+  
+  // GET /api/admin/points-rules/referral - Get referral configuration
+  app.get("/api/admin/points-rules/referral", requireAdmin, async (req, res) => {
+    try {
+      const referralRule = await storage.getReferralConfiguration();
+      res.json(referralRule);
+    } catch (error) {
+      console.error("Get referral configuration error:", error);
+      res.status(500).json({ message: "Failed to fetch referral configuration" });
+    }
+  });
+
+  // PUT /api/admin/points-rules/referral - Update referral configuration  
+  app.put("/api/admin/points-rules/referral", requireAdmin, async (req, res) => {
+    try {
+      const { referrerPoints, referredPoints, isActive } = req.body;
+      
+      // Validate input
+      if (typeof referrerPoints !== 'number' || typeof referredPoints !== 'number' || typeof isActive !== 'boolean') {
+        return res.status(400).json({ 
+          message: "Invalid data: referrerPoints and referredPoints must be numbers, isActive must be boolean" 
+        });
+      }
+
+      if (referrerPoints < 0 || referredPoints < 0) {
+        return res.status(400).json({ 
+          message: "Points values must be non-negative" 
+        });
+      }
+
+      const updatedRule = await storage.updateReferralConfiguration({
+        referrerPoints,
+        referredPoints, 
+        isActive
+      });
+      
+      res.json(updatedRule);
+    } catch (error) {
+      console.error("Update referral configuration error:", error);
+      res.status(500).json({ message: "Failed to update referral configuration" });
+    }
+  });
+
   // === LOYALTY TIERS CONFIG ROUTES ===
   app.get("/api/admin/loyalty-tiers", async (req, res) => {
     try {
