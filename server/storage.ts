@@ -1730,7 +1730,9 @@ export class DatabaseStorage implements IStorage {
         .limit(1);
 
       if (referralRule.length > 0) {
-        referralBonus = referralRule[0].actionPoints || 100; // Default 100 points
+        // Use new separate points fields or fallback to actionPoints
+        const rule = referralRule[0];
+        referralBonus = rule.referredPoints || rule.actionPoints || 100; // Points for the new user (referred)
         message = `Usuário cadastrado com sucesso! Você ganhou ${referralBonus} pontos de bônus por indicação!`;
       }
     }
@@ -1755,14 +1757,31 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     // If referred by someone, create referral transaction and update referrer
-    if (referrerId && referralBonus > 0) {
+    if (referrerId) {
+      // Get points for referrer from rule
+      let referrerBonus = 0;
+      const referralRule = await db
+        .select()
+        .from(pointsRules)
+        .where(and(
+          eq(pointsRules.ruleType, "action_bonus"),
+          eq(pointsRules.actionType, "referral"),
+          eq(pointsRules.isActive, true)
+        ))
+        .limit(1);
+
+      if (referralRule.length > 0) {
+        const rule = referralRule[0];
+        referrerBonus = rule.referrerPoints || rule.actionPoints || 100; // Points for the referrer
+      }
+
       // Create referral transaction
       await db.insert(referralTransactions).values({
         referrerId: referrerId,
         referredId: newUser.id,
         referralCode: data.referralCode!,
         status: "confirmed",
-        pointsAwarded: referralBonus,
+        pointsAwarded: referrerBonus, // Store referrer bonus in transaction
         validatedAt: new Date()
       });
 
@@ -1773,13 +1792,13 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, referrerId))
         .limit(1);
 
-      if (referrer.length > 0) {
+      if (referrer.length > 0 && referrerBonus > 0) {
         await db
           .update(users)
           .set({
             totalReferrals: (referrer[0].totalReferrals || 0) + 1,
-            totalReferralPoints: (referrer[0].totalReferralPoints || 0) + referralBonus,
-            pointsBalance: (referrer[0].pointsBalance || 0) + referralBonus
+            totalReferralPoints: (referrer[0].totalReferralPoints || 0) + referrerBonus,
+            pointsBalance: (referrer[0].pointsBalance || 0) + referrerBonus
           })
           .where(eq(users.id, referrerId));
 
@@ -1787,7 +1806,7 @@ export class DatabaseStorage implements IStorage {
         await db.insert(loyaltyTransactions).values({
           userId: referrerId,
           type: "referral",
-          pointsChange: referralBonus,
+          pointsChange: referrerBonus,
           description: `Indicação confirmada: ${newUser.name}`,
           multiplier: "1.0"
         });
