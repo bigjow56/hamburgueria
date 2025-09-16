@@ -118,15 +118,15 @@ export default function ProductCard({ product, onAddToCart, showBadge = false }:
         
         <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 line-clamp-2 md:line-clamp-2">{product.description}</p>
         
-        <div className="space-y-2 md:space-y-0 md:flex md:items-center md:justify-between">
+        <div className="space-y-3">
           <div className="flex flex-col space-y-1">
             <div className="flex items-center space-x-1 sm:space-x-2">
               {hasDiscount && (
-                <span className="text-xs sm:text-sm md:text-lg text-muted-foreground line-through">
+                <span className="text-xs sm:text-sm text-muted-foreground line-through">
                   R$ {parseFloat(product.originalPrice!).toFixed(2)}
                 </span>
               )}
-              <span className="text-sm sm:text-lg md:text-2xl font-bold text-orange-600">
+              <span className="text-lg sm:text-xl font-bold text-orange-600">
                 R$ {parseFloat(product.price).toFixed(2)}
               </span>
             </div>
@@ -140,21 +140,20 @@ export default function ProductCard({ product, onAddToCart, showBadge = false }:
           {isAvailable ? (
             <Button
               onClick={() => onAddToCart(product)}
-              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white w-full md:w-auto px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm md:text-base font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white w-full px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
               data-testid={`button-add-to-cart-${product.id}`}
             >
-              <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <Plus className="mr-1 sm:mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Adicionar ao Carrinho</span>
               <span className="sm:hidden">Adicionar</span>
             </Button>
           ) : (
             <Button
               disabled
-              className="bg-gray-400 text-gray-600 w-full md:w-auto px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm md:text-base font-bold cursor-not-allowed opacity-60"
+              className="bg-gray-400 text-gray-600 w-full px-3 py-2 rounded-lg text-sm font-semibold cursor-not-allowed opacity-60"
               data-testid={`button-unavailable-${product.id}`}
             >
-              <span className="hidden sm:inline">😞 Indisponível</span>
-              <span className="sm:hidden">😞 Fora</span>
+              <span>😞 Indisponível</span>
             </Button>
           )}
         </div>
