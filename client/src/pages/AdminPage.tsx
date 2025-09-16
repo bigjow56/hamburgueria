@@ -49,14 +49,17 @@ export default function AdminPage() {
     }
   }, []);
 
-  const handleLogin = (admin: AdminUser) => {
+  const handleLogin = (admin: AdminUser, token: string) => {
     setCurrentAdmin(admin);
     localStorage.setItem('adminUser', JSON.stringify(admin));
+    localStorage.setItem('adminToken', token);
+    console.log('✅ Admin login successful, token stored');
   };
 
   const handleLogout = () => {
     setCurrentAdmin(null);
     localStorage.removeItem('adminUser');
+    localStorage.removeItem('adminToken');
     setCurrentSection('dashboard');
   };
 

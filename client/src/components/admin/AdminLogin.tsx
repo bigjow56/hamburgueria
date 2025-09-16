@@ -15,7 +15,7 @@ interface AdminUser {
 }
 
 interface AdminLoginProps {
-  onLogin: (admin: AdminUser) => void;
+  onLogin: (admin: AdminUser, token: string) => void;
 }
 
 export function AdminLogin({ onLogin }: AdminLoginProps) {
@@ -38,7 +38,7 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
       const data = await response.json();
 
       if (data.success) {
-        onLogin(data.admin);
+        onLogin(data.admin, data.token);
       } else {
         setError("Credenciais inválidas");
       }
